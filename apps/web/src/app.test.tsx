@@ -1,12 +1,23 @@
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppProviders } from "./app/providers.js";
 import { router } from "./app/router.js";
 
 describe("web app foundation", () => {
-  it("exports the application router", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "UNAUTHENTICATED" } }), {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
+    })));
+  });
+
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("exports the application router", async () => {
     render(<AppProviders><div>{router.routes.length} routes</div></AppProviders>);
-    expect(screen.getByText("2 routes")).toBeInTheDocument();
+    expect(screen.getByText("5 routes")).toBeInTheDocument();
+    expect(router.routes.map((route) => route.path)).toEqual(["/", "/market", "/login", "/register", undefined]);
+    await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
   });
 });
