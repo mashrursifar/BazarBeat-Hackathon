@@ -1,4 +1,5 @@
-import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createHash, createHmac, randomUUID, timingSafeEqual } from "node:crypto";
+import { z } from "zod";
 
 import { env } from "../../config/env.js";
 
@@ -12,6 +13,23 @@ interface TokenClaims {
   type: "access" | "refresh";
   jti: string;
 }
+
+export interface RefreshTokenClaims {
+  sub: string;
+  iat: number;
+  exp: number;
+  type: "refresh";
+  jti: string;
+}
+
+const tokenHeaderSchema = z.object({ alg: z.literal("HS256"), typ: z.literal("JWT") });
+const tokenClaimsSchema = z.object({
+  sub: z.string().min(1),
+  iat: z.number().int().nonnegative(),
+  exp: z.number().int().positive(),
+  type: z.enum(["access", "refresh"]),
+  jti: z.string().uuid(),
+});
 
 export interface SessionTokens {
   accessToken: string;
@@ -46,6 +64,24 @@ export function hashRefreshToken(token: string): string {
   return createHash("sha256").update(token).digest("hex");
 }
 
+export function verifyRefreshToken(token: string, now = Math.floor(Date.now() / 1000)): RefreshTokenClaims | null {
+  const segments = token.split(".");
+  if (segments.length !== 3) return null;
+  const [encodedHeader, encodedClaims, encodedSignature] = segments;
+  if (encodedHeader === undefined || encodedClaims === undefined || encodedSignature === undefined) return null;
+
+  const header = tokenHeaderSchema.safeParse(parseJson(encodedHeader));
+  const claims = tokenClaimsSchema.safeParse(parseJson(encodedClaims));
+  if (!header.success || !claims.success || claims.data.type !== "refresh" || claims.data.exp <= now) return null;
+
+  const signingInput = `${encodedHeader}.${encodedClaims}`;
+  const expectedSignature = createHmac("sha256", env.JWT_REFRESH_SECRET).update(signingInput).digest();
+  const receivedSignature = Buffer.from(encodedSignature, "base64url");
+  if (receivedSignature.length !== expectedSignature.length) return null;
+  if (!timingSafeEqual(receivedSignature, expectedSignature)) return null;
+  return { ...claims.data, type: "refresh" };
+}
+
 function signToken(claims: TokenClaims, secret: string): string {
   const header = encodeJson({ alg: "HS256", typ: "JWT" });
   const payload = encodeJson(claims);
@@ -56,4 +92,12 @@ function signToken(claims: TokenClaims, secret: string): string {
 
 function encodeJson(value: object): string {
   return Buffer.from(JSON.stringify(value)).toString("base64url");
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(Buffer.from(value, "base64url").toString());
+  } catch {
+    return null;
+  }
 }

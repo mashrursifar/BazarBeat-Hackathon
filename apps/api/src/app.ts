@@ -1,4 +1,5 @@
 import cors from "cors";
+import cookieParser from "cookie-parser";
 import express from "express";
 
 import { env } from "./config/env.js";
@@ -9,6 +10,7 @@ import { authRouter } from "./modules/auth/auth.routes.js";
 export const app = express();
 app.use(cors({ origin: env.CORS_ORIGINS.split(",").map((origin) => origin.trim()), credentials: true }));
 app.use(express.json());
+app.use(cookieParser());
 
 app.use("/api/v1/auth", authRouter);
 

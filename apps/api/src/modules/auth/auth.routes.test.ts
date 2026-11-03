@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LoginInput, PublicUser, RegisterInput } from "@bazarbeat/shared";
 
-const { loginUserMock, registerUserMock } = vi.hoisted(() => ({
+const { loginUserMock, refreshUserSessionMock, registerUserMock } = vi.hoisted(() => ({
   loginUserMock: vi.fn(async (input: LoginInput): Promise<{ user: PublicUser; accessToken: string; refreshToken: string }> => {
     void input;
     return {
@@ -19,6 +19,21 @@ const { loginUserMock, registerUserMock } = vi.hoisted(() => ({
       refreshToken: "signed-refresh-token",
     };
   }),
+  refreshUserSessionMock: vi.fn(async (token: string): Promise<{ user: PublicUser; accessToken: string; refreshToken: string }> => {
+    void token;
+    return {
+      user: {
+        id: "user-id",
+        role: "FARMER",
+        name: "Farmer One",
+        division: "dhaka",
+        district: "dhaka",
+        language: "en",
+      },
+      accessToken: "rotated-access-token",
+      refreshToken: "rotated-refresh-token",
+    };
+  }),
   registerUserMock: vi.fn(async (input: RegisterInput): Promise<PublicUser> => {
     void input;
     return {
@@ -32,7 +47,11 @@ const { loginUserMock, registerUserMock } = vi.hoisted(() => ({
   }),
 }));
 
-vi.mock("./auth.service.js", () => ({ loginUser: loginUserMock, registerUser: registerUserMock }));
+vi.mock("./auth.service.js", () => ({
+  loginUser: loginUserMock,
+  refreshUserSession: refreshUserSessionMock,
+  registerUser: registerUserMock,
+}));
 
 import { AppError } from "../../shared/errors.js";
 import { app } from "../../app.js";
@@ -50,6 +69,7 @@ describe("POST /api/v1/auth/register", () => {
   beforeEach(() => {
     registerUserMock.mockClear();
     loginUserMock.mockClear();
+    refreshUserSessionMock.mockClear();
   });
 
   it("requires the CSRF header", async () => {
@@ -156,5 +176,34 @@ describe("POST /api/v1/auth/login", () => {
 
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe("UNAUTHENTICATED");
+  });
+});
+
+describe("POST /api/v1/auth/refresh", () => {
+  beforeEach(() => {
+    refreshUserSessionMock.mockClear();
+  });
+
+  it("rotates the refresh cookie and returns the public user", async () => {
+    const response = await request(app)
+      .post("/api/v1/auth/refresh")
+      .set("X-CSRF-Protection", "1")
+      .set("Cookie", "refreshToken=old-refresh-token");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ id: "user-id", role: "FARMER" });
+    expect(response.headers["set-cookie"]?.[1]).toContain("refreshToken=rotated-refresh-token");
+    expect(refreshUserSessionMock).toHaveBeenCalledWith("old-refresh-token");
+  });
+
+  it("rejects requests without a refresh cookie or CSRF header", async () => {
+    const missingCookie = await request(app).post("/api/v1/auth/refresh").set("X-CSRF-Protection", "1");
+    const missingCsrf = await request(app)
+      .post("/api/v1/auth/refresh")
+      .set("Cookie", "refreshToken=old-refresh-token");
+
+    expect(missingCookie.status).toBe(401);
+    expect(missingCsrf.status).toBe(403);
+    expect(refreshUserSessionMock).not.toHaveBeenCalled();
   });
 });

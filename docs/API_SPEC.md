@@ -18,7 +18,7 @@ State-changing requests require the `X-CSRF-Protection: 1` header.
 |---|---|---|---|
 | POST | /auth/register | P | Create farmer or buyer account |
 | POST | /auth/login | P | Login by phone + password, sets cookies |
-| POST | /auth/refresh | A | Rotate session |
+| POST | /auth/refresh | A | Rotate the refresh cookie; reuse revokes the token family |
 | POST | /auth/logout | A | Clear cookies |
 | GET | /me | A | Current user profile |
 | PATCH | /me | A | Update profile and language |

@@ -33,3 +33,4 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-22 | 2026-11-03 | Use express-rate-limit for the auth endpoint limit of 10 attempts per minute per IP | Applies the documented auth abuse limit with the architecture-approved package | Accepted |
 | D-23 | 2026-11-03 | Sign HS256 access and refresh JWTs with Node crypto and require `X-CSRF-Protection: 1` for state-changing auth requests | Avoids an extra JWT dependency and gives the documented custom-header CSRF guard a concrete name and value | Accepted |
 | D-24 | 2026-11-03 | Require 32-character JWT secrets and a non-localhost cookie domain in production | Prevents auth tokens from using the development defaults in production | Accepted |
+| D-25 | 2026-11-03 | Use cookie-parser for refresh-token cookie extraction | Uses the architecture-approved middleware instead of manually parsing Cookie headers | Accepted |

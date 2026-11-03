@@ -51,6 +51,7 @@ export const registerSchema = z.discriminatedUnion("role", [
 ]);
 
 export const loginSchema = z.object({ phone: phoneSchema, password: z.string().min(1).max(128) });
+export const refreshCookieSchema = z.object({ refreshToken: z.string().min(1).max(4096) });
 
 export const updateProfileSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),

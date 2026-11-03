@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loginSchema, publicUserSchema, registerSchema, updateProfileSchema } from "./auth.js";
+import { loginSchema, publicUserSchema, refreshCookieSchema, registerSchema, updateProfileSchema } from "./auth.js";
 
 const registration = {
   name: "A Farmer",
@@ -35,6 +35,11 @@ describe("auth schemas", () => {
     expect(loginSchema.parse({ phone: "+8801712345678", password: "x" }).phone).toBe("+8801712345678");
     expect(updateProfileSchema.safeParse({}).success).toBe(false);
     expect(updateProfileSchema.safeParse({ language: "bn" }).success).toBe(true);
+  });
+
+  it("requires a non-empty refresh cookie", () => {
+    expect(refreshCookieSchema.safeParse({ refreshToken: "signed-token" }).success).toBe(true);
+    expect(refreshCookieSchema.safeParse({}).success).toBe(false);
   });
 
   it("rejects password hashes from the safe public-user shape", () => {

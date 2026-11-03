@@ -10,7 +10,7 @@ import {
 } from "@bazarbeat/shared";
 
 import { RefreshSession } from "./refresh-session.model.js";
-import { createSessionTokens, hashRefreshToken } from "./tokens.js";
+import { createSessionTokens, hashRefreshToken, verifyRefreshToken } from "./tokens.js";
 import { User, type UserDocument } from "../users/user.model.js";
 import { AppError } from "../../shared/errors.js";
 
@@ -66,6 +66,59 @@ export async function loginUser(input: LoginInput): Promise<LoginSession> {
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
   };
+}
+
+export async function refreshUserSession(token: string): Promise<LoginSession> {
+  const claims = verifyRefreshToken(token);
+  if (claims === null) throw invalidCredentialsError();
+
+  const tokenHash = hashRefreshToken(token);
+  const session = await RefreshSession.findOne({ tokenHash }).lean();
+  if (session === null) throw invalidCredentialsError();
+  if (session.revokedAt !== undefined && session.revokedAt !== null) {
+    await revokeSessionFamily(session.familyId);
+    throw invalidCredentialsError();
+  }
+
+  const now = new Date();
+  if (session.expiresAt <= now || session.userId.toString() !== claims.sub) throw invalidCredentialsError();
+  const user = await User.findById(claims.sub);
+  if (user === null || !user.isActive) {
+    await revokeSessionFamily(session.familyId);
+    throw invalidCredentialsError();
+  }
+
+  const tokens = createSessionTokens(user.id);
+  const nextTokenHash = hashRefreshToken(tokens.refreshToken);
+  await RefreshSession.create({
+    userId: user._id,
+    tokenHash: nextTokenHash,
+    familyId: session.familyId,
+    expiresAt: tokens.refreshExpiresAt,
+  });
+  const rotated = await RefreshSession.findOneAndUpdate(
+    { _id: session._id, tokenHash, revokedAt: { $exists: false }, expiresAt: { $gt: now } },
+    { $set: { revokedAt: now, replacedByTokenHash: nextTokenHash } },
+    { new: false },
+  );
+  if (rotated === null) {
+    await RefreshSession.deleteOne({ tokenHash: nextTokenHash });
+    await revokeSessionFamily(session.familyId);
+    throw invalidCredentialsError();
+  }
+
+  return { user: toPublicUser(user), accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+}
+
+async function revokeSessionFamily(familyId: string): Promise<void> {
+  await RefreshSession.updateMany(
+    { familyId, revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
+}
+
+function invalidCredentialsError(): AppError {
+  return new AppError(401, "UNAUTHENTICATED", "Session is invalid or expired");
 }
 
 function toPublicUser(user: UserDocument): PublicUser {
