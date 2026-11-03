@@ -9,6 +9,7 @@ const {
   findUserByIdMock,
   findUserMock,
   updateRefreshSessionMock,
+  updateRefreshSessionSingleMock,
   updateRefreshSessionsMock,
 } = vi.hoisted(() => ({
   createRefreshSessionMock: vi.fn(),
@@ -18,6 +19,7 @@ const {
   findUserByIdMock: vi.fn(),
   findUserMock: vi.fn(),
   updateRefreshSessionMock: vi.fn(),
+  updateRefreshSessionSingleMock: vi.fn(),
   updateRefreshSessionsMock: vi.fn(),
 }));
 vi.mock("../users/user.model.js", () => ({
@@ -29,12 +31,13 @@ vi.mock("./refresh-session.model.js", () => ({
     deleteOne: deleteRefreshSessionMock,
     findOne: findRefreshSessionMock,
     findOneAndUpdate: updateRefreshSessionMock,
+    updateOne: updateRefreshSessionSingleMock,
     updateMany: updateRefreshSessionsMock,
   },
 }));
 
 import { User } from "../users/user.model.js";
-import { loginUser, refreshUserSession, registerUser } from "./auth.service.js";
+import { authenticateAccessToken, loginUser, logoutUser, refreshUserSession, registerUser } from "./auth.service.js";
 import { createSessionTokens, hashRefreshToken } from "./tokens.js";
 
 import type { RegisterInput } from "@bazarbeat/shared";
@@ -67,6 +70,7 @@ describe("registerUser", () => {
     createRefreshSessionMock.mockResolvedValue({});
     findRefreshSessionMock.mockReset();
     updateRefreshSessionMock.mockReset();
+    updateRefreshSessionSingleMock.mockReset();
     deleteRefreshSessionMock.mockReset();
     updateRefreshSessionsMock.mockReset();
   });
@@ -200,5 +204,31 @@ describe("registerUser", () => {
       { familyId, revokedAt: { $exists: false } },
       { $set: { revokedAt: expect.any(Date) } },
     );
+  });
+
+  it("authenticates active users from access tokens", async () => {
+    const accessToken = createSessionTokens("user-id").accessToken;
+    findUserByIdMock.mockResolvedValue({ ...savedUser, isActive: true });
+
+    await expect(authenticateAccessToken(accessToken)).resolves.toMatchObject({ id: "user-id", role: "FARMER" });
+    await expect(authenticateAccessToken("not-a-token")).rejects.toMatchObject({ statusCode: 401 });
+  });
+
+  it("revokes only the presented refresh token on logout", async () => {
+    const refreshToken = createSessionTokens("user-id").refreshToken;
+    updateRefreshSessionSingleMock.mockResolvedValue({ modifiedCount: 1 });
+
+    await expect(logoutUser("user-id", refreshToken)).resolves.toBeUndefined();
+    expect(updateRefreshSessionSingleMock).toHaveBeenCalledWith(
+      { userId: "user-id", tokenHash: hashRefreshToken(refreshToken), revokedAt: { $exists: false } },
+      { $set: { revokedAt: expect.any(Date) } },
+    );
+  });
+
+  it("does not revoke another user's refresh token during logout", async () => {
+    const refreshToken = createSessionTokens("other-user-id").refreshToken;
+
+    await expect(logoutUser("user-id", refreshToken)).resolves.toBeUndefined();
+    expect(updateRefreshSessionSingleMock).not.toHaveBeenCalled();
   });
 });

@@ -3,7 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { LoginInput, PublicUser, RegisterInput } from "@bazarbeat/shared";
 
-const { loginUserMock, refreshUserSessionMock, registerUserMock } = vi.hoisted(() => ({
+const { authenticateAccessTokenMock, loginUserMock, logoutUserMock, refreshUserSessionMock, registerUserMock } = vi.hoisted(() => ({
+  authenticateAccessTokenMock: vi.fn(async (token: string): Promise<PublicUser> => {
+    void token;
+    return {
+      id: "user-id",
+      role: "FARMER",
+      name: "Farmer One",
+      division: "dhaka",
+      district: "dhaka",
+      language: "en",
+    };
+  }),
   loginUserMock: vi.fn(async (input: LoginInput): Promise<{ user: PublicUser; accessToken: string; refreshToken: string }> => {
     void input;
     return {
@@ -34,6 +45,10 @@ const { loginUserMock, refreshUserSessionMock, registerUserMock } = vi.hoisted((
       refreshToken: "rotated-refresh-token",
     };
   }),
+  logoutUserMock: vi.fn(async (_userId: string, token?: string): Promise<void> => {
+    void _userId;
+    void token;
+  }),
   registerUserMock: vi.fn(async (input: RegisterInput): Promise<PublicUser> => {
     void input;
     return {
@@ -48,7 +63,9 @@ const { loginUserMock, refreshUserSessionMock, registerUserMock } = vi.hoisted((
 }));
 
 vi.mock("./auth.service.js", () => ({
+  authenticateAccessToken: authenticateAccessTokenMock,
   loginUser: loginUserMock,
+  logoutUser: logoutUserMock,
   refreshUserSession: refreshUserSessionMock,
   registerUser: registerUserMock,
 }));
@@ -70,6 +87,8 @@ describe("POST /api/v1/auth/register", () => {
     registerUserMock.mockClear();
     loginUserMock.mockClear();
     refreshUserSessionMock.mockClear();
+    authenticateAccessTokenMock.mockClear();
+    logoutUserMock.mockClear();
   });
 
   it("requires the CSRF header", async () => {
@@ -205,5 +224,60 @@ describe("POST /api/v1/auth/refresh", () => {
     expect(missingCookie.status).toBe(401);
     expect(missingCsrf.status).toBe(403);
     expect(refreshUserSessionMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /api/v1/auth/logout", () => {
+  beforeEach(() => {
+    logoutUserMock.mockClear();
+  });
+
+  it("revokes the refresh cookie and clears both session cookies", async () => {
+    const response = await request(app)
+      .post("/api/v1/auth/logout")
+      .set("X-CSRF-Protection", "1")
+      .set("Cookie", "accessToken=valid-access; refreshToken=valid-refresh");
+
+    expect(response.status).toBe(204);
+    expect(logoutUserMock).toHaveBeenCalledWith("user-id", "valid-refresh");
+    const cookies = response.headers["set-cookie"];
+    expect(cookies).toHaveLength(2);
+    expect(cookies?.[0]).toContain("accessToken=");
+    expect(cookies?.[0]).toContain("Path=/");
+    expect(cookies?.[1]).toContain("refreshToken=");
+    expect(cookies?.[1]).toContain("Path=/api/v1/auth");
+    expect(cookies?.[0]).toContain("Expires=Thu, 01 Jan 1970");
+  });
+
+  it("requires authentication and the CSRF header", async () => {
+    const missingSession = await request(app).post("/api/v1/auth/logout").set("X-CSRF-Protection", "1");
+    const missingCsrf = await request(app).post("/api/v1/auth/logout").set("Cookie", "accessToken=valid-access");
+
+    expect(missingSession.status).toBe(401);
+    expect(missingCsrf.status).toBe(403);
+    expect(logoutUserMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/v1/me", () => {
+  beforeEach(() => {
+    authenticateAccessTokenMock.mockClear();
+  });
+
+  it("returns the authenticated public user without private fields", async () => {
+    const response = await request(app).get("/api/v1/me").set("Cookie", "accessToken=valid-access");
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ id: "user-id", role: "FARMER", name: "Farmer One" });
+    expect(response.body.data).not.toHaveProperty("phone");
+    expect(response.body.data).not.toHaveProperty("passwordHash");
+    expect(authenticateAccessTokenMock).toHaveBeenCalledWith("valid-access");
+  });
+
+  it("rejects requests without an access cookie", async () => {
+    const response = await request(app).get("/api/v1/me");
+
+    expect(response.status).toBe(401);
+    expect(response.body.error.code).toBe("UNAUTHENTICATED");
   });
 });

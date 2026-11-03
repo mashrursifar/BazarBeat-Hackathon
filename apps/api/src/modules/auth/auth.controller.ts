@@ -1,10 +1,13 @@
 import type { RequestHandler, Response } from "express";
+import type { ParsedQs } from "qs";
+import type { ParamsDictionary } from "express-serve-static-core";
 
 import type { LoginInput, PublicUser, RegisterInput } from "@bazarbeat/shared";
 
 import { env } from "../../config/env.js";
-import { loginUser, refreshUserSession, registerUser } from "./auth.service.js";
+import { loginUser, logoutUser, refreshUserSession, registerUser } from "./auth.service.js";
 import { AppError } from "../../shared/errors.js";
+import type { AuthenticatedLocals } from "./auth.middleware.js";
 
 export const registerController: RequestHandler<
   Record<string, string>,
@@ -40,6 +43,14 @@ export const refreshController: RequestHandler<Record<string, string>, { data: P
     const session = await refreshUserSession(refreshToken);
     setSessionCookies(response, session);
     response.status(200).json({ data: session.user });
+  };
+
+export const logoutController: RequestHandler<ParamsDictionary, unknown, unknown, ParsedQs, AuthenticatedLocals> =
+  async (request, response): Promise<void> => {
+    await logoutUser(response.locals.currentUser.id, request.cookies?.refreshToken);
+    response.clearCookie("accessToken", { ...COOKIE_SECURITY_OPTIONS, path: "/" });
+    response.clearCookie("refreshToken", { ...COOKIE_SECURITY_OPTIONS, path: "/api/v1/auth" });
+    response.status(204).end();
   };
 
 function setSessionCookies(

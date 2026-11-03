@@ -22,6 +22,14 @@ export interface RefreshTokenClaims {
   jti: string;
 }
 
+export interface AccessTokenClaims {
+  sub: string;
+  iat: number;
+  exp: number;
+  type: "access";
+  jti: string;
+}
+
 const tokenHeaderSchema = z.object({ alg: z.literal("HS256"), typ: z.literal("JWT") });
 const tokenClaimsSchema = z.object({
   sub: z.string().min(1),
@@ -65,6 +73,16 @@ export function hashRefreshToken(token: string): string {
 }
 
 export function verifyRefreshToken(token: string, now = Math.floor(Date.now() / 1000)): RefreshTokenClaims | null {
+  const claims = verifyToken(token, env.JWT_REFRESH_SECRET, now);
+  return claims?.type === "refresh" ? { ...claims, type: "refresh" } : null;
+}
+
+export function verifyAccessToken(token: string, now = Math.floor(Date.now() / 1000)): AccessTokenClaims | null {
+  const claims = verifyToken(token, env.JWT_ACCESS_SECRET, now);
+  return claims?.type === "access" ? { ...claims, type: "access" } : null;
+}
+
+function verifyToken(token: string, secret: string, now: number): TokenClaims | null {
   const segments = token.split(".");
   if (segments.length !== 3) return null;
   const [encodedHeader, encodedClaims, encodedSignature] = segments;
@@ -72,14 +90,14 @@ export function verifyRefreshToken(token: string, now = Math.floor(Date.now() / 
 
   const header = tokenHeaderSchema.safeParse(parseJson(encodedHeader));
   const claims = tokenClaimsSchema.safeParse(parseJson(encodedClaims));
-  if (!header.success || !claims.success || claims.data.type !== "refresh" || claims.data.exp <= now) return null;
+  if (!header.success || !claims.success || claims.data.exp <= now) return null;
 
   const signingInput = `${encodedHeader}.${encodedClaims}`;
-  const expectedSignature = createHmac("sha256", env.JWT_REFRESH_SECRET).update(signingInput).digest();
+  const expectedSignature = createHmac("sha256", secret).update(signingInput).digest();
   const receivedSignature = Buffer.from(encodedSignature, "base64url");
   if (receivedSignature.length !== expectedSignature.length) return null;
   if (!timingSafeEqual(receivedSignature, expectedSignature)) return null;
-  return { ...claims.data, type: "refresh" };
+  return claims.data;
 }
 
 function signToken(claims: TokenClaims, secret: string): string {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createSessionTokens, hashRefreshToken, verifyRefreshToken } from "./tokens.js";
+import { createSessionTokens, hashRefreshToken, verifyAccessToken, verifyRefreshToken } from "./tokens.js";
 
 describe("session tokens", () => {
   it("sets 15-minute and seven-day expirations and hashes refresh tokens", () => {
@@ -25,6 +25,8 @@ describe("session tokens", () => {
     expect(hashRefreshToken(tokens.refreshToken)).not.toBe(tokens.refreshToken);
     expect(verifyRefreshToken(tokens.refreshToken, issuedAt)).toMatchObject({ sub: "user-id", type: "refresh" });
     expect(verifyRefreshToken(tokens.accessToken, issuedAt)).toBeNull();
+    expect(verifyAccessToken(tokens.accessToken, issuedAt)).toMatchObject({ sub: "user-id", type: "access" });
+    expect(verifyAccessToken(tokens.refreshToken, issuedAt)).toBeNull();
     const [header, payload, signature] = tokens.refreshToken.split(".");
     const tamperedToken = `${header}.${payload}.${signature === "x" ? "y" : "x"}`;
     expect(verifyRefreshToken(tamperedToken, issuedAt)).toBeNull();

@@ -4,12 +4,14 @@ import rateLimit from "express-rate-limit";
 import { loginSchema, refreshCookieSchema, registerSchema } from "@bazarbeat/shared";
 
 import { AppError } from "../../shared/errors.js";
-import { loginController, refreshController, registerController } from "./auth.controller.js";
+import { requireAuthentication } from "./auth.middleware.js";
+import { loginController, logoutController, refreshController, registerController } from "./auth.controller.js";
 import { validateBody } from "../../shared/validate-body.js";
 
 const registrationRateLimit = createAuthRateLimit("registration");
 const loginRateLimit = createAuthRateLimit("login");
 const refreshRateLimit = createAuthRateLimit("refresh");
+const logoutRateLimit = createAuthRateLimit("logout");
 const requireCsrfHeader: RequestHandler = (request, _response, next): void => {
   if (request.get("X-CSRF-Protection") !== "1") {
     next(new AppError(403, "FORBIDDEN", "The CSRF protection header is required"));
@@ -31,6 +33,7 @@ export const authRouter = Router();
 authRouter.post("/register", registrationRateLimit, requireCsrfHeader, validateBody(registerSchema), registerController);
 authRouter.post("/login", loginRateLimit, requireCsrfHeader, validateBody(loginSchema), loginController);
 authRouter.post("/refresh", refreshRateLimit, requireCsrfHeader, validateRefreshCookie, refreshController);
+authRouter.post("/logout", logoutRateLimit, requireAuthentication, requireCsrfHeader, logoutController);
 
 function createAuthRateLimit(action: string): ReturnType<typeof rateLimit> {
   return rateLimit({

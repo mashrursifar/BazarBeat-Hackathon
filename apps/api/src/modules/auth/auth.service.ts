@@ -10,7 +10,7 @@ import {
 } from "@bazarbeat/shared";
 
 import { RefreshSession } from "./refresh-session.model.js";
-import { createSessionTokens, hashRefreshToken, verifyRefreshToken } from "./tokens.js";
+import { createSessionTokens, hashRefreshToken, verifyAccessToken, verifyRefreshToken } from "./tokens.js";
 import { User, type UserDocument } from "../users/user.model.js";
 import { AppError } from "../../shared/errors.js";
 
@@ -108,6 +108,26 @@ export async function refreshUserSession(token: string): Promise<LoginSession> {
   }
 
   return { user: toPublicUser(user), accessToken: tokens.accessToken, refreshToken: tokens.refreshToken };
+}
+
+export async function authenticateAccessToken(token: string): Promise<PublicUser> {
+  const claims = verifyAccessToken(token);
+  if (claims === null) throw invalidCredentialsError();
+
+  const user = await User.findById(claims.sub);
+  if (user === null || !user.isActive) throw invalidCredentialsError();
+  return toPublicUser(user);
+}
+
+export async function logoutUser(userId: string, refreshToken?: string): Promise<void> {
+  if (refreshToken === undefined) return;
+  const claims = verifyRefreshToken(refreshToken);
+  if (claims === null || claims.sub !== userId) return;
+
+  await RefreshSession.updateOne(
+    { userId, tokenHash: hashRefreshToken(refreshToken), revokedAt: { $exists: false } },
+    { $set: { revokedAt: new Date() } },
+  );
 }
 
 async function revokeSessionFamily(familyId: string): Promise<void> {

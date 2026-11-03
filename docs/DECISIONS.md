@@ -34,3 +34,4 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-23 | 2026-11-03 | Sign HS256 access and refresh JWTs with Node crypto and require `X-CSRF-Protection: 1` for state-changing auth requests | Avoids an extra JWT dependency and gives the documented custom-header CSRF guard a concrete name and value | Accepted |
 | D-24 | 2026-11-03 | Require 32-character JWT secrets and a non-localhost cookie domain in production | Prevents auth tokens from using the development defaults in production | Accepted |
 | D-25 | 2026-11-03 | Use cookie-parser for refresh-token cookie extraction | Uses the architecture-approved middleware instead of manually parsing Cookie headers | Accepted |
+| D-26 | 2026-11-03 | Authenticate protected requests from the access cookie and revoke only the presented refresh token on logout | Keeps logout scoped to the current device session while allowing other active sessions to continue | Accepted |

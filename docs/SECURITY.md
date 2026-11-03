@@ -3,7 +3,7 @@
 ## 1. Authentication
 - Phone number + password (email optional). Passwords hashed with argon2 or bcrypt (cost ≥ 12); minimum 8 chars; reject top common passwords.
 - Session: short-lived access JWT (15 min) and rotating refresh token (7 days), both in httpOnly, Secure, SameSite=Lax cookies. Refresh tokens stored hashed server-side to allow revocation; rotate on use; reuse detection revokes the family.
-- Logout clears cookies and revokes the refresh token.
+- Logout requires a valid access session, clears both cookies, and revokes the presented refresh token.
 - CSRF: SameSite cookies plus `X-CSRF-Protection: 1` on state-changing requests; CORS restricted to configured origins with credentials.
 - Rate limit and lock out: 10 attempts/min/IP on auth; progressive delay after repeated failures per phone number.
 - OTP/phone verification is out of scope for MVP (note in decisions); structure the code so it can be added.
