@@ -189,6 +189,7 @@ describe("POST /api/v1/auth/login", () => {
     expect(cookies?.[0]).toContain("accessToken=signed-access-token");
     expect(cookies?.[0]).toContain("HttpOnly");
     expect(cookies?.[0]).toContain("SameSite=Lax");
+    expect(cookies?.[0]).not.toContain("Domain=");
     expect(cookies?.[1]).toContain("refreshToken=signed-refresh-token");
     expect(cookies?.[1]).toContain("Path=/api/v1/auth");
   });

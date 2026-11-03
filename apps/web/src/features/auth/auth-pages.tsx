@@ -20,10 +20,10 @@ function AuthFrame({ children }: { children: React.ReactNode }): ReactElement {
   );
 }
 
-function ServerError({ code }: { code: string }): ReactElement {
+export function ServerError({ code }: { code: string }): ReactElement {
   const { t } = useTranslation();
-  const known = ["CONFLICT", "RATE_LIMITED", "VALIDATION_ERROR", "UNAUTHENTICATED", "NETWORK_ERROR"];
-  return <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">{t(known.includes(code) ? `errors.${code}` : "errors.NETWORK_ERROR")}</p>;
+  const known = ["CONFLICT", "RATE_LIMITED", "VALIDATION_ERROR", "UNAUTHENTICATED", "NETWORK_ERROR", "INTERNAL"];
+  return <p role="alert" className="rounded-md bg-red-50 p-3 text-sm text-red-800">{t(known.includes(code) ? `errors.${code}` : "errors.API_ERROR")}</p>;
 }
 
 export function LoginPage(): ReactElement {

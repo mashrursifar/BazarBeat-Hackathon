@@ -24,7 +24,7 @@ const COOKIE_SECURITY_OPTIONS = {
   httpOnly: true,
   secure: env.NODE_ENV === "production",
   sameSite: "lax" as const,
-  domain: env.COOKIE_DOMAIN,
+  ...(env.COOKIE_DOMAIN.length > 0 ? { domain: env.COOKIE_DOMAIN } : {}),
 };
 
 export const loginController: RequestHandler<Record<string, string>, { data: PublicUser }, LoginInput> =

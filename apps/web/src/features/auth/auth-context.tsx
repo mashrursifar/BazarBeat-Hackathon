@@ -15,6 +15,17 @@ type AuthState = {
 };
 
 const AuthContext = createContext<AuthState | null>(null);
+const SESSION_HINT_KEY = "bazarbeat-session";
+
+function hasSessionHint(): boolean {
+  return document.cookie.split(";").some((cookie) => cookie.trim() === `${SESSION_HINT_KEY}=1`);
+}
+
+function setSessionHint(present: boolean): void {
+  document.cookie = present
+    ? `${SESSION_HINT_KEY}=1; Path=/; SameSite=Lax; Max-Age=604800`
+    : `${SESSION_HINT_KEY}=; Path=/; SameSite=Lax; Max-Age=0`;
+}
 
 export function AuthProvider({ children }: { children: ReactNode }): ReactElement {
   const [user, setUser] = useState<PublicUser | null>(null);
@@ -24,6 +35,12 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
 
   useEffect(() => {
     let active = true;
+    if (!hasSessionHint()) {
+      setUser(null);
+      setError(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     void authApi.getCurrentUser().then((currentUser) => {
       if (active) {
@@ -35,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       if (!active) return;
       const message = reason instanceof Error ? reason.message : "NETWORK_ERROR";
       if (message === "UNAUTHENTICATED") {
+        setSessionHint(false);
         setUser(null);
         setError(null);
       } else {
@@ -52,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     error,
     signIn: async (phone, password): Promise<PublicUser> => {
       const nextUser = await authApi.login({ phone, password });
+      setSessionHint(true);
       setUser(nextUser);
       void i18n.changeLanguage(nextUser.language);
       setError(null);
@@ -59,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
     },
     signOut: async (): Promise<void> => {
       await authApi.logout();
+      setSessionHint(false);
       setUser(null);
     },
     setUser,

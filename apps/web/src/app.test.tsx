@@ -6,13 +6,17 @@ import { router } from "./app/router.js";
 
 describe("web app foundation", () => {
   beforeEach(() => {
+    document.cookie = "bazarbeat-session=1; Path=/; SameSite=Lax";
     vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ error: { code: "UNAUTHENTICATED" } }), {
       status: 401,
       headers: { "Content-Type": "application/json" },
     })));
   });
 
-  afterEach(() => vi.unstubAllGlobals());
+  afterEach(() => {
+    document.cookie = "bazarbeat-session=; Path=/; Max-Age=0";
+    vi.unstubAllGlobals();
+  });
 
   it("exports the application router", async () => {
     render(<AppProviders><div>{router.routes.length} routes</div></AppProviders>);

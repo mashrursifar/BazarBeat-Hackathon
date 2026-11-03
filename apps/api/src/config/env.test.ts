@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { envSchema } from "./env.js";
 
 describe("environment validation", () => {
-  it("rejects development JWT secrets and localhost cookies in production", () => {
+  it("rejects development JWT secrets and a missing cookie domain in production", () => {
     expect(envSchema.safeParse({ NODE_ENV: "production" }).success).toBe(false);
   });
 
