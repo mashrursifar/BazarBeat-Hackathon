@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
       if (message === "UNAUTHENTICATED") {
         setSessionHint(false);
         setUser(null);
-        setError(null);
+        setError("SESSION_EXPIRED");
       } else {
         setError(message);
       }

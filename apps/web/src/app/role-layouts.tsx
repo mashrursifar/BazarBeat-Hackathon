@@ -35,7 +35,7 @@ export function AuthGuard(): ReactElement {
   const { t } = useTranslation();
   const location = useLocation();
   if (loading) return <main className="p-8" role="status">{t("auth.loading")}</main>;
-  if (error !== null) return <main className="mx-auto max-w-lg p-8"><p role="alert" className="mb-4">{t("auth.loadError")}</p><button className="min-h-11 rounded bg-primary px-4 text-white" onClick={retry}>{t("auth.retry")}</button></main>;
+  if (error !== null) return <main className="mx-auto max-w-lg p-8"><p role="alert" className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{t(error === "SESSION_EXPIRED" ? "errors.UNAUTHENTICATED" : "auth.loadError")}</p>{error === "SESSION_EXPIRED" ? <Link className="font-semibold text-primary underline" to="/login">{t("login.title")}</Link> : <button className="min-h-11 rounded bg-primary px-4 text-white" onClick={retry}>{t("auth.retry")}</button>}</main>;
   if (user === null) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   return <Outlet />;
 }
