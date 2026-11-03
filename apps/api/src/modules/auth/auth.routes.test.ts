@@ -1,9 +1,16 @@
 import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { LoginInput, PublicUser, RegisterInput } from "@bazarbeat/shared";
+import type { LoginInput, PublicUser, RegisterInput, UpdateProfileInput } from "@bazarbeat/shared";
 
-const { authenticateAccessTokenMock, loginUserMock, logoutUserMock, refreshUserSessionMock, registerUserMock } = vi.hoisted(() => ({
+const {
+  authenticateAccessTokenMock,
+  loginUserMock,
+  logoutUserMock,
+  refreshUserSessionMock,
+  registerUserMock,
+  updateUserProfileMock,
+} = vi.hoisted(() => ({
   authenticateAccessTokenMock: vi.fn(async (token: string): Promise<PublicUser> => {
     void token;
     return {
@@ -60,6 +67,17 @@ const { authenticateAccessTokenMock, loginUserMock, logoutUserMock, refreshUserS
       language: "en",
     };
   }),
+  updateUserProfileMock: vi.fn(async (userId: string, input: UpdateProfileInput): Promise<PublicUser> => {
+    void userId;
+    return {
+      id: "user-id",
+      role: "FARMER",
+      name: "Farmer One",
+      division: "dhaka",
+      district: "dhaka",
+      language: input.language ?? "en",
+    };
+  }),
 }));
 
 vi.mock("./auth.service.js", () => ({
@@ -69,6 +87,7 @@ vi.mock("./auth.service.js", () => ({
   refreshUserSession: refreshUserSessionMock,
   registerUser: registerUserMock,
 }));
+vi.mock("../users/users.service.js", () => ({ updateUserProfile: updateUserProfileMock }));
 
 import { AppError } from "../../shared/errors.js";
 import { app } from "../../app.js";
@@ -89,6 +108,7 @@ describe("POST /api/v1/auth/register", () => {
     refreshUserSessionMock.mockClear();
     authenticateAccessTokenMock.mockClear();
     logoutUserMock.mockClear();
+    updateUserProfileMock.mockClear();
   });
 
   it("requires the CSRF header", async () => {
@@ -279,5 +299,45 @@ describe("GET /api/v1/me", () => {
 
     expect(response.status).toBe(401);
     expect(response.body.error.code).toBe("UNAUTHENTICATED");
+  });
+});
+
+describe("PATCH /api/v1/me", () => {
+  beforeEach(() => {
+    updateUserProfileMock.mockClear();
+  });
+
+  it("updates only the authenticated user's profile and returns the safe user", async () => {
+    const response = await request(app)
+      .patch("/api/v1/me")
+      .set("Cookie", "accessToken=valid-access")
+      .set("X-CSRF-Protection", "1")
+      .send({ language: "bn", id: "other-user-id" });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({ id: "user-id", language: "bn" });
+    expect(response.body.data).not.toHaveProperty("phone");
+    expect(updateUserProfileMock).toHaveBeenCalledWith("user-id", { language: "bn" });
+  });
+
+  it("rejects unauthenticated, invalid, and missing-CSRF requests", async () => {
+    const unauthenticated = await request(app)
+      .patch("/api/v1/me")
+      .set("X-CSRF-Protection", "1")
+      .send({ language: "bn" });
+    const invalid = await request(app)
+      .patch("/api/v1/me")
+      .set("Cookie", "accessToken=valid-access")
+      .set("X-CSRF-Protection", "1")
+      .send({});
+    const missingCsrf = await request(app)
+      .patch("/api/v1/me")
+      .set("Cookie", "accessToken=valid-access")
+      .send({ language: "bn" });
+
+    expect(unauthenticated.status).toBe(401);
+    expect(invalid.status).toBe(400);
+    expect(missingCsrf.status).toBe(403);
+    expect(updateUserProfileMock).not.toHaveBeenCalled();
   });
 });

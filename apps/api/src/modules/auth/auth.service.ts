@@ -1,17 +1,12 @@
 import bcrypt from "bcrypt";
 import { randomUUID } from "node:crypto";
 
-import {
-  type LoginInput,
-  type PublicUser,
-  type RegisterInput,
-  UserRole,
-  publicUserSchema,
-} from "@bazarbeat/shared";
+import { type LoginInput, type PublicUser, type RegisterInput, UserRole } from "@bazarbeat/shared";
 
 import { RefreshSession } from "./refresh-session.model.js";
 import { createSessionTokens, hashRefreshToken, verifyAccessToken, verifyRefreshToken } from "./tokens.js";
-import { User, type UserDocument } from "../users/user.model.js";
+import { User } from "../users/user.model.js";
+import { toPublicUser } from "../users/user.mapper.js";
 import { AppError } from "../../shared/errors.js";
 
 const BCRYPT_COST = 12;
@@ -139,19 +134,6 @@ async function revokeSessionFamily(familyId: string): Promise<void> {
 
 function invalidCredentialsError(): AppError {
   return new AppError(401, "UNAUTHENTICATED", "Session is invalid or expired");
-}
-
-function toPublicUser(user: UserDocument): PublicUser {
-  return publicUserSchema.parse({
-    id: user.id,
-    role: user.role,
-    name: user.name,
-    division: user.division,
-    district: user.district,
-    ...(user.upazila === undefined ? {} : { upazila: user.upazila }),
-    ...(user.organization === undefined ? {} : { organization: user.organization }),
-    language: user.language,
-  });
 }
 
 function isDuplicateKeyError(error: unknown): boolean {

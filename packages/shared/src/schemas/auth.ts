@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 import { Language, UserRole } from "../enums.js";
-import { BANGLADESH_DISTRICTS, BANGLADESH_DIVISIONS } from "../locations.js";
+import { BANGLADESH_DISTRICTS, BANGLADESH_DIVISIONS, districtBelongsToDivision } from "../locations.js";
 import { normalizeBangladeshPhone } from "../phone.js";
 
 const divisionIds = BANGLADESH_DIVISIONS.map(({ id }) => id);
@@ -64,7 +64,12 @@ export const updateProfileSchema = z.object({
   upazila: z.string().trim().min(1).max(100).optional(),
   organization: z.string().trim().min(1).max(160).optional(),
   language: z.enum([Language.EN, Language.BN]).optional(),
-}).refine((value) => Object.keys(value).length > 0, { message: "At least one profile field is required" });
+}).refine((value) => Object.keys(value).length > 0, { message: "At least one profile field is required" }).superRefine((value, context) => {
+  if (value.division !== undefined && value.district !== undefined &&
+    !districtBelongsToDivision(value.district, value.division)) {
+    context.addIssue({ code: "custom", path: ["district"], message: "District must belong to the selected division" });
+  }
+});
 
 export const publicUserSchema = z.object({
   id: z.string(),

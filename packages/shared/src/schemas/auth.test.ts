@@ -42,6 +42,7 @@ describe("auth schemas", () => {
     expect(loginSchema.parse({ phone: "+8801712345678", password: "x" }).phone).toBe("+8801712345678");
     expect(updateProfileSchema.safeParse({}).success).toBe(false);
     expect(updateProfileSchema.safeParse({ language: "bn" }).success).toBe(true);
+    expect(updateProfileSchema.safeParse({ division: "dhaka", district: "sylhet" }).success).toBe(false);
   });
 
   it("requires a non-empty refresh cookie", () => {

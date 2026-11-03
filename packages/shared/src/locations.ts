@@ -75,3 +75,7 @@ export const BANGLADESH_DISTRICTS = [
   { id: "sunamganj", nameEn: "Sunamganj", nameBn: "সুনামগঞ্জ", divisionId: "sylhet" },
   { id: "sylhet", nameEn: "Sylhet", nameBn: "সিলেট", divisionId: "sylhet" },
 ] as const;
+
+export function districtBelongsToDivision(districtId: string, divisionId: string): boolean {
+  return BANGLADESH_DISTRICTS.some((district) => district.id === districtId && district.divisionId === divisionId);
+}

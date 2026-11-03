@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 
 import { loginSchema, refreshCookieSchema, registerSchema } from "@bazarbeat/shared";
 
+import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { AppError } from "../../shared/errors.js";
 import { requireAuthentication } from "./auth.middleware.js";
 import { loginController, logoutController, refreshController, registerController } from "./auth.controller.js";
@@ -12,13 +13,6 @@ const registrationRateLimit = createAuthRateLimit("registration");
 const loginRateLimit = createAuthRateLimit("login");
 const refreshRateLimit = createAuthRateLimit("refresh");
 const logoutRateLimit = createAuthRateLimit("logout");
-const requireCsrfHeader: RequestHandler = (request, _response, next): void => {
-  if (request.get("X-CSRF-Protection") !== "1") {
-    next(new AppError(403, "FORBIDDEN", "The CSRF protection header is required"));
-    return;
-  }
-  next();
-};
 const validateRefreshCookie: RequestHandler = (request, _response, next): void => {
   const parsed = refreshCookieSchema.safeParse(request.cookies);
   if (!parsed.success) {
@@ -30,10 +24,10 @@ const validateRefreshCookie: RequestHandler = (request, _response, next): void =
 };
 
 export const authRouter = Router();
-authRouter.post("/register", registrationRateLimit, requireCsrfHeader, validateBody(registerSchema), registerController);
-authRouter.post("/login", loginRateLimit, requireCsrfHeader, validateBody(loginSchema), loginController);
-authRouter.post("/refresh", refreshRateLimit, requireCsrfHeader, validateRefreshCookie, refreshController);
-authRouter.post("/logout", logoutRateLimit, requireAuthentication, requireCsrfHeader, logoutController);
+authRouter.post("/register", registrationRateLimit, requireCsrfProtection, validateBody(registerSchema), registerController);
+authRouter.post("/login", loginRateLimit, requireCsrfProtection, validateBody(loginSchema), loginController);
+authRouter.post("/refresh", refreshRateLimit, requireCsrfProtection, validateRefreshCookie, refreshController);
+authRouter.post("/logout", logoutRateLimit, requireAuthentication, requireCsrfProtection, logoutController);
 
 function createAuthRateLimit(action: string): ReturnType<typeof rateLimit> {
   return rateLimit({

@@ -35,3 +35,4 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-24 | 2026-11-03 | Require 32-character JWT secrets and a non-localhost cookie domain in production | Prevents auth tokens from using the development defaults in production | Accepted |
 | D-25 | 2026-11-03 | Use cookie-parser for refresh-token cookie extraction | Uses the architecture-approved middleware instead of manually parsing Cookie headers | Accepted |
 | D-26 | 2026-11-03 | Authenticate protected requests from the access cookie and revoke only the presented refresh token on logout | Keeps logout scoped to the current device session while allowing other active sessions to continue | Accepted |
+| D-27 | 2026-11-03 | Treat Phase 1 Task 1.7 as `PATCH /me` profile updates | The build plan does not number subtasks; this follows the completed auth endpoints before the planned web auth and layout work | Accepted |
