@@ -1,0 +1,34 @@
+{
+  "name": "bazarbeat",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": ["apps/api", "apps/web", "packages/shared"],
+  "scripts": {
+    "dev": "concurrently -k -n api,web -c blue,green \"npm run dev -w @bazarbeat/api\" \"npm run dev -w @bazarbeat/web\"",
+    "build": "npm run build -w @bazarbeat/shared && npm run build -w @bazarbeat/api && npm run build -w @bazarbeat/web",
+    "typecheck": "npm run typecheck -w @bazarbeat/shared && npm run typecheck -w @bazarbeat/api && npm run typecheck -w @bazarbeat/web",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test -w @bazarbeat/shared && npm run test -w @bazarbeat/api && npm run test -w @bazarbeat/web",
+    "test:api": "npm run test -w @bazarbeat/api",
+    "test:web": "npm run test -w @bazarbeat/web",
+    "test:e2e": "playwright test",
+    "seed": "npm run seed -w @bazarbeat/api",
+    "seed:demo": "npm run seed:demo -w @bazarbeat/api"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.10.0",
+    "caniuse-lite": "^1.0.30001819",
+    "concurrently": "^9.2.1",
+    "eslint": "^10.14.0",
+    "jsdom": "^26.1.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.2",
+    "vitest": "^3.2.4"
+  }
+}

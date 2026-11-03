@@ -57,8 +57,42 @@ bazarbeat/
 | `docs/BUILD_PLAN.md` | choosing the next task |
 | `docs/DECISIONS.md` | questioning a past choice or logging a new one |
 
-## Getting started (filled in during Phase 0)
-Prerequisites, install, env setup, seed, run, and test commands are added here by the agent at the end of Phase 0 and kept current afterwards.
+## Getting started
+
+### Prerequisites
+
+- Node.js LTS and npm
+- MongoDB running locally (the web app and API can start without it; the API health response reports the connection state)
+
+### Install and configure
+
+```sh
+npm install
+cp .env.example .env
+```
+
+On PowerShell, use `Copy-Item .env.example .env` for the second command. The example values are for local development only; replace the JWT secrets before exposing the API.
+
+### Run the apps
+
+```sh
+npm run dev
+```
+
+The web app runs at <http://localhost:5173> and the API at <http://localhost:4000>. Check API and MongoDB status at <http://localhost:4000/api/v1/health>.
+
+Seed fixtures are not part of Phase 0. `npm run seed` and `npm run seed:demo` are present as workspace script placeholders and report that no seed data is configured yet.
+
+### Quality checks
+
+```sh
+npm run typecheck
+npm run lint
+npm test
+npm run test:e2e
+```
+
+Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically.
 
 ## Demo mode
 A configuration flag shortens auction durations to a couple of minutes and loads seeded farmers, buyers, listings, and bids so the full story can be shown live in a few minutes.

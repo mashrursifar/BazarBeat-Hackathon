@@ -25,3 +25,6 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-14 | Project start | Anti-sniping: 2-minute window, max 5 extensions | Fairness to bidders, bounded wait for farmers | Accepted |
 | D-15 | Project start | Bangla UI is P1/P2 but i18n keys used from day one | Avoids a costly retrofit | Accepted |
 | D-16 | Project start | Single-instance deployment for the hackathon (in-process events, scheduler) | Time constraint; limitation is declared | Accepted |
+| D-17 | 2026-11-03 | Use `concurrently` for the root dev command and `tsx` to run the TypeScript API during development | Starts both workspace apps from one command without a build step | Accepted |
+| D-18 | 2026-11-03 | Use `jsdom` as the Vitest environment for web component tests | Provides a browser DOM for React Testing Library tests | Accepted |
+| D-19 | 2026-11-03 | Declare `caniuse-lite` in the web workspace | Keeps Browserslist's browser feature database present in clean installs; without it Vite's React transform fails | Accepted |
