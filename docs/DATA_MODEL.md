@@ -17,7 +17,9 @@ User 1─1 FarmerProfile or BuyerProfile · Farmer 1─* InventoryItem · Invent
 | organization | string? | Buyers only |
 | language | enum en \| bn | Default en |
 | isActive | boolean | |
-Indexes: unique phone; role.
+Indexes: unique phone; role. Request and public-user contracts live in `packages/shared`; public user responses omit `phone`, `email`, and `passwordHash`.
+
+Controlled location values are stable English slugs with English and Bangla display names. The division and district lists live in `packages/shared/src/locations.ts` and are based on the Bangladesh National Portal's [division list](https://bangladesh.gov.bd/views/division-list/List-of-Divisions/) and [district list](https://bangladesh.gov.bd/views/district-list/District-List/). District records include their parent division ID.
 
 ## Crop (seeded catalog)
 | Field | Type | Notes |

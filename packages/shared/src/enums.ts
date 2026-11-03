@@ -5,6 +5,13 @@ export const UserRole = {
 
 export type UserRole = (typeof UserRole)[keyof typeof UserRole];
 
+export const Language = {
+  EN: "en",
+  BN: "bn",
+} as const;
+
+export type Language = (typeof Language)[keyof typeof Language];
+
 export const CropGrade = {
   A: "A",
   B: "B",
