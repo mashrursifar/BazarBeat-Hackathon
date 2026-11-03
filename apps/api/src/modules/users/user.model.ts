@@ -4,7 +4,7 @@ import { Language, UserRole, normalizeBangladeshPhone } from "@bazarbeat/shared"
 
 const userSchema = new mongoose.Schema(
   {
-    role: { type: String, enum: Object.values(UserRole), required: true, immutable: true },
+    role: { type: String, enum: Object.values(UserRole), required: true, immutable: true, index: true },
     name: { type: String, required: true, trim: true, minlength: 1, maxlength: 100 },
     phone: {
       type: String,
@@ -31,4 +31,6 @@ userSchema.pre("validate", function () {
 });
 
 export type UserRecord = InferSchemaType<typeof userSchema>;
-export const User = mongoose.models.User ?? mongoose.model("User", userSchema);
+export const User = mongoose.models.User
+  ? mongoose.model<UserRecord>("User")
+  : mongoose.model<UserRecord>("User", userSchema);

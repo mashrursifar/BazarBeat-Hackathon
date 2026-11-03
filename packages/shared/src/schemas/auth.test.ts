@@ -28,6 +28,7 @@ describe("auth schemas", () => {
     expect(registerSchema.safeParse({ ...registration, role: "ADMIN" }).success).toBe(false);
     expect(registerSchema.safeParse({ ...registration, role: "FARMER", district: "not-a-district" }).success).toBe(false);
     expect(registerSchema.safeParse({ ...registration, role: "FARMER", password: "short" }).success).toBe(false);
+    expect(registerSchema.safeParse({ ...registration, role: "FARMER", password: "Password1" }).success).toBe(false);
   });
 
   it("validates login and requires at least one profile update", () => {

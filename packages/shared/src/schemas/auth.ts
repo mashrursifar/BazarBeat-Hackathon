@@ -6,6 +6,20 @@ import { normalizeBangladeshPhone } from "../phone.js";
 
 const divisionIds = BANGLADESH_DIVISIONS.map(({ id }) => id);
 const districtIds = BANGLADESH_DISTRICTS.map(({ id }) => id);
+const COMMON_PASSWORDS = new Set([
+  "password",
+  "password1",
+  "12345678",
+  "123456789",
+  "1234567890",
+  "qwerty123",
+  "admin123",
+  "letmein123",
+  "welcome1",
+  "iloveyou",
+  "passw0rd",
+  "abc12345",
+]);
 const divisionSchema = z.enum(divisionIds as [string, ...string[]]);
 const districtSchema = z.enum(districtIds as [string, ...string[]]);
 const phoneSchema = z.string().transform((value, context) => {
@@ -20,7 +34,9 @@ const phoneSchema = z.string().transform((value, context) => {
 const registrationBase = z.object({
   name: z.string().trim().min(1).max(100),
   phone: phoneSchema,
-  password: z.string().min(8).max(128),
+  password: z.string().min(8).max(128).refine((value) => !COMMON_PASSWORDS.has(value.toLowerCase()), {
+    message: "Choose a less common password",
+  }),
   division: divisionSchema,
   district: districtSchema,
   upazila: z.string().trim().min(1).max(100).optional(),

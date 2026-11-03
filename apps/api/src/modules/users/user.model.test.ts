@@ -35,6 +35,7 @@ describe("User model", () => {
 
     expect(indexes).toContainEqual([{ phone: 1 }, { unique: true, background: true }]);
     expect(indexes).toContainEqual([{ email: 1 }, { unique: true, sparse: true, background: true }]);
+    expect(indexes).toContainEqual([{ role: 1 }, { background: true }]);
   });
 
   it("rejects invalid phone numbers", async () => {
