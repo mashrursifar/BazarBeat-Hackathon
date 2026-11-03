@@ -2,6 +2,8 @@
 
 Base path: `/api/v1`. JSON only (uploads are multipart). Auth via httpOnly cookies unless noted. All request/response shapes are zod schemas in `packages/shared`. Update this file whenever a route changes.
 
+State-changing requests require the `X-CSRF-Protection: 1` header.
+
 ## Conventions
 **Success envelope:** `{ data, meta? }` where `meta` carries pagination `{ page, limit, total }` and server time `{ serverTime }` on listing/bid responses.
 **Error envelope:** `{ error: { code, message, details? } }`.

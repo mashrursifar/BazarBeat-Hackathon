@@ -2,7 +2,7 @@ import "dotenv/config";
 
 import { z } from "zod";
 
-const envSchema = z.object({
+export const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   PORT: z.coerce.number().int().positive().default(4000),
   MONGODB_URI: z.string().default("mongodb://127.0.0.1:27017/bazarbeat"),
@@ -17,6 +17,16 @@ const envSchema = z.object({
   UPLOAD_DIR: z.string().default("./uploads"),
   DEMO_MODE: z.stringbool().default(false),
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10_000).default(200),
+}).superRefine((values, context) => {
+  if (values.NODE_ENV !== "production") return;
+  for (const key of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"] as const) {
+    if (values[key].length < 32 || values[key].startsWith("local-development-")) {
+      context.addIssue({ code: "custom", path: [key], message: "Production JWT secrets must be at least 32 characters" });
+    }
+  }
+  if (values.COOKIE_DOMAIN === "localhost") {
+    context.addIssue({ code: "custom", path: ["COOKIE_DOMAIN"], message: "Production must configure COOKIE_DOMAIN" });
+  }
 });
 
 export const env = envSchema.parse(process.env);

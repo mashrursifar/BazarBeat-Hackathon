@@ -1,4 +1,4 @@
-import mongoose, { type InferSchemaType } from "mongoose";
+import mongoose, { type HydratedDocument, type InferSchemaType } from "mongoose";
 
 import { Language, UserRole, normalizeBangladeshPhone } from "@bazarbeat/shared";
 
@@ -31,6 +31,7 @@ userSchema.pre("validate", function () {
 });
 
 export type UserRecord = InferSchemaType<typeof userSchema>;
+export type UserDocument = HydratedDocument<UserRecord>;
 export const User = mongoose.models.User
   ? mongoose.model<UserRecord>("User")
   : mongoose.model<UserRecord>("User", userSchema);

@@ -31,3 +31,5 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-20 | 2026-11-03 | Treat Phase 1 Task 1.2 as the User persistence model only | The build plan groups Phase 1 work without numbering individual tasks; this follows Task 1.1 shared contracts and keeps the next slice narrow | Accepted |
 | D-21 | 2026-11-03 | Hash registration passwords with bcrypt cost 12 | Meets the password storage requirement using the architecture-approved algorithm | Accepted |
 | D-22 | 2026-11-03 | Use express-rate-limit for the auth endpoint limit of 10 attempts per minute per IP | Applies the documented auth abuse limit with the architecture-approved package | Accepted |
+| D-23 | 2026-11-03 | Sign HS256 access and refresh JWTs with Node crypto and require `X-CSRF-Protection: 1` for state-changing auth requests | Avoids an extra JWT dependency and gives the documented custom-header CSRF guard a concrete name and value | Accepted |
+| D-24 | 2026-11-03 | Require 32-character JWT secrets and a non-localhost cookie domain in production | Prevents auth tokens from using the development defaults in production | Accepted |

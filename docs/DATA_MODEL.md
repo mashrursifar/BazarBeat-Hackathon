@@ -3,7 +3,7 @@
 Conventions: every document has `_id`, `createdAt`, `updatedAt`. Money fields are integer poisha (per kg unless stated). Enums are defined in `packages/shared/enums.ts`. This document is the contract; update it with any schema change.
 
 ## Entities overview
-User 1─1 FarmerProfile or BuyerProfile · Farmer 1─* InventoryItem · InventoryItem 1─* StockMovement · Farmer 1─* Listing · Listing 1─* Bid · Listing 0..1─1 Order · User 1─* Notification · Crop 1─* MarketPrice
+User 1─1 FarmerProfile or BuyerProfile · User 1─* RefreshSession · Farmer 1─* InventoryItem · InventoryItem 1─* StockMovement · Farmer 1─* Listing · Listing 1─* Bid · Listing 0..1─1 Order · User 1─* Notification · Crop 1─* MarketPrice
 
 ## User
 | Field | Type | Notes |
@@ -20,6 +20,17 @@ User 1─1 FarmerProfile or BuyerProfile · Farmer 1─* InventoryItem · Invent
 Indexes: unique phone; unique sparse email; role. Password hashes are excluded from normal Mongoose queries. Request and public-user contracts live in `packages/shared`; public user responses omit `phone`, `email`, and `passwordHash`.
 
 Controlled location values are stable English slugs with English and Bangla display names. The division and district lists live in `packages/shared/src/locations.ts` and are based on the Bangladesh National Portal's [division list](https://bangladesh.gov.bd/views/division-list/List-of-Divisions/) and [district list](https://bangladesh.gov.bd/views/district-list/District-List/). District records include their parent division ID.
+
+## RefreshSession
+| Field | Type | Notes |
+|---|---|---|
+| userId | ref User | |
+| tokenHash | string | SHA-256 hash of the refresh JWT; never store the raw token |
+| familyId | string | Groups rotated tokens for reuse detection |
+| expiresAt | Date | TTL index removes expired records |
+| revokedAt? | Date | Set when a token or family is revoked |
+| replacedByTokenHash? | string | Hash of the next token after rotation |
+Indexes: unique tokenHash; userId; familyId; TTL on expiresAt.
 
 ## Crop (seeded catalog)
 | Field | Type | Notes |
