@@ -3,6 +3,10 @@ import { describe, expect, it } from "vitest";
 import { envSchema } from "./env.js";
 
 describe("environment validation", () => {
+  it("defaults to the existing BazarBeat database name", () => {
+    expect(envSchema.parse({}).MONGODB_URI).toBe("mongodb://127.0.0.1:27017/BazarBeat");
+  });
+
   it("rejects development JWT secrets and a missing cookie domain in production", () => {
     expect(envSchema.safeParse({ NODE_ENV: "production" }).success).toBe(false);
   });
