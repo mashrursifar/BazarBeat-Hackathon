@@ -28,3 +28,4 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-17 | 2026-11-03 | Use `concurrently` for the root dev command and `tsx` to run the TypeScript API during development | Starts both workspace apps from one command without a build step | Accepted |
 | D-18 | 2026-11-03 | Use `jsdom` as the Vitest environment for web component tests | Provides a browser DOM for React Testing Library tests | Accepted |
 | D-19 | 2026-11-03 | Declare `caniuse-lite` in the web workspace | Keeps Browserslist's browser feature database present in clean installs; without it Vite's React transform fails | Accepted |
+| D-20 | 2026-11-03 | Treat Phase 1 Task 1.2 as the User persistence model only | The build plan groups Phase 1 work without numbering individual tasks; this follows Task 1.1 shared contracts and keeps the next slice narrow | Accepted |
