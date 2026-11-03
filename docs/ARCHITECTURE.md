@@ -49,7 +49,7 @@ apps/
     locales/           # en, bn
 packages/shared/src/
   schemas/             # zod schemas per domain
-  enums.ts             # roles, grades, statuses, crops
+  enums.ts             # roles, grades, and fixed workflow statuses; crop catalog entries are database data
   money.ts             # poisha helpers (pure functions)
   index.ts
 e2e/                   # Playwright specs

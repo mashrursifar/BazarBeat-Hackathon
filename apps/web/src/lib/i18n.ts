@@ -41,6 +41,11 @@ void i18n.use(initReactI18next).init({
           retry: "Try again", logout: "Log out", pagePlaceholder: "This page will be available in a later marketplace phase.",
           logoutError: "We could not end your session. Check your connection and try again.",
         },
+        inventory: {
+          title: "Inventory", description: "Track available, listed, and sold crop stock.", available: "Available", listed: "Listed", sold: "Sold",
+          availableShort: "Available", listedShort: "Listed", soldShort: "Sold", addStock: "Add stock", addTitle: "Add harvested stock", crop: "Crop", quantity: "Quantity", kilograms: "Kilograms", noteOptional: "Note (optional)",
+          cancel: "Cancel", saving: "Saving…", validation: "Enter a valid crop and quantity up to 5,000 kg with at most one decimal place.", addError: "Stock could not be added. Please try again.", loadError: "Inventory could not be loaded.", retry: "Try again", noCrops: "No crops are available yet.", historyTitle: "Movement history", chooseHistoryCrop: "Choose a crop for movement history", noMovements: "No movements for this crop yet.", movement: "Movement", date: "Date", previous: "Previous", next: "Next", page: "Page {{page}} of {{maxPage}}", types: { ADD: "Stock added", LIST: "Listed for auction", RELEASE: "Stock released", SELL: "Sold", ADJUST: "Stock adjusted" },
+        },
         errors: {
           CONFLICT: "An account with this phone number already exists.", RATE_LIMITED: "Too many attempts. Please wait a moment and try again.",
           VALIDATION_ERROR: "Please check your details and try again.", UNAUTHENTICATED: "Your session has ended. Please log in again.",
@@ -97,6 +102,11 @@ void i18n.use(initReactI18next).init({
           loading: "আপনার সেশন যাচাই হচ্ছে…", loadError: "অ্যাকাউন্টে সংযোগ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
           retry: "আবার চেষ্টা করুন", logout: "লগ আউট", pagePlaceholder: "বাজারের পরবর্তী ধাপে এই পৃষ্ঠাটি চালু হবে।",
           logoutError: "আপনার সেশন শেষ করা যায়নি। সংযোগ পরীক্ষা করে আবার চেষ্টা করুন।",
+        },
+        inventory: {
+          title: "মজুত", description: "উপলভ্য, তালিকাভুক্ত ও বিক্রি হওয়া ফসলের মজুত দেখুন।", available: "উপলভ্য", listed: "তালিকাভুক্ত", sold: "বিক্রি হয়েছে",
+          availableShort: "উপলভ্য", listedShort: "তালিকাভুক্ত", soldShort: "বিক্রি", addStock: "মজুত যোগ করুন", addTitle: "কাটা ফসলের মজুত যোগ করুন", crop: "ফসল", quantity: "পরিমাণ", kilograms: "কিলোগ্রাম", noteOptional: "নোট (ঐচ্ছিক)",
+          cancel: "বাতিল", saving: "সংরক্ষণ হচ্ছে…", validation: "সঠিক ফসল ও ৫,০০০ কেজির মধ্যে সর্বোচ্চ এক দশমিকের পরিমাণ দিন।", addError: "মজুত যোগ করা যায়নি। আবার চেষ্টা করুন।", loadError: "মজুত লোড করা যায়নি।", retry: "আবার চেষ্টা করুন", noCrops: "এখনো কোনো ফসল পাওয়া যায়নি।", historyTitle: "মজুতের ইতিহাস", chooseHistoryCrop: "ইতিহাসের জন্য ফসল বাছুন", noMovements: "এই ফসলের কোনো মজুত পরিবর্তন নেই।", movement: "পরিবর্তন", date: "তারিখ", previous: "আগের", next: "পরের", page: "পৃষ্ঠা {{page}} / {{maxPage}}", types: { ADD: "মজুত যোগ", LIST: "নিলামে তালিকাভুক্ত", RELEASE: "মজুত ফেরত", SELL: "বিক্রি", ADJUST: "মজুত সমন্বয়" },
         },
         errors: {
           CONFLICT: "এই নম্বরে ইতিমধ্যে একটি অ্যাকাউন্ট আছে।", RATE_LIMITED: "অনেকবার চেষ্টা হয়েছে। একটু অপেক্ষা করে আবার চেষ্টা করুন।",

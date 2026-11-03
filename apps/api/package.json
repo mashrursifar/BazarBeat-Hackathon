@@ -8,7 +8,7 @@
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
-    "seed": "node -e \"process.stdout.write('Seed task is not configured in Phase 0.')\"",
+    "seed": "tsx src/seed/seed-crops.ts",
     "seed:demo": "node -e \"process.stdout.write('Demo seed task is not configured in Phase 0.')\""
   },
   "dependencies": {
@@ -29,6 +29,7 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/supertest": "^6.0.3",
+    "mongodb-memory-server": "^11.3.0",
     "supertest": "^7.1.4",
     "tsx": "^4.20.6"
   }

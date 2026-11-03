@@ -24,7 +24,7 @@ State-changing requests require the `X-CSRF-Protection: 1` header.
 | PATCH | /me | A | Update profile and language |
 
 ## Catalog and market data
-| GET | /crops | P | Active crops with limits and grade guides |
+| GET | /crops | P | Active crops with id, slug, English/Bangla names, unit, lot limits, shelf life, grade guide, minimum increment (integer poisha/kg), and image URL |
 | GET | /market-prices?cropId&division&range | A | Price history and trend |
 | GET | /market-prices/national-summary | B | Avg listing price per crop per division |
 
@@ -34,9 +34,11 @@ State-changing requests require the `X-CSRF-Protection: 1` header.
 Results are returned to the client and also re-verified on listing creation via a short-lived assessment token (see `AI_INTEGRATION.md`), so clients cannot forge a grade.
 
 ## Inventory (F)
-| GET | /inventory | Stock summary per crop |
-| POST | /inventory/add | Add harvested stock |
-| GET | /inventory/movements?cropId | Ledger |
+| GET | /inventory | One entry per active crop, including zero totals; each entry has crop plus available/listed/sold kg |
+| POST | /inventory/add | Add harvested stock `{ cropId, quantityKg, note? }`; returns the updated inventory summary item. Quantity is positive kg, at most one decimal place and 5,000 kg; note max 200 characters |
+| GET | /inventory/movements?cropId&page&limit | `cropId` is required; returns the farmer's ledger entries newest first with movement type, positive quantity, references, note, and creation time; page defaults to 1, limit defaults to 20 (max 50) |
+
+All inventory responses are scoped to the authenticated farmer; clients cannot submit a farmer ID.
 
 ## Listings
 | POST | /listings | F | Create and publish (requires valid assessment token, stock, valid floor and duration) |

@@ -15,7 +15,7 @@ BazarBeat is a two-sided agri-marketplace where rural farmers list fresh produce
 | Buyer | Discover graded produce from all over the country, compare, and buy at competitive prices |
 
 ## Scope (MVP crops)
-Onion, Green Chilli, Bottle Gourd, Eggplant, and one more crop (TBD — see `docs/DECISIONS.md` D-02). Crops live in a seeded catalog so the list is data, not code.
+Onion, Green Chilli, Bitter Gourd, Eggplant, and Potato. Crops live in a seeded catalog so the list is data, not code.
 
 ## Tech stack
 - **Frontend:** React + TypeScript, Vite, Tailwind CSS, shadcn/ui, react-router

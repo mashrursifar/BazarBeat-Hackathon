@@ -5,17 +5,17 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 ## Open questions (need a human answer)
 | ID | Question | Current default |
 |---|---|---|
-| D-02 | The brief lists four crops (Onion, Green Chilli, Bottle Gourd, Eggplant) but says five. What is the fifth? | Placeholder: Tomato. The catalog is seeded data, so changing it is cheap. |
 | D-03 | Where does grading/price training data come from (public datasets, own photos, government price bulletins)? | Mock providers until a model exists |
 | D-04 | Who handles transport after a sale? | Buyer-arranged pickup in MVP |
 | D-05 | Payment in the demo: COD only, or simulated wallet too? | Both simulated; no real money |
 | D-06 | Hackathon rules: team size, deadline, judging criteria, required submission format? | Unknown — shape the demo script after answering |
-| D-07 | Platform fee: charge or show 0% as a growth message? | Configurable; default 2%, displayed transparently |
+| D-07 | Platform fee: charge or show 0% as a growth message? | Configurable; default 0%, displayed transparently |
 
 ## Decisions
 | ID | Date | Decision | Reason | Status |
 |---|---|---|---|---|
 | D-01 | Project start | Monorepo with npm workspaces and a shared contracts package | One source of truth for types between web and api; simplest for AI agents | Accepted |
+| D-02 | 2026-11-03 | Initial MVP crop catalog: Onion, Green Chilli, Tomato, Eggplant, and Potato | User selected the five catalog crops; superseded by D-30 | Superseded |
 | D-08 | Project start | Open ascending auction with a visible floor price as the opening bid | Simple to understand for farmers; keeps farmer's fallback logic clear | Accepted |
 | D-09 | Project start | Real-time via Server-Sent Events, with polling fallback | No extra dependency; one-way updates are enough; works with Express | Accepted |
 | D-10 | Project start | Money stored as integer poisha, prices per kg | Avoids float errors | Accepted |
@@ -36,3 +36,6 @@ Log every decision that changes scope, adds a dependency, or interprets an uncle
 | D-25 | 2026-11-03 | Use cookie-parser for refresh-token cookie extraction | Uses the architecture-approved middleware instead of manually parsing Cookie headers | Accepted |
 | D-26 | 2026-11-03 | Authenticate protected requests from the access cookie and revoke only the presented refresh token on logout | Keeps logout scoped to the current device session while allowing other active sessions to continue | Accepted |
 | D-27 | 2026-11-03 | Treat Phase 1 Task 1.7 as `PATCH /me` profile updates | The build plan does not number subtasks; this follows the completed auth endpoints before the planned web auth and layout work | Accepted |
+| D-28 | 2026-11-03 | Use `mongodb-memory-server` for inventory integration tests covering transactions and concurrent updates | This package is pre-approved in ARCHITECTURE §9 and provides an isolated Mongo replica set for ledger consistency tests | Accepted |
+| D-29 | 2026-11-03 | Attempt Mongo transactions for each inventory movement; on unsupported standalone deployments, persist a unique PENDING ledger intent, atomically update the bucket with a pending marker, then mark APPLIED and clear the marker | Preserves idempotency and prevents concurrent movements from overtaking an interrupted ledger write without requiring a replica set | Accepted |
+| D-30 | 2026-11-03 | Replace Tomato with Bitter Gourd in the five-crop MVP catalog; use its existing 10–1,000 kg lot bounds and 120-hour shelf-life as the starting values, with Bitter Gourd-specific grade guidance; deactivate Tomato when reseeding | User requested the crop substitution; no Bitter Gourd lot or shelf-life values were specified | Accepted |

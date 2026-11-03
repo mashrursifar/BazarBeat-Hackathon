@@ -80,4 +80,4 @@ Detailed in `AUCTION_RULES.md`. Key points: floor is visible and is the opening 
 - Low-bandwidth friendliness: compress images client-side before upload
 
 ## 12. Open questions
-Tracked in `DECISIONS.md` (fifth crop, payment simulation, real AI model source, delivery responsibility).
+Tracked in `DECISIONS.md` (payment simulation, real AI model source, delivery responsibility).

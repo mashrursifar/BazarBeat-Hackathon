@@ -19,3 +19,20 @@ export const CropGrade = {
 } as const;
 
 export type CropGrade = (typeof CropGrade)[keyof typeof CropGrade];
+
+export const StockMovementType = {
+  ADD: "ADD",
+  LIST: "LIST",
+  RELEASE: "RELEASE",
+  SELL: "SELL",
+  ADJUST: "ADJUST",
+} as const;
+
+export type StockMovementType = (typeof StockMovementType)[keyof typeof StockMovementType];
+
+export const StockMovementStatus = {
+  PENDING: "PENDING",
+  APPLIED: "APPLIED",
+} as const;
+
+export type StockMovementStatus = (typeof StockMovementStatus)[keyof typeof StockMovementStatus];

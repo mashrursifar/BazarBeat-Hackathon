@@ -35,14 +35,29 @@ Indexes: unique tokenHash; userId; familyId; TTL on expiresAt.
 ## Crop (seeded catalog)
 | Field | Type | Notes |
 |---|---|---|
-| slug | string | `onion`, `green-chilli`, `bottle-gourd`, `eggplant`, plus fifth |
+| slug | string | `onion`, `green-chilli`, `bitter-gourd`, `eggplant`, `potato` |
 | nameEn, nameBn | string | |
 | unit | enum KG | Fixed to kg in MVP |
 | minLotKg, maxLotKg | number | Listing limits |
 | shelfLifeHours | number | Caps max auction duration for perishables |
 | gradeGuide | object | Plain-language A/B/C criteria shown in UI |
+| minIncrementPerKg | int poisha | Minimum bid increase per kg; defaults to 100 (৳1.00) |
 | imageUrl | string | Catalog icon |
 | isActive | boolean | |
+
+Index: unique `slug`.
+
+Seeded catalog values (starting values for human review):
+
+| Crop (slug) | Bangla | Lot limits (kg) | Shelf life (hours) | Minimum increment (poisha/kg) | Grade guide (A / B / C) | Image |
+|---|---|---:|---:|---:|---|---|
+| Onion (`onion`) | পেঁয়াজ | 10–2,000 | 720 | 100 | Firm, dry bulbs with intact skin / Mostly firm bulbs with minor marks / Small or uneven bulbs, still sound | `/images/crops/placeholder.svg` |
+| Green Chilli (`green-chilli`) | কাঁচা মরিচ | 5–500 | 72 | 100 | Fresh, firm, bright green pods / Fresh pods with slight bends or marks / Mixed sizes, usable with minor softness | `/images/crops/placeholder.svg` |
+| Bitter Gourd (`bitter-gourd`) | করলা | 10–1,000 | 120 | 100 | Firm, green fruit with defined ridges / Mostly firm fruit with minor marks or uneven color / Mature fruit with some yellowing, still sound and usable | `/images/crops/placeholder.svg` |
+| Eggplant (`eggplant`) | বেগুন | 10–1,000 | 120 | 100 | Glossy, firm fruit with fresh green caps / Firm fruit with small scratches or marks / Mixed sizes, usable with slight dullness | `/images/crops/placeholder.svg` |
+| Potato (`potato`) | আলু | 10–2,000 | 720 | 100 | Firm, clean tubers with no green patches / Firm tubers with minor scuffs or irregular shapes / Small or uneven tubers, sound and usable | `/images/crops/placeholder.svg` |
+
+The seed uses upserts keyed by slug, so repeated runs update these catalog values without creating duplicate crops. Tomato is deactivated when reseeding so existing databases receive the crop replacement too.
 
 ## InventoryItem
 | Field | Type | Notes |
@@ -52,6 +67,7 @@ Indexes: unique tokenHash; userId; familyId; TTL on expiresAt.
 | availableKg | number | Not reserved |
 | listedKg | number | Reserved by active listings |
 | soldKg | number | Lifetime sold |
+| pendingMovementId? | string | Internal standalone-Mongo fallback marker; blocks another movement until ledger finalization |
 Index: unique (farmerId, cropId). Invariant: no field below zero.
 
 ## StockMovement (ledger)
@@ -62,7 +78,21 @@ Index: unique (farmerId, cropId). Invariant: no field below zero.
 | quantityKg | number | Positive; type gives direction |
 | listingId? / orderId? | refs | Traceability |
 | note | string? | |
-Inventory totals must always equal the sum of the ledger.
+| operationId | string | Unique idempotency key for transaction retries and fallback recovery |
+| status | enum PENDING \| APPLIED | PENDING is an internal fallback intent; only APPLIED movements count toward inventory totals |
+Inventory totals must always equal the sum of APPLIED ledger movements.
+
+### Stock movement effects
+
+Every movement quantity is positive; the movement type defines which bucket changes. `ADJUST` records unsold goods returned after a cancelled order, as permitted by AUCTION_RULES §11.
+
+| Type | Available kg | Listed kg | Sold kg | Meaning |
+|---|---:|---:|---:|---|
+| ADD | +quantity | — | — | Newly harvested stock added |
+| LIST | −quantity | +quantity | — | Stock reserved for a published listing |
+| RELEASE | +quantity | −quantity | — | Unsold listing stock returned when it closes |
+| SELL | — | −quantity | +quantity | Listed stock completed as a sale |
+| ADJUST | +quantity | — | — | Unsold goods returned after an eligible order cancellation |
 
 ## Listing
 | Field | Type | Notes |

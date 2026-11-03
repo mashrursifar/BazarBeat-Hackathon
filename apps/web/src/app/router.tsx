@@ -10,6 +10,7 @@ const AuthGuard = lazy(() => import("./role-layouts.js").then((module) => ({ def
 const BuyerLayout = lazy(() => import("./role-layouts.js").then((module) => ({ default: module.BuyerLayout })));
 const FarmerLayout = lazy(() => import("./role-layouts.js").then((module) => ({ default: module.FarmerLayout })));
 const PlaceholderPage = lazy(() => import("./role-layouts.js").then((module) => ({ default: module.PlaceholderPage })));
+const InventoryPage = lazy(() => import("../features/inventory/inventory-page.js"));
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -47,7 +48,7 @@ function MarketplacePage(): ReactElement {
 }
 
 function page(path: string, pageKey: string): { path: string; element: ReactElement } {
-  return { path, element: <PlaceholderPage pageKey={pageKey} /> };
+  return { path, element: path === "inventory" ? <InventoryPage /> : <PlaceholderPage pageKey={pageKey} /> };
 }
 
 export const router = createBrowserRouter([

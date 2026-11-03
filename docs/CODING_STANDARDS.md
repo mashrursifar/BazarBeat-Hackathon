@@ -30,6 +30,7 @@
 
 ## 4. Money, units, dates
 - Money: integer poisha; prices are per kg. Totals = price per kg × quantity kg (quantity is stored in kg with at most one decimal place; totals are rounded to whole poisha by one shared helper).
+- Inventory quantities are kg, positive, limited to one decimal place, and capped at 5,000 kg per stock-add request.
 - Use only helpers from `packages/shared/money.ts` for arithmetic and formatting.
 - Dates: UTC ISO strings on the wire; Mongo `Date` in storage; convert to local (Asia/Dhaka) only in the UI formatter.
 
