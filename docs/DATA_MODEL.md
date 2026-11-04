@@ -157,7 +157,7 @@ Indexes: (farmerId, createdAt), (buyerId, createdAt), status.
 userId, type (NEW_BID, OUTBID, ENDING_SOON, AUCTION_WON, AUCTION_LOST, AUCTION_SOLD, AUCTION_UNSOLD, ORDER_UPDATE), title, body, entityRef {kind, id}, isRead, readAt?. Index: (userId, isRead, createdAt desc).
 
 ## MarketPrice (reference data for AI and charts)
-cropId, division, date, avgPricePerKg, minPricePerKg, maxPricePerKg, source (SEED | PLATFORM). Index: (cropId, division, date desc). Platform-derived rows are written when auctions close.
+cropId (Crop ref), division, date (UTC day), avgPricePerKg, minPricePerKg, maxPricePerKg (integer poisha per kg), source (shared enum SEED | PLATFORM). Index: (cropId, division, date desc); unique (cropId, division, date, source) so seed reruns upsert without colliding with platform rows. The market-prices service returns the 60 newest rows for one crop and division. Platform-derived rows are written when auctions close. The synthetic seed generates 60 days for each of the 5 crops in all 8 Bangladesh divisions, with source SEED.
 
 ## WatchlistItem (P1)
 userId, listingId; unique together.

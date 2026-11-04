@@ -60,3 +60,10 @@ export const StockMovementStatus = {
 } as const;
 
 export type StockMovementStatus = (typeof StockMovementStatus)[keyof typeof StockMovementStatus];
+
+export const MarketPriceSource = {
+  SEED: "SEED",
+  PLATFORM: "PLATFORM",
+} as const;
+
+export type MarketPriceSource = (typeof MarketPriceSource)[keyof typeof MarketPriceSource];
