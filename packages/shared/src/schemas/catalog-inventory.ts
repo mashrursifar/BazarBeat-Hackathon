@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { StockMovementType } from "../enums.js";
 
-const databaseIdSchema = z.string().regex(/^[\da-f]{24}$/i, "Expected a database ID");
+export const databaseIdSchema = z.string().regex(/^[\da-f]{24}$/i, "Expected a database ID");
 export const inventoryQuantityKgSchema = z.number().positive().max(5_000).refine((value) => Number.isInteger(value * 10), {
   message: "Quantity must have at most one decimal place",
 });

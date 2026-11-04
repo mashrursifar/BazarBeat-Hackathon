@@ -20,6 +20,30 @@ export const CropGrade = {
 
 export type CropGrade = (typeof CropGrade)[keyof typeof CropGrade];
 
+export const AIProvider = {
+  MOCK: "mock",
+  HTTP: "http",
+} as const;
+
+export type AIProvider = (typeof AIProvider)[keyof typeof AIProvider];
+
+export const AIErrorCode = {
+  CROP_MISMATCH: "CROP_MISMATCH",
+  GRADE_UNAVAILABLE: "GRADE_UNAVAILABLE",
+} as const;
+
+export type AIErrorCode = (typeof AIErrorCode)[keyof typeof AIErrorCode];
+
+export const ListingStatus = {
+  DRAFT: "DRAFT",
+  ACTIVE: "ACTIVE",
+  SOLD: "SOLD",
+  EXPIRED_UNSOLD: "EXPIRED_UNSOLD",
+  CANCELLED: "CANCELLED",
+} as const;
+
+export type ListingStatus = (typeof ListingStatus)[keyof typeof ListingStatus];
+
 export const StockMovementType = {
   ADD: "ADD",
   LIST: "LIST",
