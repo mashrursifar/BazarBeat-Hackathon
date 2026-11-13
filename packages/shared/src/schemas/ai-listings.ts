@@ -10,6 +10,7 @@ export const cropGradeSchema = z.enum([CropGrade.A, CropGrade.B, CropGrade.C]);
 export const aiProviderSchema = z.enum([AIProvider.MOCK, AIProvider.HTTP]);
 export const aiErrorCodeSchema = z.enum([AIErrorCode.CROP_MISMATCH, AIErrorCode.GRADE_UNAVAILABLE]);
 export const priceTrendSchema = z.enum(["UP", "FLAT", "DOWN"]);
+export const confidenceBandSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
 
 export const classProbabilitiesSchema = z
   .object({
@@ -23,6 +24,7 @@ export const aiAssessmentSchema = z
   .object({
     grade: cropGradeSchema,
     confidence: probabilitySchema,
+    confidenceBand: confidenceBandSchema.optional(),
     classProbabilities: classProbabilitiesSchema,
     qualityNotes: z.array(z.string().trim().min(1)),
     cropMatch: z.boolean(),
@@ -176,6 +178,7 @@ export const farmerListingListResponseSchema = z
 export const floorPriceEvaluationSchema = z.enum(["ok", "below-market", "overpriced"]);
 
 export type AssessmentResult = z.infer<typeof assessmentResultSchema>;
+export type ConfidenceBand = z.infer<typeof confidenceBandSchema>;
 export type PriceGuidance = z.infer<typeof priceGuidanceSchema>;
 export type PredictPriceRequest = z.infer<typeof predictPriceRequestSchema>;
 export type CreateListingRequest = z.infer<typeof createListingRequestSchema>;

@@ -21,6 +21,6 @@ export interface PricePredictionProvider {
   /**
    * Predict price guidance. The request shape matches the shared `predictPriceRequestSchema`.
    */
-  predictPrice(request: PredictPriceRequest): Promise<PriceGuidance>;
+  predictPrice(request: PredictPriceRequest, division?: string): Promise<PriceGuidance>;
 }
 

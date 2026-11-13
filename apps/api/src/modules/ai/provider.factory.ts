@@ -1,4 +1,4 @@
-import { env } from '@/config/env.js';
+import { env } from '../../config/env.js';
 import { MockGradingProvider } from './mock-grading.provider.js';
 import { MockPricePredictionProvider } from './mock-price.provider.js';
 

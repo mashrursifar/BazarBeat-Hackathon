@@ -15,10 +15,9 @@ import { getRecentMarketPrices } from '../market-prices/market-price.service.js'
  *   - a confidence band that widens when data is sparse
  */
 export class MockPricePredictionProvider implements PricePredictionProvider {
-  public async predictPrice(request: PredictPriceRequest): Promise<PriceGuidance> {
+  public async predictPrice(request: PredictPriceRequest, division?: string): Promise<PriceGuidance> {
     const { cropId, grade, quantityKg } = request;
-    const division = request['division']; // optional, may be undefined in schema; ignore for mock
-    // Retrieve recent market rows (up to 60) – we ignore division if not provided.
+    // Retrieve recent market rows (up to 60)
     const recentRows = await getRecentMarketPrices(cropId, division ?? 'dhaka', 60);
     const baseAvg = recentRows.length
       ? Math.round(

@@ -40,12 +40,12 @@ export function calculatePriceGuidance(params: PricingStrategyParams) {
     highPerKg: high,
     trend,
     confidence: 1 - scarcity * 0.5, // simple confidence reduction when sparse
-    explanation: [],
+    explanation: [`Recent market prices analyzed for grade ${grade}`],
     modelVersion: 'mock-price-1.0',
     provider: 'mock' as const,
     degraded: false,
     generatedAt: new Date().toISOString(),
     suggestedFloorPerKg: low,
-  } as const;
+  };
 }
 
