@@ -2,17 +2,18 @@ import crypto from "node:crypto";
 import mongoose from "mongoose";
 import { ObjectId } from "bson";
 import {
+  AIProvider,
   type AssessmentResult,
   type PredictPriceRequest,
   type PriceGuidance,
-  AIProvider,
 } from "@bazarbeat/shared";
 
 import { AppError } from "../../shared/errors.js";
 import { logger } from "../../shared/logger.js";
 import { Crop } from "../crops/crop.model.js";
 import { LocalDiskStorageProvider } from "../storage/local-disk.provider.js";
-import { processImage, type ProcessedImage } from "../storage/image-processor.js";
+import { type ProcessedImage, processImage } from "../storage/image-processor.js";
+import type { GradingProvider, PricePredictionProvider } from "./interfaces.js";
 import { createGradingProvider, createPricePredictionProvider } from "./provider.factory.js";
 import { AiAssessmentRecord, type AiAssessmentRecordDoc } from "./ai-assessment-record.model.js";
 
@@ -20,11 +21,11 @@ const storageProvider = new LocalDiskStorageProvider();
 const gradingProvider = createGradingProvider();
 const pricePredictionProvider = createPricePredictionProvider();
 
-export function getGradingProvider() {
+export function getGradingProvider(): GradingProvider {
   return gradingProvider;
 }
 
-export function getPricePredictionProvider() {
+export function getPricePredictionProvider(): PricePredictionProvider {
   return pricePredictionProvider;
 }
 
@@ -212,7 +213,11 @@ export async function getValidAssessmentRecord(
   }
 
   if (cropId && record.cropId.toString() !== cropId) {
-    throw new AppError(400, "VALIDATION_ERROR", "Assessment token does not match the requested crop");
+    throw new AppError(
+      400,
+      "VALIDATION_ERROR",
+      "Assessment token does not match the requested crop",
+    );
   }
 
   return record;

@@ -1,5 +1,5 @@
 import { promises as fs } from "node:fs";
-import { join, extname } from "node:path";
+import { extname, join } from "node:path";
 import { randomUUID } from "node:crypto";
 import { env } from "../../config/env.js";
 import type { StorageProvider } from "./storage-provider.interface.js";

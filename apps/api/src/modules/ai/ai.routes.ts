@@ -5,15 +5,12 @@ import { UserRole, predictPriceRequestSchema } from "@bazarbeat/shared";
 import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { validateBody } from "../../shared/validate-body.js";
 import {
+  type AuthenticatedLocals,
   requireAuthentication,
   requireRole,
-  type AuthenticatedLocals,
 } from "../auth/auth.middleware.js";
 import { uploadImagesMiddleware } from "../storage/upload.middleware.js";
-import {
-  assessQualityController,
-  predictPriceController,
-} from "./ai.controller.js";
+import { assessQualityController, predictPriceController } from "./ai.controller.js";
 
 export const aiRouter = Router();
 

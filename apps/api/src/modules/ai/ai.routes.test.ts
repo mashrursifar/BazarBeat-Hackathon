@@ -4,11 +4,7 @@ import request from "supertest";
 import sharp from "sharp";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
-import {
-  type PublicUser,
-  assessmentResultSchema,
-  priceGuidanceSchema,
-} from "@bazarbeat/shared";
+import { type PublicUser, assessmentResultSchema, priceGuidanceSchema } from "@bazarbeat/shared";
 
 const { authenticateAccessTokenMock } = vi.hoisted(() => ({
   authenticateAccessTokenMock: vi.fn<(token: string) => Promise<PublicUser>>(),
@@ -22,22 +18,48 @@ vi.mock("../auth/auth.service.js", async (importOriginal) => {
 import { app } from "../../app.js";
 import { Crop } from "../crops/crop.model.js";
 import { AiAssessmentRecord } from "./ai-assessment-record.model.js";
-import {
-  getGradingProvider,
-  hashAssessmentToken,
-  getValidAssessmentRecord,
-} from "./ai.service.js";
+import { getGradingProvider, getValidAssessmentRecord, hashAssessmentToken } from "./ai.service.js";
 import type { MockGradingProvider } from "./mock-grading.provider.js";
 
 const farmerAId = new Types.ObjectId().toString();
 const farmerBId = new Types.ObjectId().toString();
+const farmerCId = new Types.ObjectId().toString();
 const buyerId = new Types.ObjectId().toString();
 const activeCropId = new Types.ObjectId().toString();
 
 const sessionUsers: Record<string, PublicUser> = {
-  farmerA: { id: farmerAId, role: "FARMER", name: "Farmer A", division: "dhaka", district: "dhaka", language: "en" },
-  farmerB: { id: farmerBId, role: "FARMER", name: "Farmer B", division: "dhaka", district: "dhaka", language: "en" },
-  buyer: { id: buyerId, role: "BUYER", name: "Buyer", division: "dhaka", district: "dhaka", language: "en" },
+  farmerA: {
+    id: farmerAId,
+    role: "FARMER",
+    name: "Farmer A",
+    division: "dhaka",
+    district: "dhaka",
+    language: "en",
+  },
+  farmerB: {
+    id: farmerBId,
+    role: "FARMER",
+    name: "Farmer B",
+    division: "dhaka",
+    district: "dhaka",
+    language: "en",
+  },
+  farmerC: {
+    id: farmerCId,
+    role: "FARMER",
+    name: "Farmer C",
+    division: "dhaka",
+    district: "dhaka",
+    language: "en",
+  },
+  buyer: {
+    id: buyerId,
+    role: "BUYER",
+    name: "Buyer",
+    division: "dhaka",
+    district: "dhaka",
+    language: "en",
+  },
 };
 
 let mongoReplicaSet: MongoMemoryReplSet | undefined;
@@ -94,7 +116,7 @@ beforeEach(async () => {
   });
 });
 
-function withAccessToken(token: "farmerA" | "farmerB" | "buyer"): string {
+function withAccessToken(token: "farmerA" | "farmerB" | "farmerC" | "buyer"): string {
   return `accessToken=${token}`;
 }
 
@@ -188,7 +210,8 @@ describe("AI Assessment and Price Prediction endpoints", () => {
 
       // Verify helper retrieves valid record for the same farmer
       const retrieved = await getValidAssessmentRecord(rawToken, farmerAId, activeCropId);
-      expect(retrieved._id.toString()).toBe(record?._id.toString());
+      expect(retrieved.assessmentTokenHash).toBe(record?.assessmentTokenHash);
+      expect(retrieved.grade).toBe(record?.grade);
     });
 
     it("prevents another farmer from using the assessment token", async () => {
@@ -203,7 +226,9 @@ describe("AI Assessment and Price Prediction endpoints", () => {
       const rawToken = res.body.data.assessmentToken;
 
       // Farmer B attempts to use Farmer A's token
-      await expect(getValidAssessmentRecord(rawToken, farmerBId, activeCropId)).rejects.toMatchObject({
+      await expect(
+        getValidAssessmentRecord(rawToken, farmerBId, activeCropId),
+      ).rejects.toMatchObject({
         statusCode: 403,
         code: "FORBIDDEN",
       });
@@ -227,7 +252,9 @@ describe("AI Assessment and Price Prediction endpoints", () => {
         { expiresAt: new Date(Date.now() - 1000) },
       );
 
-      await expect(getValidAssessmentRecord(rawToken, farmerAId, activeCropId)).rejects.toMatchObject({
+      await expect(
+        getValidAssessmentRecord(rawToken, farmerAId, activeCropId),
+      ).rejects.toMatchObject({
         statusCode: 400,
         code: "VALIDATION_ERROR",
         message: expect.stringMatching(/expired/i),
@@ -365,6 +392,22 @@ describe("AI Assessment and Price Prediction endpoints", () => {
     });
   });
 
+  describe("AiAssessmentRecord schema and model", () => {
+    it("indexes token hashes uniquely and expires records at expiresAt with TTL", () => {
+      const indexes = AiAssessmentRecord.schema.indexes();
+
+      expect(indexes).toContainEqual([
+        { assessmentTokenHash: 1 },
+        { unique: true, background: true },
+      ]);
+      expect(indexes).toContainEqual([
+        { expiresAt: 1 },
+        { expireAfterSeconds: 0, background: true },
+      ]);
+      expect(indexes).toContainEqual([{ farmerId: 1 }, { background: true }]);
+    });
+  });
+
   describe("Rate limiting (10 per minute per user)", () => {
     it("enforces rate limit of 10 requests per minute per user and allows other users", async () => {
       // Farmer B makes 10 successful price predictions
@@ -389,14 +432,14 @@ describe("AI Assessment and Price Prediction endpoints", () => {
         error: { code: "RATE_LIMITED", message: expect.any(String) },
       });
 
-      // Farmer A is unaffected because rate limits are per user!
-      const farmerARes = await request(app)
+      // Farmer C is unaffected because rate limits are per user!
+      const farmerCRes = await request(app)
         .post("/api/v1/ai/predict-price")
-        .set("Cookie", withAccessToken("farmerA"))
+        .set("Cookie", withAccessToken("farmerC"))
         .set("X-CSRF-Protection", "1")
         .send({ cropId: activeCropId, grade: "A", quantityKg: 20 });
 
-      expect(farmerARes.status).toBe(200);
+      expect(farmerCRes.status).toBe(200);
     });
   });
 });

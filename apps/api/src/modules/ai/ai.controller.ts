@@ -22,11 +22,7 @@ export const assessQualityController: RequestHandler<
     throw new AppError(400, "VALIDATION_ERROR", "At least one image is required");
   }
 
-  const result = await assessCropQuality(
-    response.locals.currentUser.id,
-    cropIdentifier,
-    files,
-  );
+  const result = await assessCropQuality(response.locals.currentUser.id, cropIdentifier, files);
 
   response.status(200).json({ data: result });
 };
@@ -39,11 +35,7 @@ export const predictPriceController: RequestHandler<
   AuthenticatedLocals
 > = async (request, response): Promise<void> => {
   const farmer = response.locals.currentUser;
-  const guidance = await predictCropPrice(
-    farmer.id,
-    farmer.division,
-    request.body,
-  );
+  const guidance = await predictCropPrice(farmer.id, farmer.division, request.body);
 
   response.status(200).json({ data: guidance });
 };

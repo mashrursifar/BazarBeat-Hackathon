@@ -1,4 +1,4 @@
-import type { AssessmentResult, PredictPriceRequest, PriceGuidance } from '@bazarbeat/shared';
+import type { AssessmentResult, PredictPriceRequest, PriceGuidance } from "@bazarbeat/shared";
 
 /**
  * Provider that assesses image(s) and returns an AI quality assessment.
@@ -8,10 +8,7 @@ export interface GradingProvider {
    * Assess the quality of the given images for a specific crop.
    * Returns a contract‑validated `AssessmentResult`.
    */
-  assessQuality(params: {
-    cropId: string;
-    images: Buffer[];
-  }): Promise<AssessmentResult>;
+  assessQuality(params: { cropId: string; images: Buffer[] }): Promise<AssessmentResult>;
 }
 
 /**
@@ -23,4 +20,3 @@ export interface PricePredictionProvider {
    */
   predictPrice(request: PredictPriceRequest, division?: string): Promise<PriceGuidance>;
 }
-

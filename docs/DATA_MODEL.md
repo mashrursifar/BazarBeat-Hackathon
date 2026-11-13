@@ -125,6 +125,29 @@ grade (A|B|C), confidence (0–1), classProbabilities {A,B,C}, qualityNotes (str
 ### aiPriceGuidance (embedded)
 lowPerKg, expectedPerKg, highPerKg (poisha), trend (UP|FLAT|DOWN), confidence, modelVersion, provider, generatedAt, suggestedFloorPerKg, explanation (string array).
 
+## AiAssessmentRecord
+| Field | Type | Notes |
+|---|---|---|
+| farmerId | ref User | Authenticated farmer who initiated the assessment |
+| cropId | ref Crop | Catalog crop evaluated |
+| assessmentTokenHash | string | SHA-256 hash of opaque token; raw token is never stored in DB |
+| grade | enum A \| B \| C | Quality grade |
+| confidence | number | Confidence score (0–1); must be ≥ 0.55 |
+| confidenceBand | enum HIGH \| MEDIUM \| LOW | Confidence indicator |
+| classProbabilities | {A, B, C} | Grade distribution |
+| qualityNotes | string[] | Plain-language observations |
+| cropMatch | boolean | Must be true |
+| modelVersion | string | Model version for auditability |
+| provider | enum mock \| http | Provider identifier |
+| degraded | boolean | Indicates mock fallback if real service was unavailable |
+| assessedAt | Date | Assessment timestamp |
+| images | array of {url, width, height, hash} | Processed photos stored via storage adapter |
+| imageHashes | string[] | Content hashes for immutability check |
+| isConsumed | boolean | Atomic consumption marker for single-use listing creation |
+| consumedAt? | Date | Timestamp when consumed by listing creation |
+| expiresAt | Date | Short-lived (30 min) TTL index removes expired records |
+Indexes: unique `assessmentTokenHash`; TTL on `expiresAt` (`expireAfterSeconds: 0`); `(farmerId, createdAt desc)`.
+
 ## Bid
 | Field | Type | Notes |
 |---|---|---|

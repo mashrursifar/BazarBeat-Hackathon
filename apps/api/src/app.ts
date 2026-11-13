@@ -13,7 +13,9 @@ import { inventoryRouter } from "./modules/inventory/inventory.routes.js";
 import { aiRouter } from "./modules/ai/ai.routes.js";
 
 export const app = express();
-app.use(cors({ origin: env.CORS_ORIGINS.split(",").map((origin) => origin.trim()), credentials: true }));
+app.use(
+  cors({ origin: env.CORS_ORIGINS.split(",").map((origin) => origin.trim()), credentials: true }),
+);
 app.use(express.json());
 app.use(cookieParser());
 
