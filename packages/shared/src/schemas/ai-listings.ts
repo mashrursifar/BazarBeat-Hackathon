@@ -112,9 +112,27 @@ export const createListingRequestSchema = z
   })
   .strict();
 
+export const durationPresetsSchema = z.record(z.string(), z.number().int().positive());
+
 export const publicConfigSchema = z
   .object({
     demoMode: z.boolean(),
+    durationPresets: durationPresetsSchema,
+    platformFeeBps: z.number().int().nonnegative(),
+  })
+  .strict();
+
+export const publicConfigResponseSchema = z
+  .object({
+    data: publicConfigSchema,
+  })
+  .strict();
+
+export const listingLocationSchema = z
+  .object({
+    division: z.string().trim().min(1),
+    district: z.string().trim().min(1),
+    upazila: z.string().trim().min(1).optional(),
   })
   .strict();
 
@@ -143,9 +161,18 @@ export const farmerListingSchema = z
     status: listingStatusSchema,
     currentBidPerKg: poishaSchema.optional(),
     bidCount: z.number().int().nonnegative(),
+    location: listingLocationSchema.optional(),
     pickupNote: z.string().optional(),
     closedAt: z.iso.datetime().optional(),
     createdAt: z.iso.datetime(),
+  })
+  .strict();
+
+export const farmerListingQuerySchema = z
+  .object({
+    status: listingStatusSchema.optional(),
+    page: z.coerce.number().int().positive().default(1),
+    limit: z.coerce.number().int().positive().max(50).default(20),
   })
   .strict();
 
@@ -177,13 +204,22 @@ export const farmerListingListResponseSchema = z
 
 export const floorPriceEvaluationSchema = z.enum(["ok", "below-market", "overpriced"]);
 
+export const listingDetailResponseSchema = farmerListingResponseSchema;
+export const publicListingResponseSchema = farmerListingResponseSchema;
+
 export type AssessmentResult = z.infer<typeof assessmentResultSchema>;
 export type ConfidenceBand = z.infer<typeof confidenceBandSchema>;
 export type PriceGuidance = z.infer<typeof priceGuidanceSchema>;
 export type PredictPriceRequest = z.infer<typeof predictPriceRequestSchema>;
 export type CreateListingRequest = z.infer<typeof createListingRequestSchema>;
 export type PublicConfig = z.infer<typeof publicConfigSchema>;
+export type PublicConfigResponse = z.infer<typeof publicConfigResponseSchema>;
+export type DurationPresets = z.infer<typeof durationPresetsSchema>;
+export type ListingLocation = z.infer<typeof listingLocationSchema>;
 export type FarmerListing = z.infer<typeof farmerListingSchema>;
+export type FarmerListingQuery = z.infer<typeof farmerListingQuerySchema>;
 export type FarmerListingResponse = z.infer<typeof farmerListingResponseSchema>;
 export type FarmerListingListResponse = z.infer<typeof farmerListingListResponseSchema>;
+export type ListingDetailResponse = z.infer<typeof listingDetailResponseSchema>;
+export type PublicListingResponse = z.infer<typeof publicListingResponseSchema>;
 export type FloorPriceEvaluation = z.infer<typeof floorPriceEvaluationSchema>;

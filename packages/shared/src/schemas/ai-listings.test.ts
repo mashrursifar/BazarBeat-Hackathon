@@ -11,6 +11,7 @@ import {
   createListingRequestSchema,
   cropGradeSchema,
   farmerListingListResponseSchema,
+  farmerListingQuerySchema,
   farmerListingResponseSchema,
   farmerListingSchema,
   listingDurationMinutesSchema,
@@ -143,8 +144,21 @@ describe("shared AI and listing schemas", () => {
   });
 
   it("validates public config and listing image and response shapes", () => {
-    expect(publicConfigSchema.safeParse({ demoMode: true }).success).toBe(true);
+    expect(
+      publicConfigSchema.safeParse({
+        demoMode: true,
+        durationPresets: LISTING_DURATION_PRESETS,
+        platformFeeBps: 200,
+      }).success,
+    ).toBe(true);
     expect(publicConfigSchema.safeParse({ demoMode: "true" }).success).toBe(false);
+    expect(
+      publicConfigSchema.safeParse({
+        demoMode: true,
+        durationPresets: LISTING_DURATION_PRESETS,
+        platformFeeBps: -10,
+      }).success,
+    ).toBe(false);
     expect(
       listingImageSchema.safeParse({
         url: "https://example.test/photo.jpg",
@@ -156,6 +170,21 @@ describe("shared AI and listing schemas", () => {
       false,
     );
     expect(farmerListingSchema.safeParse(listing).success).toBe(true);
+    expect(
+      farmerListingSchema.safeParse({
+        ...listing,
+        location: { division: "dhaka", district: "gazipur" },
+      }).success,
+    ).toBe(true);
+
+    expect(farmerListingQuerySchema.parse({})).toEqual({ page: 1, limit: 20 });
+    expect(farmerListingQuerySchema.parse({ status: "ACTIVE", page: "2", limit: "10" })).toEqual({
+      status: "ACTIVE",
+      page: 2,
+      limit: 10,
+    });
+    expect(farmerListingQuerySchema.safeParse({ limit: 51 }).success).toBe(false);
+    expect(farmerListingQuerySchema.safeParse({ page: 0 }).success).toBe(false);
 
     const meta = { serverTime: "2026-11-04T00:00:00.000Z" };
     expect(listingResponseMetaSchema.safeParse(meta).success).toBe(true);

@@ -13,7 +13,7 @@ import { Crop } from "../crops/crop.model.js";
 import { AiAssessmentRecord } from "../ai/ai-assessment-record.model.js";
 import { getPricePredictionProvider, hashAssessmentToken } from "../ai/ai.service.js";
 import { releaseStock, reserveStockForListing } from "../inventory/inventory.service.js";
-import { Listing } from "./listing.model.js";
+import { Listing, type ListingRecord } from "./listing.model.js";
 import { assertValidListingTransition } from "./listing-state-machine.js";
 import { mapListingToFarmerListing } from "./listing.mapper.js";
 
@@ -246,4 +246,65 @@ export async function createAndPublishListing(
 
   const mapped = mapListingToFarmerListing(createdListing.toObject());
   return { listing: mapped, warning: floorWarning };
+}
+
+export interface FarmerListingsResult {
+  listings: FarmerListing[];
+  total: number;
+}
+
+export async function getFarmerListings(
+  farmerId: string,
+  options: { status?: ListingStatus; page: number; limit: number },
+): Promise<FarmerListingsResult> {
+  const farmerObjectId = ensureObjectId(farmerId);
+  const filter: Record<string, unknown> = {
+    farmerId: farmerObjectId,
+  };
+
+  if (options.status) {
+    filter.status = options.status;
+  }
+
+  const skip = (options.page - 1) * options.limit;
+
+  const [records, total] = await Promise.all([
+    Listing.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(options.limit)
+      .lean(),
+    Listing.countDocuments(filter),
+  ]);
+
+  const listings = records.map((record) =>
+    mapListingToFarmerListing(
+      record as unknown as ListingRecord & { _id: { toString(): string }; createdAt: Date },
+    ),
+  );
+
+  return { listings, total };
+}
+
+export async function getListingById(
+  listingId: string,
+  user: PublicUser,
+): Promise<FarmerListing> {
+  const id = ensureObjectId(listingId);
+  const record = await Listing.findById(id).lean();
+
+  if (!record) {
+    throw new AppError(404, "NOT_FOUND", "Listing not found");
+  }
+
+  const isOwner = record.farmerId.toString() === user.id;
+
+  // Non-owners (other farmers, buyers) can only see ACTIVE listings
+  if (!isOwner && record.status !== ListingStatus.ACTIVE) {
+    throw new AppError(404, "NOT_FOUND", "Listing not found");
+  }
+
+  return mapListingToFarmerListing(
+    record as unknown as ListingRecord & { _id: { toString(): string }; createdAt: Date },
+  );
 }

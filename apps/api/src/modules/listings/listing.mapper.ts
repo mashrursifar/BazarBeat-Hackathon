@@ -56,6 +56,13 @@ export function mapListingToFarmerListing(
   if (listing.currentBidPerKg !== undefined && listing.currentBidPerKg !== null) {
     doc.currentBidPerKg = listing.currentBidPerKg;
   }
+  if (listing.location) {
+    doc.location = {
+      division: listing.location.division,
+      district: listing.location.district,
+      ...(listing.location.upazila ? { upazila: listing.location.upazila } : {}),
+    };
+  }
   if (listing.pickupNote) {
     doc.pickupNote = listing.pickupNote;
   }

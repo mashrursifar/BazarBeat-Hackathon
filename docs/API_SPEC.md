@@ -41,10 +41,10 @@ Results are returned to the client and also re-verified on listing creation via 
 All inventory responses are scoped to the authenticated farmer; clients cannot submit a farmer ID.
 
 ## Listings
-| POST | /listings | F | Create and publish (requires valid assessment token, stock, valid floor and duration) |
+| POST | /listings | F | Create and publish (requires valid assessment token, stock, valid floor and duration). Returns meta with `serverTime` |
 | GET | /listings | A | Marketplace search with filters: cropId, grade, division, district, minPrice, maxPrice, minQty, endingWithin, status (default ACTIVE); sort |
-| GET | /listings/:id | A | Detail incl. bid summary and AI data |
-| GET | /listings/mine | F | Farmer's listings with filters by status |
+| GET | /listings/:id | A | Detail incl. bid summary and AI data (farmers see their own in any status; other roles see ACTIVE listings only; never exposes private fields; non-public listings return 404 for non-owners). Returns meta with `serverTime` |
+| GET | /listings/mine | F | Farmer's listings with status filter (`status`), pagination (`page`, `limit`), sorted newest first. Returns meta with `serverTime`, `page`, `limit`, `total` |
 | POST | /listings/:id/cancel | F | Only if no bids |
 | POST | /listings/:id/accept-current-bid | F | Close early if current bid ≥ floor |
 | POST | /listings/:id/relist | F | Create a new listing from an unsold one (re-runs stock check; keeps grade only if within freshness window) |
@@ -82,6 +82,7 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 
 ## Ops
 | GET | /health | P | Liveness and DB status |
+| GET | /config | P | Public runtime configuration: demoMode, durationPresets, platformFeeBps |
 
 ## Authorization matrix rules
 - Farmers can read/modify only their own listings, inventory, and orders.

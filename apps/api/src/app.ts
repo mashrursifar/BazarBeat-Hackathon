@@ -12,6 +12,7 @@ import { cropsRouter } from "./modules/crops/crop.routes.js";
 import { inventoryRouter } from "./modules/inventory/inventory.routes.js";
 import { aiRouter } from "./modules/ai/ai.routes.js";
 import { listingsRouter } from "./modules/listings/listing.routes.js";
+import { configRouter } from "./modules/config/config.routes.js";
 
 export const app = express();
 app.use(
@@ -36,6 +37,7 @@ app.use("/api/v1/crops", cropsRouter);
 app.use("/api/v1/inventory", inventoryRouter);
 app.use("/api/v1/ai", aiRouter);
 app.use("/api/v1/listings", listingsRouter);
+app.use("/api/v1/config", configRouter);
 
 app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ data: { status: "ok", database: getDatabaseStatus() } });
