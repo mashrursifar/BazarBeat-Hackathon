@@ -1,4 +1,9 @@
-import type { FarmerListing } from "@bazarbeat/shared";
+import {
+  type BuyerListingCard,
+  type FarmerListing,
+  ListingStatus,
+  calculateSubtotal,
+} from "@bazarbeat/shared";
 import type { ListingRecord } from "./listing.model.js";
 
 export function mapListingToFarmerListing(
@@ -75,3 +80,97 @@ export function mapListingToFarmerListing(
 
   return doc;
 }
+
+export interface RawMarketplaceListingDoc {
+  _id: { toString(): string };
+  cropId: { toString(): string };
+  cropDoc: {
+    _id: { toString(): string };
+    slug: string;
+    nameEn: string;
+    nameBn: string;
+    unit?: string;
+  };
+  aiAssessment: {
+    grade: "A" | "B" | "C";
+  };
+  aiPriceGuidance?: {
+    expectedPerKg?: number;
+  };
+  quantityKg: number;
+  floorPricePerKg: number;
+  currentBidPerKg?: number | null;
+  displayPricePerKg?: number;
+  minIncrementPerKg?: number;
+  bidCount: number;
+  startsAt: Date | string;
+  endsAt: Date | string;
+  status: "ACTIVE";
+  location: {
+    division: string;
+    district: string;
+    upazila?: string;
+  };
+  images?: Array<{ url: string; width: number; height: number }>;
+}
+
+/**
+ * Maps a raw aggregated listing record to a buyer-facing listing card DTO.
+ * Strictly excludes private fields (farmer identity, phone, pickup note, AI internals).
+ */
+export function mapListingToBuyerCard(doc: RawMarketplaceListingDoc): BuyerListingCard {
+  const displayPricePerKg =
+    doc.displayPricePerKg ??
+    (doc.bidCount > 0 && doc.currentBidPerKg != null
+      ? doc.currentBidPerKg
+      : doc.floorPricePerKg);
+
+  const totalDisplayCost = calculateSubtotal(displayPricePerKg, doc.quantityKg);
+
+  const card: BuyerListingCard = {
+    id: doc._id.toString(),
+    cropId: doc.cropId.toString(),
+    crop: {
+      id: doc.cropDoc._id.toString(),
+      slug: doc.cropDoc.slug,
+      nameEn: doc.cropDoc.nameEn,
+      nameBn: doc.cropDoc.nameBn,
+      unit: doc.cropDoc.unit ?? "kg",
+    },
+    grade: doc.aiAssessment.grade,
+    quantityKg: doc.quantityKg,
+    floorPricePerKg: doc.floorPricePerKg,
+    currentBidPerKg: doc.currentBidPerKg ?? null,
+    displayPricePerKg,
+    totalDisplayCost,
+    minIncrementPerKg: doc.minIncrementPerKg ?? 100,
+    hasBids: doc.bidCount > 0,
+    bidCount: doc.bidCount,
+    startsAt:
+      doc.startsAt instanceof Date
+        ? doc.startsAt.toISOString()
+        : new Date(doc.startsAt).toISOString(),
+    endsAt:
+      doc.endsAt instanceof Date
+        ? doc.endsAt.toISOString()
+        : new Date(doc.endsAt).toISOString(),
+    status: ListingStatus.ACTIVE,
+    location: {
+      division: doc.location.division,
+      district: doc.location.district,
+    },
+    thumbnailUrl: doc.images?.[0]?.url ?? null,
+    images: doc.images?.map((img) => ({
+      url: img.url,
+      width: img.width,
+      height: img.height,
+    })),
+  };
+
+  if (doc.aiPriceGuidance?.expectedPerKg !== undefined) {
+    card.aiExpectedPricePerKg = doc.aiPriceGuidance.expectedPerKg;
+  }
+
+  return card;
+}
+

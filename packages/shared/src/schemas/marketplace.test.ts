@@ -74,6 +74,13 @@ describe("Marketplace schemas", () => {
       expect(result.success).toBe(false);
     });
 
+    it("accepts status ACTIVE and rejects any other status for buyers", () => {
+      expect(marketplaceQuerySchema.safeParse({ status: "ACTIVE" }).success).toBe(true);
+      expect(marketplaceQuerySchema.safeParse({ status: "SOLD" }).success).toBe(false);
+      expect(marketplaceQuerySchema.safeParse({ status: "CANCELLED" }).success).toBe(false);
+      expect(marketplaceQuerySchema.safeParse({ status: "EXPIRED_UNSOLD" }).success).toBe(false);
+    });
+
     it("accepts valid endingWithin presets (1, 3, 6, 24) and rejects others", () => {
       for (const preset of [1, 3, 6, 24]) {
         expect(marketplaceQuerySchema.safeParse({ endingWithin: preset }).success).toBe(true);

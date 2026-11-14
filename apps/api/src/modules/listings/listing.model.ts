@@ -125,6 +125,8 @@ const listingSchema = new mongoose.Schema(
 // Indexes defined in DATA_MODEL.md
 listingSchema.index({ status: 1, endsAt: 1 });
 listingSchema.index({ status: 1, cropId: 1, "location.division": 1 });
+listingSchema.index({ status: 1, cropId: 1, "location.division": 1, "location.district": 1 });
+listingSchema.index({ status: 1, "aiAssessment.grade": 1, endsAt: 1 });
 listingSchema.index({ status: 1, createdAt: -1 });
 listingSchema.index({ farmerId: 1, status: 1 });
 

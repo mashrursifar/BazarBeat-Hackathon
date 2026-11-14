@@ -85,7 +85,12 @@ export const marketplaceQuerySchema = z
     sort: marketplaceSortSchema.default(MarketplaceSort.ENDING_SOONEST),
     page: z.coerce.number().int().positive().default(1),
     limit: z.coerce.number().int().positive().max(50).default(20),
-    status: listingStatusSchema.optional().default(ListingStatus.ACTIVE),
+    status: z
+      .literal(ListingStatus.ACTIVE, {
+        message: "Buyers can only query ACTIVE listings",
+      })
+      .optional()
+      .default(ListingStatus.ACTIVE),
   })
   .refine(
     (data) => {
@@ -150,6 +155,7 @@ export const buyerListingCardSchema = z
     displayPricePerKg: poishaSchema,
     totalDisplayCost: poishaSchema,
     minIncrementPerKg: poishaSchema,
+    hasBids: z.boolean().default(false),
     bidCount: z.number().int().nonnegative(),
     startsAt: z.iso.datetime(),
     endsAt: z.iso.datetime(),

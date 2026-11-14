@@ -3,6 +3,7 @@ import {
   UserRole,
   createListingRequestSchema,
   farmerListingQuerySchema,
+  marketplaceQuerySchema,
   placeBidRequestSchema,
   relistListingRequestSchema,
 } from "@bazarbeat/shared";
@@ -20,10 +21,19 @@ import {
   getFarmerListingsController,
   getListingByIdController,
   getListingStreamController,
+  getMarketplaceListingsController,
   relistListingController,
 } from "./listing.controller.js";
 
 export const listingsRouter = Router();
+
+listingsRouter.get(
+  "/",
+  requireAuthentication,
+  requireRole(UserRole.BUYER),
+  validateQuery(marketplaceQuerySchema),
+  getMarketplaceListingsController,
+);
 
 listingsRouter.post(
   "/",

@@ -5,6 +5,8 @@ import {
   type FarmerListingListResponse,
   type FarmerListingQuery,
   type FarmerListingResponse,
+  type MarketplaceListingListResponse,
+  type MarketplaceQuery,
   type RelistListingRequest,
 } from "@bazarbeat/shared";
 
@@ -18,6 +20,7 @@ import {
   createAndPublishListing,
   getFarmerListings,
   getListingById,
+  getMarketplaceListings,
   relistListing,
 } from "./listing.service.js";
 
@@ -45,6 +48,27 @@ export const getFarmerListingsController: RequestHandler<
 > = async (_request, response): Promise<void> => {
   const query = response.locals.validatedQuery;
   const result = await getFarmerListings(response.locals.currentUser.id, query);
+
+  response.status(200).json({
+    data: result.listings,
+    meta: {
+      serverTime: getClock().iso(),
+      page: query.page,
+      limit: query.limit,
+      total: result.total,
+    },
+  });
+};
+
+export const getMarketplaceListingsController: RequestHandler<
+  Record<string, string>,
+  MarketplaceListingListResponse,
+  unknown,
+  unknown,
+  AuthenticatedLocals & QueryValidationLocals<MarketplaceQuery>
+> = async (_request, response): Promise<void> => {
+  const query = response.locals.validatedQuery;
+  const result = await getMarketplaceListings(query);
 
   response.status(200).json({
     data: result.listings,

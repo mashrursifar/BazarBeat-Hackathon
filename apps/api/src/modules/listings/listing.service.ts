@@ -1,10 +1,13 @@
 import { ObjectId } from "bson";
-import { Types } from "mongoose";
+import { type PipelineStage, Types } from "mongoose";
 import {
+  type BuyerListingCard,
   type CreateListingRequest,
   DomainEventName,
   type FarmerListing,
   ListingStatus,
+  type MarketplaceQuery,
+  MarketplaceSort,
   type PublicUser,
   type RelistListingRequest,
   evaluateFloorPrice,
@@ -20,7 +23,11 @@ import { getPricePredictionProvider, hashAssessmentToken } from "../ai/ai.servic
 import { releaseStock, reserveStockForListing } from "../inventory/inventory.service.js";
 import { Listing, type ListingRecord } from "./listing.model.js";
 import { assertValidListingTransition } from "./listing-state-machine.js";
-import { mapListingToFarmerListing } from "./listing.mapper.js";
+import {
+  type RawMarketplaceListingDoc,
+  mapListingToBuyerCard,
+  mapListingToFarmerListing,
+} from "./listing.mapper.js";
 
 function ensureObjectId(value: string): string {
   if (!/^[\da-f]{24}$/i.test(value)) {
@@ -648,3 +655,163 @@ export async function relistListing(
 
   return { listing: mapped, warning: floorWarning };
 }
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export interface MarketplaceListingsResult {
+  listings: BuyerListingCard[];
+  total: number;
+}
+
+interface AggregateFacetResult {
+  data: RawMarketplaceListingDoc[];
+  totalCount: Array<{ count: number }>;
+}
+
+/**
+ * Queries active marketplace listings for buyers with filtering, sorting, and pagination.
+ * Excludes listings past their end time using the injected Clock.
+ * Returns anonymized buyer card DTOs with no private fields.
+ */
+export async function getMarketplaceListings(
+  query: MarketplaceQuery,
+): Promise<MarketplaceListingsResult> {
+  if (query.status && query.status !== ListingStatus.ACTIVE) {
+    throw new AppError(400, "VALIDATION_ERROR", "Buyers can only query ACTIVE listings");
+  }
+
+  const now = getClock().now();
+
+  const matchStage: Record<string, unknown> = {
+    status: ListingStatus.ACTIVE,
+    endsAt: { $gt: now },
+  };
+
+  // 1. Crop filter (by ID or slug/name)
+  if (query.cropId) {
+    matchStage.cropId = new ObjectId(ensureObjectId(query.cropId));
+  } else if (query.crop) {
+    const cropDoc = await Crop.findOne({
+      $or: [
+        { slug: query.crop.toLowerCase() },
+        { nameEn: new RegExp(`^${escapeRegex(query.crop)}$`, "i") },
+      ],
+    }).lean();
+
+    if (!cropDoc) {
+      return { listings: [], total: 0 };
+    }
+    matchStage.cropId = cropDoc._id;
+  }
+
+  // 2. Grade filter
+  if (query.grade) {
+    matchStage["aiAssessment.grade"] = query.grade;
+  }
+
+  // 3. Division & District filter
+  if (query.division) {
+    matchStage["location.division"] = new RegExp(`^${escapeRegex(query.division)}$`, "i");
+  }
+  if (query.district) {
+    matchStage["location.district"] = new RegExp(`^${escapeRegex(query.district)}$`, "i");
+  }
+
+  // 4. Quantity filter
+  const minQty = query.minQuantity ?? query.minQty;
+  if (minQty !== undefined) {
+    matchStage.quantityKg = { $gte: minQty };
+  }
+
+  // 5. Ending within filter (presets in hours: 1, 3, 6, 24)
+  if (query.endingWithin !== undefined) {
+    const targetEnd = new Date(now.getTime() + query.endingWithin * 3600 * 1000);
+    matchStage.endsAt = { $gt: now, $lte: targetEnd };
+  }
+
+  // 6. Compute displayPricePerKg
+  const displayPriceField: PipelineStage = {
+    $addFields: {
+      displayPricePerKg: {
+        $cond: {
+          if: {
+            $and: [{ $gt: ["$bidCount", 0] }, { $ne: ["$currentBidPerKg", null] }],
+          },
+          then: "$currentBidPerKg",
+          else: "$floorPricePerKg",
+        },
+      },
+    },
+  };
+
+  // 7. Price range filter on computed displayPricePerKg
+  const priceFilter: Record<string, unknown> = {};
+  if (query.minPrice !== undefined) {
+    priceFilter.$gte = query.minPrice;
+  }
+  if (query.maxPrice !== undefined) {
+    priceFilter.$lte = query.maxPrice;
+  }
+
+  // 8. Sorting stage with deterministic tie-breaking (_id: 1)
+  let sortStage: PipelineStage;
+  switch (query.sort) {
+    case MarketplaceSort.LOWEST_PRICE:
+      sortStage = { $sort: { displayPricePerKg: 1, endsAt: 1, _id: 1 } };
+      break;
+    case MarketplaceSort.HIGHEST_GRADE:
+      sortStage = { $sort: { "aiAssessment.grade": 1, endsAt: 1, _id: 1 } };
+      break;
+    case MarketplaceSort.NEWEST:
+      sortStage = { $sort: { createdAt: -1, _id: 1 } };
+      break;
+    case MarketplaceSort.ENDING_SOONEST:
+    default:
+      sortStage = { $sort: { endsAt: 1, _id: 1 } };
+      break;
+  }
+
+  const lookupCrop: PipelineStage = {
+    $lookup: {
+      from: "crops",
+      localField: "cropId",
+      foreignField: "_id",
+      as: "cropDoc",
+    },
+  };
+
+  const unwindCrop: PipelineStage = {
+    $unwind: "$cropDoc",
+  };
+
+  const skip = (query.page - 1) * query.limit;
+  const facetStage: PipelineStage = {
+    $facet: {
+      data: [{ $skip: skip }, { $limit: query.limit }],
+      totalCount: [{ $count: "count" }],
+    },
+  };
+
+  const pipeline: PipelineStage[] = [
+    { $match: matchStage },
+    displayPriceField,
+    ...(Object.keys(priceFilter).length > 0
+      ? [{ $match: { displayPricePerKg: priceFilter } } as PipelineStage]
+      : []),
+    lookupCrop,
+    unwindCrop,
+    sortStage,
+    facetStage,
+  ];
+
+  const results = (await Listing.aggregate(pipeline).exec()) as [AggregateFacetResult];
+  const facetResult = results[0];
+
+  const listings = (facetResult?.data ?? []).map((doc) => mapListingToBuyerCard(doc));
+  const total = facetResult?.totalCount?.[0]?.count ?? 0;
+
+  return { listings, total };
+}
+
