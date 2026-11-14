@@ -9,7 +9,8 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "vitest run",
     "seed": "tsx src/seed/seed-crops.ts",
-    "seed:demo": "node -e \"process.stdout.write('Demo seed task is not configured in Phase 0.')\""
+    "seed:demo": "node -e \"process.stdout.write('Demo seed task is not configured in Phase 0.')\"",
+    "dev:bid": "tsx scripts/dev-bid.ts"
   },
   "dependencies": {
     "@bazarbeat/shared": "*",

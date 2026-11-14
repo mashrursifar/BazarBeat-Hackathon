@@ -16,7 +16,8 @@
     "test:web": "npm run test -w @bazarbeat/web",
     "test:e2e": "playwright test",
     "seed": "npm run seed -w @bazarbeat/api",
-    "seed:demo": "npm run seed:demo -w @bazarbeat/api"
+    "seed:demo": "npm run seed:demo -w @bazarbeat/api",
+    "dev:bid": "npm run dev:bid -w @bazarbeat/api --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

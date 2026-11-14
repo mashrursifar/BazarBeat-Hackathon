@@ -94,5 +94,52 @@ npm run test:e2e
 
 Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically. End-to-end specs in `e2e/` test Journey 1 (farmer publishing live auction with AI grading and price guidance) and Journey 1 Part 2 (floor warnings and inventory stock deduction check) using deterministic fixture sample photos in `e2e/fixtures/`.
 
+## Manually testing an auction
+
+You can test the full bidding flow across roles in development:
+
+1. **Start the environment:**
+   Ensure MongoDB is running and start the development servers:
+   ```sh
+   npm run dev
+   ```
+   If starting from an empty database, seed the crop catalog:
+   ```sh
+   npm run seed
+   ```
+
+2. **Set up a buyer account:**
+   - Register a buyer at <http://localhost:5173/register> (choose the **Buyer** role, e.g. Phone `01712345678`, Password `buyerpassword123`).
+   - Add these credentials to your `.env` file:
+     ```env
+     DEV_BUYER_PHONE=01712345678
+     DEV_BUYER_PASSWORD=buyerpassword123
+     ```
+
+3. **Create a listing as a farmer:**
+   - Open <http://localhost:5173/register> in your browser and register as a **Farmer** (or log in).
+   - Go to **Inventory** to add produce stock (e.g. 100 kg of Onion).
+   - Go to **New Listing** to upload a crop photo, receive AI quality grading and price suggestions, set your floor price (e.g. ৳45.00/kg = 4500 poisha), configure the auction timer, and publish.
+   - Note the `listingId` from the URL or the listing details in **My Products** / **Crop Bidding**.
+
+4. **Place bids as the buyer via CLI:**
+   Run the dev-only bidding tool from the repository root:
+   ```sh
+   npm run dev:bid -- <listingId> <amountPerKgInPoisha>
+   ```
+   For example, to place a bid of ৳46.00/kg (4,600 poisha):
+   ```sh
+   npm run dev:bid -- 6788f4b5c92842f1b0a81123 4600
+   ```
+   The script signs in as the configured buyer, submits the bid over HTTP with `X-CSRF-Protection: 1` and session cookies, and prints the server's answer:
+   - If accepted, the script prints HTTP 201 with the bid item, sequence number, and server time.
+   - If invalid (e.g. below floor price or current bid + minimum increment), it prints the server's rejection code and message (e.g. `BID_TOO_LOW`).
+   - The script refuses to run if `NODE_ENV` is set to `production`.
+
+5. **Observe live updates on the farmer screen:**
+   Keep the farmer's listing or bidding page open (see Task 4.10) to watch incoming bids stream via SSE in real time.
+
+*(Alternatively, you can test via Postman or Bruno by sending a `POST /api/v1/auth/login` with `{ "phone": "...", "password": "..." }`, followed by `POST /api/v1/listings/:id/bids` with `{ "amountPerKg": 4600 }`, header `X-CSRF-Protection: 1`, and the received `accessToken` cookie).*
+
 ## Demo mode
 A configuration flag shortens auction durations to a couple of minutes and loads seeded farmers, buyers, listings, and bids so the full story can be shown live in a few minutes.

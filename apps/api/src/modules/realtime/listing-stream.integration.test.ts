@@ -407,7 +407,7 @@ describe("Listing Stream Integration Tests (Task 4.7)", () => {
       expect(snapshotEvent.event).toBe("snapshot");
       expect(snapshotEvent.data).toBeDefined();
 
-      const snapshot = snapshotEvent.data;
+      const snapshot = snapshotEvent.data as Record<string, unknown>;
       expect(snapshot.listingId).toBe(listing._id.toString());
       expect(snapshot.currentPrice).toBe(4500); // floor price initially
       expect(snapshot.currentBidPerKg).toBeNull();
@@ -438,7 +438,7 @@ describe("Listing Stream Integration Tests (Task 4.7)", () => {
       const bidPlacedEvent = await stream.waitForEvent("bid.placed");
       expect(bidPlacedEvent.event).toBe("bid.placed");
 
-      const patch = bidPlacedEvent.data;
+      const patch = bidPlacedEvent.data as Record<string, unknown>;
       expect(patch.listingId).toBe(listing._id.toString());
       expect(patch.currentPrice).toBe(4600);
       expect(patch.bidCount).toBe(1);
@@ -472,7 +472,7 @@ describe("Listing Stream Integration Tests (Task 4.7)", () => {
       const extEvent = await stream.waitForEvent("auction.extended");
       expect(extEvent.event).toBe("auction.extended");
 
-      const patch = extEvent.data;
+      const patch = extEvent.data as Record<string, unknown> & { endsAt: string };
       expect(patch.listingId).toBe(listing._id.toString());
       expect(patch.extensionCount).toBe(1);
       expect(new Date(patch.endsAt).getTime()).toBeGreaterThan(listing.endsAt.getTime());
@@ -508,7 +508,7 @@ describe("Listing Stream Integration Tests (Task 4.7)", () => {
       const closedEvent = await stream.waitForEvent("auction.closed");
       expect(closedEvent.event).toBe("auction.closed");
 
-      const patch = closedEvent.data;
+      const patch = closedEvent.data as Record<string, unknown>;
       expect(patch.listingId).toBe(listing._id.toString());
       expect(patch.status).toBe(ListingStatus.SOLD);
       expect(patch.winningAmountPerKg).toBe(4800);

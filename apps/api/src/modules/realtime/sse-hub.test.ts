@@ -54,13 +54,13 @@ function createMockResponse(): {
   return { res: mockRes as unknown as Response, written, headers, statusCode: 200 };
 }
 
-function createMockRequest(): Request {
+function createMockRequest(): Request<Record<string, string>, unknown, unknown, Record<string, unknown>> {
   const emitter = new EventEmitter();
   return {
     on: emitter.on.bind(emitter),
     once: emitter.once.bind(emitter),
     emit: emitter.emit.bind(emitter),
-  } as unknown as Request;
+  } as unknown as Request<Record<string, string>, unknown, unknown, Record<string, unknown>>;
 }
 
 const mockFarmer: PublicUser = {
