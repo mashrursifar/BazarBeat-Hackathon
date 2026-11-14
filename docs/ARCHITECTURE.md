@@ -78,8 +78,14 @@ Each API module contains: `*.routes.ts`, `*.controller.ts`, `*.service.ts`, `*.m
 
 ## 5. Real-time design
 - SSE endpoint per listing (`/listings/:id/stream`) broadcasting `bid.placed`, `auction.extended`, `auction.closed`.
+  - On connect: sends an initial `snapshot` event (`listingId`, `currentPrice`, `currentBidPerKg`, `floorPricePerKg`, `bidCount`, `endTime`, `endsAt`, `status`, `serverTime`).
+  - Real-time updates: forwards `bid.placed`, `auction.extended`, and `auction.closed` as small state patches.
+  - Privacy guarantee: strictly filters internal user IDs (`buyerId`, `winningBidderId`) so other users' personal identifiers are never leaked over public stream channels.
+  - Keep-alive: sends an SSE comment heartbeat (`: heartbeat\n\n`) every 20 seconds.
+  - Concurrency control: enforces a per-user cap of 5 concurrent open streams, rejecting excess connections with HTTP 429 (`RATE_LIMITED`).
+  - Automatic cleanup: disconnects clear heartbeat timers and unregister subscribers with zero memory leaks.
 - SSE endpoint per user (`/me/stream`) for notifications and outbid alerts.
-- In-process event emitter feeds the SSE hub. Single-instance only for the hackathon; documented limitation.
+- **Single-instance limitation:** In-process `DomainEventEmitter` feeds the in-memory `ListingStreamHub`. Single-instance only for the hackathon MVP (per §11 and DECISIONS D-16). In multi-instance deployments, an external message broker (e.g. Redis Pub/Sub, NATS) would be required to fan out domain events across nodes.
 - Client falls back to polling every 5 seconds if SSE disconnects.
 - The client never decides outcomes: it displays server state and server time offset.
 

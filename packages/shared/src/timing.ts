@@ -49,6 +49,16 @@ export const AUCTION_TIMING = {
    */
   ORDER_AUTO_CANCEL_HOURS: 12,
   ORDER_AUTO_CANCEL_MS: 12 * 60 * 60 * 1000, // 43,200,000 ms (12 hours)
+
+  /**
+   * ARCHITECTURE §5: Heartbeat interval sent to keep SSE connections alive.
+   */
+  SSE_HEARTBEAT_INTERVAL_MS: 20 * 1000, // 20,000 ms (20 seconds)
+
+  /**
+   * Maximum number of concurrent open SSE streams allowed per authenticated user.
+   */
+  MAX_CONCURRENT_STREAMS_PER_USER: 5,
 } as const;
 
 export function getAntiSnipingTriggerWindowMs(isDemoMode: boolean): number {
@@ -67,5 +77,13 @@ export function getSchedulerIntervalMs(isDemoMode: boolean): number {
   return isDemoMode
     ? AUCTION_TIMING.DEMO_SCHEDULER_INTERVAL_MS
     : AUCTION_TIMING.SCHEDULER_INTERVAL_MS;
+}
+
+export function getSseHeartbeatIntervalMs(): number {
+  return AUCTION_TIMING.SSE_HEARTBEAT_INTERVAL_MS;
+}
+
+export function getMaxConcurrentStreamsPerUser(): number {
+  return AUCTION_TIMING.MAX_CONCURRENT_STREAMS_PER_USER;
 }
 

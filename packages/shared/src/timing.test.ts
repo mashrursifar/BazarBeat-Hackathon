@@ -28,5 +28,10 @@ describe("Auction timing constants and helpers", () => {
     expect(getSchedulerIntervalMs(false)).toBe(10_000);
     expect(getSchedulerIntervalMs(true)).toBe(2_000);
   });
+
+  it("defines SSE heartbeat interval and stream cap parameters", () => {
+    expect(AUCTION_TIMING.SSE_HEARTBEAT_INTERVAL_MS).toBe(20_000);
+    expect(AUCTION_TIMING.MAX_CONCURRENT_STREAMS_PER_USER).toBe(5);
+  });
 });
 

@@ -66,16 +66,24 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 
 ### Real-Time Domain Events (SSE)
 
-- `GET /listings/:id/stream` broadcasts typed domain events:
-  - `bid.placed`: `{ listingId, bidId, buyerId, bidderLabel, amountPerKg, totalAmount, bidCount, currentBidPerKg, placedAt }`
-  - `auction.extended`: `{ listingId, endsAt, extensionCount, extendedAt }`
-  - `auction.closed`: `{ listingId, status, closedAt, winningBidId?, winningBidderId?, winningAmountPerKg?, totalAmount? }`
+- `GET /listings/:id/stream` (Role: A):
+  - On connect: Sends `snapshot` event with initial state: `{ listingId, currentPrice, currentBidPerKg, floorPricePerKg, bidCount, endTime, endsAt, status, serverTime }`.
+  - Event patches forwarded to listeners:
+    - `bid.placed`: `{ listingId, bidId, bidderLabel, currentPrice, currentBidPerKg, amountPerKg, totalAmount, bidCount, placedAt, serverTime }` (strictly excludes `buyerId` to prevent leaking internal user identities).
+    - `auction.extended`: `{ listingId, endsAt, endTime, extensionCount, extendedAt, serverTime }`.
+    - `auction.closed`: `{ listingId, status, closedAt, winningBidId?, winningAmountPerKg?, totalAmount?, serverTime }` (strictly excludes `winningBidderId` to prevent leaking winner identity).
+  - Heartbeat: Sends comment `: heartbeat\n\n` every 20 seconds.
+  - Concurrency limit: Maximum 5 open streams per user (`MAX_CONCURRENT_STREAMS_PER_USER = 5`), rejecting further connections with 429 `RATE_LIMITED`.
+  - Disconnect cleanup: Cleans up heartbeat intervals and subscriber registrations with zero leaked memory.
+  - Architecture constraint: In-memory single-instance hub (see ARCHITECTURE §5).
 - System-wide timing defaults (`AUCTION_TIMING`):
   - Anti-sniping window: 2 minutes (`ANTI_SNIPING_TRIGGER_WINDOW_MS = 120_000`, demo mode: 15 seconds)
   - Anti-sniping extension: 2 minutes (`ANTI_SNIPING_EXTENSION_DURATION_MS = 120_000`, demo mode: 15 seconds)
   - Maximum anti-sniping extensions: 5 (`ANTI_SNIPING_MAX_EXTENSIONS = 5`)
   - Scheduler interval: 10 seconds (`SCHEDULER_INTERVAL_MS = 10_000`, demo mode: 2 seconds)
   - Client SSE fallback polling: 5 seconds (`CLIENT_POLLING_FALLBACK_MS = 5_000`)
+  - SSE heartbeat interval: 20 seconds (`SSE_HEARTBEAT_INTERVAL_MS = 20_000`)
+  - Max concurrent streams per user: 5 (`MAX_CONCURRENT_STREAMS_PER_USER = 5`)
 
 ## Orders
 

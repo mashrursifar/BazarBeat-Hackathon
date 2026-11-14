@@ -12,6 +12,7 @@ import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
 import type { QueryValidationLocals } from "../../shared/validate-query.js";
 import { getClock } from "../../shared/clock.js";
 import { closeAuction } from "../auctions/closing.service.js";
+import { getListingStreamHub } from "../realtime/sse-hub.js";
 import {
   cancelListing,
   createAndPublishListing,
@@ -120,5 +121,25 @@ export const relistListingController: RequestHandler<
   response.status(201).json({
     data: result.listing,
     meta: { serverTime: getClock().iso() },
+  });
+};
+
+export const getListingStreamController: RequestHandler<
+  { id: string },
+  unknown,
+  unknown,
+  Record<string, unknown>,
+  AuthenticatedLocals
+> = async (request, response): Promise<void> => {
+  const listingId = request.params.id;
+  const currentUser = response.locals.currentUser;
+
+  const listing = await getListingById(listingId, currentUser);
+
+  getListingStreamHub().registerClient({
+    listing,
+    user: currentUser,
+    req: request,
+    res: response,
   });
 };

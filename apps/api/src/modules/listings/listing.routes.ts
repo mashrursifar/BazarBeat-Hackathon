@@ -19,6 +19,7 @@ import {
   createListingController,
   getFarmerListingsController,
   getListingByIdController,
+  getListingStreamController,
   relistListingController,
 } from "./listing.controller.js";
 
@@ -42,6 +43,8 @@ listingsRouter.get(
 );
 
 listingsRouter.get("/:id", requireAuthentication, getListingByIdController);
+
+listingsRouter.get("/:id/stream", requireAuthentication, getListingStreamController);
 
 listingsRouter.post(
   "/:id/accept-current-bid",
