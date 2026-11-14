@@ -521,6 +521,28 @@ describe("Auction Closing Service (Task 4.4)", () => {
         code: "NO_BIDS",
       });
     });
+
+    it("rejects early accept if current bid is below floor price with 400 BELOW_FLOOR", async () => {
+      const { listing } = await createListingWithReservedStock({
+        floorPricePerKg: 5000,
+      });
+
+      await addBidToListing(listing, buyerOne, 4500, 1);
+      await Listing.updateOne(
+        { _id: listing._id },
+        { $set: { floorPricePerKg: 5000, currentBidPerKg: 4500 } },
+      );
+
+      await expect(
+        closeAuction(listing._id.toString(), {
+          trigger: AuctionCloseTrigger.FARMER_ACCEPT,
+          farmerId: farmerUser.id,
+        }),
+      ).rejects.toMatchObject({
+        statusCode: 400,
+        code: "BELOW_FLOOR",
+      });
+    });
   });
 
   describe("Re-Run Safety and Idempotence", () => {

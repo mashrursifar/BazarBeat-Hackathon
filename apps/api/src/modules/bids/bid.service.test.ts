@@ -19,6 +19,7 @@ import {
   resetDomainEventEmitter,
   setDomainEventEmitter,
 } from "../../shared/domain-event-emitter.js";
+import { env } from "../../config/env.js";
 import { Listing } from "../listings/listing.model.js";
 import { User } from "../users/user.model.js";
 import { Bid } from "./bid.model.js";
@@ -430,6 +431,39 @@ describe("Bid Placement Service (AUCTION_RULES §4, §5, §6)", () => {
       expect(updated?.extensionCount).toBe(5);
       expect(updated?.endsAt.getTime()).toBe(listing.endsAt.getTime());
     });
+
+    it("scales windows down proportionally in demo mode (15 seconds trigger, 15 seconds extension)", async () => {
+      const originalDemoMode = env.DEMO_MODE;
+      try {
+        (env as { DEMO_MODE: boolean }).DEMO_MODE = true;
+        const listing = await createSampleListing();
+        const extendedEvents: AuctionExtendedEventPayload[] = [];
+        eventEmitter.on(DomainEventName.AUCTION_EXTENDED, (payload) => {
+          extendedEvents.push(payload);
+        });
+
+        // 1. Outside demo trigger window (20 seconds before endsAt): does NOT extend
+        testClock.setTime(new Date(listing.endsAt.getTime() - 20 * 1000));
+        const res1 = await placeBid(buyerOne, listing._id.toString(), { amountPerKg: 5000 });
+        expect(res1.wasExtended).toBe(false);
+        expect(extendedEvents).toHaveLength(0);
+
+        // 2. Inside demo trigger window (10 seconds before endsAt < 15s): extends by 15s
+        const bidInstant = new Date(listing.endsAt.getTime() - 10 * 1000);
+        testClock.setTime(bidInstant);
+        const res2 = await placeBid(buyerTwo, listing._id.toString(), { amountPerKg: 5200 });
+        expect(res2.wasExtended).toBe(true);
+        expect(res2.newExtensionCount).toBe(1);
+
+        const expectedNewEndsAt = new Date(
+          bidInstant.getTime() + AUCTION_TIMING.DEMO_ANTI_SNIPING_EXTENSION_DURATION_MS,
+        );
+        expect(res2.newEndsAt?.getTime()).toBe(expectedNewEndsAt.getTime());
+        expect(extendedEvents).toHaveLength(1);
+      } finally {
+        (env as { DEMO_MODE: boolean }).DEMO_MODE = originalDemoMode;
+      }
+    });
   });
 
   describe("Bid Model Properties and Invariants", () => {
@@ -541,6 +575,38 @@ describe("Bid Placement Service (AUCTION_RULES §4, §5, §6)", () => {
   });
 
   describe("High Concurrency Parallel Test (20+ concurrent bids)", () => {
+    it("AUCTION_RULES §12: exactly two simultaneous valid bids: exactly one wins the ordering, the other is rejected with BID_TOO_LOW", async () => {
+      const listing = await createSampleListing({
+        floorPricePerKg: 5000,
+        minIncrementPerKg: 100,
+      });
+
+      // Two different buyers place the exact same opening bid simultaneously
+      const [res1, res2] = await Promise.allSettled([
+        placeBid(buyerOne, listing._id.toString(), { amountPerKg: 5000 }),
+        placeBid(buyerTwo, listing._id.toString(), { amountPerKg: 5000 }),
+      ]);
+
+      const fulfilled = [res1, res2].filter((r) => r.status === "fulfilled");
+      const rejected = [res1, res2].filter((r) => r.status === "rejected");
+
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+
+      const rejectedReason = (rejected[0] as PromiseRejectedResult).reason;
+      expect(rejectedReason).toMatchObject({
+        statusCode: 400,
+        code: "BID_TOO_LOW",
+      });
+
+      const dbListing = await Listing.findById(listing._id);
+      expect(dbListing?.bidCount).toBe(1);
+      expect(dbListing?.currentBidPerKg).toBe(5000);
+      const bids = await Bid.find({ listingId: listing._id });
+      expect(bids).toHaveLength(1);
+      expect(bids[0]?.seq).toBe(1);
+    });
+
     it("proves highest bid equals maximum valid amount, bidCount equals accepted bids, seq 1..N has no gaps, and amounts are strictly ascending by increment", async () => {
       const minIncrementPerKg = 100;
       const floorPricePerKg = 5000;
