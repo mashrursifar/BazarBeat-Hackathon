@@ -8,7 +8,11 @@ const poishaSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
 export const cropGradeSchema = z.enum([CropGrade.A, CropGrade.B, CropGrade.C]);
 export const aiProviderSchema = z.enum([AIProvider.MOCK, AIProvider.HTTP]);
-export const aiErrorCodeSchema = z.enum([AIErrorCode.CROP_MISMATCH, AIErrorCode.GRADE_UNAVAILABLE]);
+export const aiErrorCodeSchema = z.enum([
+  AIErrorCode.CROP_MISMATCH,
+  AIErrorCode.GRADE_UNAVAILABLE,
+  AIErrorCode.GRADE_STALE,
+]);
 export const priceTrendSchema = z.enum(["UP", "FLAT", "DOWN"]);
 export const confidenceBandSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
 
@@ -112,6 +116,14 @@ export const createListingRequestSchema = z
   })
   .strict();
 
+export const relistListingRequestSchema = z
+  .object({
+    floorPricePerKg: poishaSchema,
+    durationMinutes: listingDurationMinutesSchema,
+    pickupNote: z.string().trim().min(1).optional(),
+  })
+  .strict();
+
 export const durationPresetsSchema = z.record(z.string(), z.number().int().positive());
 
 export const publicConfigSchema = z
@@ -164,6 +176,7 @@ export const farmerListingSchema = z
     location: listingLocationSchema.optional(),
     pickupNote: z.string().optional(),
     closedAt: z.iso.datetime().optional(),
+    relistedFromId: databaseIdSchema.optional(),
     createdAt: z.iso.datetime(),
   })
   .strict();
@@ -212,6 +225,7 @@ export type ConfidenceBand = z.infer<typeof confidenceBandSchema>;
 export type PriceGuidance = z.infer<typeof priceGuidanceSchema>;
 export type PredictPriceRequest = z.infer<typeof predictPriceRequestSchema>;
 export type CreateListingRequest = z.infer<typeof createListingRequestSchema>;
+export type RelistListingRequest = z.infer<typeof relistListingRequestSchema>;
 export type PublicConfig = z.infer<typeof publicConfigSchema>;
 export type PublicConfigResponse = z.infer<typeof publicConfigResponseSchema>;
 export type DurationPresets = z.infer<typeof durationPresetsSchema>;

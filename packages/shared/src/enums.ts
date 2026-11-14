@@ -30,6 +30,7 @@ export type AIProvider = (typeof AIProvider)[keyof typeof AIProvider];
 export const AIErrorCode = {
   CROP_MISMATCH: "CROP_MISMATCH",
   GRADE_UNAVAILABLE: "GRADE_UNAVAILABLE",
+  GRADE_STALE: "GRADE_STALE",
 } as const;
 
 export type AIErrorCode = (typeof AIErrorCode)[keyof typeof AIErrorCode];
@@ -86,6 +87,7 @@ export const AuctionErrorCode = {
   NO_BIDS: "NO_BIDS",
   BELOW_FLOOR: "BELOW_FLOOR",
   INVALID_TRANSITION: "INVALID_TRANSITION",
+  GRADE_STALE: "GRADE_STALE",
 } as const;
 
 export type AuctionErrorCode = (typeof AuctionErrorCode)[keyof typeof AuctionErrorCode];

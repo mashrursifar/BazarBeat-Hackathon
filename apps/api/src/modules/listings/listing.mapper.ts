@@ -69,6 +69,9 @@ export function mapListingToFarmerListing(
   if (listing.closedAt) {
     doc.closedAt = listing.closedAt.toISOString();
   }
+  if (listing.relistedFromId) {
+    doc.relistedFromId = listing.relistedFromId.toString();
+  }
 
   return doc;
 }

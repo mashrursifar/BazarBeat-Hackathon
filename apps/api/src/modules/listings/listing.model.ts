@@ -116,6 +116,8 @@ const listingSchema = new mongoose.Schema(
     location: { type: listingLocationSchema, required: true },
     pickupNote: { type: String, maxlength: 500 },
     closedAt: { type: Date },
+    relistedFromId: { type: mongoose.Schema.Types.ObjectId, ref: "Listing" },
+    relistedToListingId: { type: mongoose.Schema.Types.ObjectId, ref: "Listing" },
   },
   { timestamps: true, collection: "listings", versionKey: false },
 );

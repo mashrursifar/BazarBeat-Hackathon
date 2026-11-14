@@ -5,6 +5,7 @@ import {
   type FarmerListingListResponse,
   type FarmerListingQuery,
   type FarmerListingResponse,
+  type RelistListingRequest,
 } from "@bazarbeat/shared";
 
 import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
@@ -12,9 +13,11 @@ import type { QueryValidationLocals } from "../../shared/validate-query.js";
 import { getClock } from "../../shared/clock.js";
 import { closeAuction } from "../auctions/closing.service.js";
 import {
+  cancelListing,
   createAndPublishListing,
   getFarmerListings,
   getListingById,
+  relistListing,
 } from "./listing.service.js";
 
 export const createListingController: RequestHandler<
@@ -90,3 +93,32 @@ export const acceptCurrentBidController: RequestHandler<
   });
 };
 
+export const cancelListingController: RequestHandler<
+  { id: string },
+  FarmerListingResponse,
+  unknown,
+  unknown,
+  AuthenticatedLocals
+> = async (request, response): Promise<void> => {
+  const listing = await cancelListing(request.params.id, response.locals.currentUser);
+
+  response.status(200).json({
+    data: listing,
+    meta: { serverTime: getClock().iso() },
+  });
+};
+
+export const relistListingController: RequestHandler<
+  { id: string },
+  FarmerListingResponse,
+  RelistListingRequest,
+  unknown,
+  AuthenticatedLocals
+> = async (request, response): Promise<void> => {
+  const result = await relistListing(request.params.id, response.locals.currentUser, request.body);
+
+  response.status(201).json({
+    data: result.listing,
+    meta: { serverTime: getClock().iso() },
+  });
+};

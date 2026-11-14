@@ -4,6 +4,7 @@ import {
   createListingRequestSchema,
   farmerListingQuerySchema,
   placeBidRequestSchema,
+  relistListingRequestSchema,
 } from "@bazarbeat/shared";
 
 import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
@@ -11,15 +12,14 @@ import { validateBody } from "../../shared/validate-body.js";
 import { validateQuery } from "../../shared/validate-query.js";
 import { requireAuthentication, requireRole } from "../auth/auth.middleware.js";
 import { bidsRateLimit } from "../bids/bid.rate-limit.js";
-import {
-  getListingBidsController,
-  placeBidController,
-} from "../bids/bid.controller.js";
+import { getListingBidsController, placeBidController } from "../bids/bid.controller.js";
 import {
   acceptCurrentBidController,
+  cancelListingController,
   createListingController,
   getFarmerListingsController,
   getListingByIdController,
+  relistListingController,
 } from "./listing.controller.js";
 
 export const listingsRouter = Router();
@@ -41,11 +41,7 @@ listingsRouter.get(
   getFarmerListingsController,
 );
 
-listingsRouter.get(
-  "/:id",
-  requireAuthentication,
-  getListingByIdController,
-);
+listingsRouter.get("/:id", requireAuthentication, getListingByIdController);
 
 listingsRouter.post(
   "/:id/accept-current-bid",
@@ -53,6 +49,23 @@ listingsRouter.post(
   requireRole(UserRole.FARMER),
   requireCsrfProtection,
   acceptCurrentBidController,
+);
+
+listingsRouter.post(
+  "/:id/cancel",
+  requireAuthentication,
+  requireRole(UserRole.FARMER),
+  requireCsrfProtection,
+  cancelListingController,
+);
+
+listingsRouter.post(
+  "/:id/relist",
+  requireAuthentication,
+  requireRole(UserRole.FARMER),
+  requireCsrfProtection,
+  validateBody(relistListingRequestSchema),
+  relistListingController,
 );
 
 listingsRouter.post(
@@ -65,8 +78,4 @@ listingsRouter.post(
   placeBidController,
 );
 
-listingsRouter.get(
-  "/:id/bids",
-  requireAuthentication,
-  getListingBidsController,
-);
+listingsRouter.get("/:id/bids", requireAuthentication, getListingBidsController);

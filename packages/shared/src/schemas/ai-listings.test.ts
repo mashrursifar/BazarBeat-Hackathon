@@ -22,6 +22,7 @@ import {
   priceGuidanceSchema,
   priceTrendSchema,
   publicConfigSchema,
+  relistListingRequestSchema,
 } from "./index.js";
 
 const id = "0123456789abcdef01234567";
@@ -204,9 +205,35 @@ describe("shared AI and listing schemas", () => {
     ).toBe(false);
   });
 
+  it("validates relist-listing requests and relistedFromId on farmer listings", () => {
+    const validRelist = {
+      floorPricePerKg: 1200,
+      durationMinutes: 180,
+      pickupNote: "Relisted lot, farm gate pickup",
+    };
+    expect(relistListingRequestSchema.safeParse(validRelist).success).toBe(true);
+    expect(
+      relistListingRequestSchema.safeParse({ floorPricePerKg: 1200, durationMinutes: 180 }).success,
+    ).toBe(true);
+    expect(
+      relistListingRequestSchema.safeParse({ ...validRelist, floorPricePerKg: 0 }).success,
+    ).toBe(false);
+    expect(
+      relistListingRequestSchema.safeParse({ ...validRelist, durationMinutes: 45 }).success,
+    ).toBe(false);
+
+    expect(
+      farmerListingSchema.safeParse({
+        ...listing,
+        relistedFromId: id,
+      }).success,
+    ).toBe(true);
+  });
+
   it("defines the new AI error codes", () => {
     expect(aiErrorCodeSchema.parse(AIErrorCode.CROP_MISMATCH)).toBe("CROP_MISMATCH");
     expect(aiErrorCodeSchema.parse(AIErrorCode.GRADE_UNAVAILABLE)).toBe("GRADE_UNAVAILABLE");
+    expect(aiErrorCodeSchema.parse(AIErrorCode.GRADE_STALE)).toBe("GRADE_STALE");
     expect(aiErrorCodeSchema.safeParse("INTERNAL").success).toBe(false);
     expect(AIProvider.HTTP).toBe("http");
     expect(CropGrade.C).toBe("C");
