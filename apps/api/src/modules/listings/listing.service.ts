@@ -8,6 +8,7 @@ import {
 } from "@bazarbeat/shared";
 
 import { AppError } from "../../shared/errors.js";
+import { getClock } from "../../shared/clock.js";
 import { logger } from "../../shared/logger.js";
 import { Crop } from "../crops/crop.model.js";
 import { AiAssessmentRecord } from "../ai/ai-assessment-record.model.js";
@@ -60,6 +61,8 @@ export async function createAndPublishListing(
   }
 
   // 2. Atomically consume the assessment record (single use, same farmer, same crop, unexpired)
+  const clock = getClock();
+  const currentInstant = clock.now();
   const assessmentTokenHash = hashAssessmentToken(request.assessmentToken);
   const assessmentRecord = await AiAssessmentRecord.findOneAndUpdate(
     {
@@ -67,12 +70,12 @@ export async function createAndPublishListing(
       farmerId: ensureObjectId(farmer.id),
       cropId: crop._id,
       isConsumed: false,
-      expiresAt: { $gt: new Date() },
+      expiresAt: { $gt: currentInstant },
     },
     {
       $set: {
         isConsumed: true,
-        consumedAt: new Date(),
+        consumedAt: currentInstant,
       },
     },
     { new: true },
@@ -89,7 +92,7 @@ export async function createAndPublishListing(
     if (existing.cropId.toString() !== crop._id.toString()) {
       throw new AppError(400, "VALIDATION_ERROR", "Assessment token is for a different crop");
     }
-    if (existing.expiresAt.getTime() <= Date.now()) {
+    if (existing.expiresAt.getTime() <= clock.timestamp()) {
       throw new AppError(400, "VALIDATION_ERROR", "Assessment token has expired");
     }
     if (existing.isConsumed) {
@@ -150,7 +153,7 @@ export async function createAndPublishListing(
   // 5. Create listing as ACTIVE
   assertValidListingTransition(ListingStatus.DRAFT, ListingStatus.ACTIVE, "publish");
 
-  const now = new Date();
+  const now = clock.now();
   const endsAt = new Date(now.getTime() + request.durationMinutes * 60 * 1000);
 
   let createdListing: InstanceType<typeof Listing>;

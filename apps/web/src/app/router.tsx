@@ -12,6 +12,7 @@ const FarmerLayout = lazy(() => import("./role-layouts.js").then((module) => ({ 
 const PlaceholderPage = lazy(() => import("./role-layouts.js").then((module) => ({ default: module.PlaceholderPage })));
 const InventoryPage = lazy(() => import("../features/inventory/inventory-page.js"));
 const NewListingPage = lazy(() => import("../features/listings/new-listing-page.js"));
+const MyListingsPage = lazy(() => import("../features/listings/my-listings-page.js"));
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -51,6 +52,7 @@ function MarketplacePage(): ReactElement {
 function page(path: string, pageKey: string): { path: string; element: ReactElement } {
   if (path === "inventory") return { path, element: <InventoryPage /> };
   if (path === "new-listing") return { path, element: <NewListingPage /> };
+  if (path === "products") return { path, element: <MyListingsPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 

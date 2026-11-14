@@ -3,7 +3,7 @@ import mongoose, { Types } from "mongoose";
 import { ObjectId } from "bson";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import request from "supertest";
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   ListingStatus,
@@ -12,6 +12,8 @@ import {
   farmerListingResponseSchema,
   publicConfigResponseSchema,
 } from "@bazarbeat/shared";
+
+import { TestClock, resetClock, setClock } from "../../shared/clock.js";
 
 const { authenticateAccessTokenMock } = vi.hoisted(() => ({
   authenticateAccessTokenMock: vi.fn<(token: string) => Promise<PublicUser>>(),
@@ -89,6 +91,10 @@ beforeAll(async () => {
 afterAll(async () => {
   await mongoose.disconnect();
   if (mongoReplicaSet !== undefined) await mongoReplicaSet.stop();
+});
+
+afterEach(() => {
+  resetClock();
 });
 
 beforeEach(async () => {
@@ -343,6 +349,69 @@ describe("POST /api/v1/listings (Task 3.6)", () => {
     expect(await Listing.countDocuments()).toBe(0);
 
     saveSpy.mockRestore();
+  });
+
+  describe("Clock integration (Task 4.1)", () => {
+    it("uses Clock interface to set startsAt, endsAt, and meta.serverTime", async () => {
+      const testClock = new TestClock("2026-11-14T10:00:00.000Z");
+      setClock(testClock);
+
+      const { rawToken } = await createTestAssessmentRecord(
+        farmerAId,
+        activeCropId,
+        false,
+        new Date("2026-11-14T10:30:00.000Z"),
+      );
+
+      const res = await request(app)
+        .post("/api/v1/listings")
+        .set("Cookie", withAccessToken("farmerA"))
+        .set("X-CSRF-Protection", "1")
+        .send({
+          cropId: activeCropId,
+          assessmentToken: rawToken,
+          quantityKg: 50,
+          floorPricePerKg: 4000,
+          durationMinutes: 180, // 3 hours (supported preset)
+        });
+
+      expect(res.status).toBe(201);
+      expect(res.body.data.startsAt).toBe("2026-11-14T10:00:00.000Z");
+      expect(res.body.data.endsAt).toBe("2026-11-14T13:00:00.000Z");
+      expect(res.body.meta.serverTime).toBe("2026-11-14T10:00:00.000Z");
+    });
+
+    it("rejects listing creation when test clock is advanced past token expiry", async () => {
+      const testClock = new TestClock("2026-11-14T10:00:00.000Z");
+      setClock(testClock);
+
+      // Token expires at 10:30:00.000Z
+      const { rawToken } = await createTestAssessmentRecord(
+        farmerAId,
+        activeCropId,
+        false,
+        new Date("2026-11-14T10:30:00.000Z"),
+      );
+
+      // Advance clock by 35 minutes -> 10:35:00.000Z (past token expiry)
+      testClock.advanceBy(35 * 60 * 1000);
+
+      const res = await request(app)
+        .post("/api/v1/listings")
+        .set("Cookie", withAccessToken("farmerA"))
+        .set("X-CSRF-Protection", "1")
+        .send({
+          cropId: activeCropId,
+          assessmentToken: rawToken,
+          quantityKg: 50,
+          floorPricePerKg: 4000,
+          durationMinutes: 180,
+        });
+
+      expect(res.status).toBe(400);
+      expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      expect(res.body.error.message).toContain("Assessment token has expired");
+    });
   });
 
   describe("Validation rules", () => {

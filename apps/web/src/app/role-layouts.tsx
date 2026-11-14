@@ -6,11 +6,11 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { LanguageSwitcher } from "../components/language-switcher.js";
 import { useAuth } from "../features/auth/auth-context.js";
 
-type NavItem = { path: string; key: string };
+type NavItem = { path: string; key: string; section?: string };
 const FARMER_NAV: readonly NavItem[] = [
   { path: "dashboard", key: "dashboard" },
-  { path: "products", key: "myListings" },
-  { path: "new-listing", key: "newListing" },
+  { path: "products", key: "myListings", section: "products" },
+  { path: "new-listing", key: "newListing", section: "products" },
   { path: "crop-bidding", key: "cropBidding" },
   { path: "inventory", key: "inventory" },
   { path: "orders", key: "orders" },
@@ -70,7 +70,36 @@ function RoleLayout({ role }: { role: UserRoleType }): ReactElement {
       <aside className="w-full shrink-0 border-b border-stone-200 bg-white p-4 md:min-h-screen md:w-64 md:border-b-0 md:border-r md:p-5">
         <Link className="text-xl font-extrabold text-primary" to="/">{t("appName")}</Link>
         <p className="mt-3 text-sm font-semibold">{title}</p>
-        <nav className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-1" aria-label={t("navigation")}>{items.map((item) => <NavLink key={item.path} to={item.path} className={({ isActive }) => `flex min-h-11 items-center rounded-md px-3 text-sm ${isActive ? "bg-green-50 font-semibold text-primary" : "text-stone-700 hover:bg-stone-100"}`}>{t(`nav.${item.key}`)}</NavLink>)}</nav>
+        <nav className="mt-4 grid grid-cols-2 gap-1 sm:grid-cols-3 md:grid-cols-1" aria-label={t("navigation")}>
+          {items.map((item, index) => {
+            const showSectionHeader =
+              item.section && (index === 0 || items[index - 1]?.section !== item.section);
+            return (
+              <div key={item.path} className="contents">
+                {showSectionHeader && (
+                  <div
+                    data-testid={`sidebar-section-${item.section}`}
+                    className="col-span-full pt-3 pb-1 px-3 text-xs font-bold uppercase tracking-wider text-muted-foreground"
+                  >
+                    {t(`nav.${item.section}`)}
+                  </div>
+                )}
+                <NavLink
+                  to={`${role === UserRole.FARMER ? "/farmer" : "/buyer"}/${item.path}`}
+                  className={({ isActive }) =>
+                    `flex min-h-11 items-center rounded-md px-3 text-sm ${
+                      isActive
+                        ? "bg-green-50 font-semibold text-primary"
+                        : "text-stone-700 hover:bg-stone-100"
+                    }`
+                  }
+                >
+                  {t(`nav.${item.key}`)}
+                </NavLink>
+              </div>
+            );
+          })}
+        </nav>
       </aside>
       <div className="min-w-0 flex-1">
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-4 py-2 sm:px-6">

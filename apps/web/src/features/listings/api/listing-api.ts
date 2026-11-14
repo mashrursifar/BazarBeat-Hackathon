@@ -2,6 +2,8 @@ import {
   type AssessmentResult,
   type CreateListingRequest,
   type CropResponse,
+  type FarmerListingListResponse,
+  type FarmerListingQuery,
   type FarmerListingResponse,
   type PredictPriceRequest,
   type PriceGuidance,
@@ -9,6 +11,7 @@ import {
   assessmentResultSchema,
   createListingRequestSchema,
   cropResponseSchema,
+  farmerListingListResponseSchema,
   farmerListingResponseSchema,
   predictPriceRequestSchema,
   priceGuidanceSchema,
@@ -118,4 +121,25 @@ export async function getConfig(): Promise<PublicConfig> {
   const envelope = await request<unknown>("/config");
   const parsed = publicConfigResponseSchema.parse(envelope);
   return parsed.data;
+}
+
+/** Fetches farmer's own listings with optional status filter and pagination */
+export async function getMyListings(
+  query?: FarmerListingQuery,
+): Promise<FarmerListingListResponse> {
+  const searchParams = new URLSearchParams();
+  if (query?.status) searchParams.set("status", query.status);
+  if (query?.page) searchParams.set("page", query.page.toString());
+  if (query?.limit) searchParams.set("limit", query.limit.toString());
+
+  const queryString = searchParams.toString();
+  const path = `/listings/mine${queryString ? `?${queryString}` : ""}`;
+  const response = await request<unknown>(path);
+  return farmerListingListResponseSchema.parse(response);
+}
+
+/** Fetches a single listing's detail by ID */
+export async function getListingById(id: string): Promise<FarmerListingResponse> {
+  const response = await request<unknown>(`/listings/${id}`);
+  return farmerListingResponseSchema.parse(response);
 }

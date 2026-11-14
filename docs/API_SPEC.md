@@ -11,7 +11,7 @@ State-changing requests require the `X-CSRF-Protection: 1` header.
 **Roles:** F = farmer, B = buyer, A = any authenticated, P = public.
 
 ## Error codes
-`VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN` 403 · `NOT_FOUND` 404 · `CONFLICT` 409 · `RATE_LIMITED` 429 · `INTERNAL` 500 · Business: `AUCTION_CLOSED`, `BID_TOO_LOW`, `OWN_LISTING`, `INSUFFICIENT_STOCK`, `GRADE_UNAVAILABLE`, `CROP_MISMATCH`, `INVALID_TRANSITION`, `HAS_BIDS`, `BELOW_FLOOR` (all 409 or 422 as noted in the module).
+`VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN` 403 · `NOT_FOUND` 404 · `CONFLICT` 409 · `RATE_LIMITED` 429 · `INTERNAL` 500 · Business: `AUCTION_CLOSED`, `BID_TOO_LOW`, `CANNOT_OUTBID_SELF`, `OWN_LISTING`, `INSUFFICIENT_STOCK`, `GRADE_UNAVAILABLE`, `CROP_MISMATCH`, `INVALID_TRANSITION`, `HAS_BIDS`, `BELOW_FLOOR` (403, 409, or 422 as noted in the module).
 
 ## Auth
 | Method | Path | Role | Purpose |
@@ -52,9 +52,21 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 | GET | /listings/compare?ids=a,b,c,d | B | Compare payload (max 4) |
 
 ## Bids
-| POST | /listings/:id/bids | B | Place bid `{ amountPerKg }` |
-| GET | /listings/:id/bids | A | Bid history (bidders anonymized for non-owners; farmer sees anonymized too, buyer names revealed only on order) |
+| POST | /listings/:id/bids | B | Place bid `{ amountPerKg }` (poisha per kg). Accepts optional `Idempotency-Key` header. Returns `{ data: BidItem, meta: { serverTime } }`. Errors: `VALIDATION_ERROR`, `AUCTION_CLOSED`, `BID_TOO_LOW`, `CANNOT_OUTBID_SELF`, `OWN_LISTING` |
+| GET | /listings/:id/bids | A | Bid history (bidders anonymized as `Buyer #1`, `Buyer #2`, etc. for non-owners and farmers; buyer names revealed only on confirmed order). Returns `{ data: AnonymizedBidHistoryItem[], meta: { serverTime } }` |
 | GET | /bids/mine | B | My bids grouped: active (winning/outbid), won, lost |
+
+### Real-Time Domain Events (SSE)
+- `GET /listings/:id/stream` broadcasts typed domain events:
+  - `bid.placed`: `{ listingId, bidId, buyerId, bidderLabel, amountPerKg, totalAmount, bidCount, currentBidPerKg, placedAt }`
+  - `auction.extended`: `{ listingId, endsAt, extensionCount, extendedAt }`
+  - `auction.closed`: `{ listingId, status, closedAt, winningBidId?, winningBidderId?, winningAmountPerKg?, totalAmount? }`
+- System-wide timing defaults (`AUCTION_TIMING`):
+  - Anti-sniping window: 2 minutes (`ANTI_SNIPING_TRIGGER_WINDOW_MS = 120_000`, demo mode: 15 seconds)
+  - Anti-sniping extension: 2 minutes (`ANTI_SNIPING_EXTENSION_DURATION_MS = 120_000`, demo mode: 15 seconds)
+  - Maximum anti-sniping extensions: 5 (`ANTI_SNIPING_MAX_EXTENSIONS = 5`)
+  - Scheduler interval: 10 seconds (`SCHEDULER_INTERVAL_MS = 10_000`, demo mode: 2 seconds)
+  - Client SSE fallback polling: 5 seconds (`CLIENT_POLLING_FALLBACK_MS = 5_000`)
 
 ## Orders
 | GET | /orders | A | Role-scoped list with filters |

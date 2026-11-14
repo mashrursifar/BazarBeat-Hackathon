@@ -92,7 +92,7 @@ npm test
 npm run test:e2e
 ```
 
-Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically.
+Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically. End-to-end specs in `e2e/` test Journey 1 (farmer publishing live auction with AI grading and price guidance) and Journey 1 Part 2 (floor warnings and inventory stock deduction check) using deterministic fixture sample photos in `e2e/fixtures/`.
 
 ## Demo mode
 A configuration flag shortens auction durations to a couple of minutes and loads seeded farmers, buyers, listings, and bids so the full story can be shown live in a few minutes.

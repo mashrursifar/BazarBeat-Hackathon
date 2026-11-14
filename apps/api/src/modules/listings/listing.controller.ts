@@ -8,6 +8,7 @@ import type {
 
 import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
 import type { QueryValidationLocals } from "../../shared/validate-query.js";
+import { getClock } from "../../shared/clock.js";
 import {
   createAndPublishListing,
   getFarmerListings,
@@ -25,7 +26,7 @@ export const createListingController: RequestHandler<
 
   response.status(201).json({
     data: result.listing,
-    meta: { serverTime: new Date().toISOString() },
+    meta: { serverTime: getClock().iso() },
   });
 };
 
@@ -42,7 +43,7 @@ export const getFarmerListingsController: RequestHandler<
   response.status(200).json({
     data: result.listings,
     meta: {
-      serverTime: new Date().toISOString(),
+      serverTime: getClock().iso(),
       page: query.page,
       limit: query.limit,
       total: result.total,
@@ -61,6 +62,6 @@ export const getListingByIdController: RequestHandler<
 
   response.status(200).json({
     data: listing,
-    meta: { serverTime: new Date().toISOString() },
+    meta: { serverTime: getClock().iso() },
   });
 };
