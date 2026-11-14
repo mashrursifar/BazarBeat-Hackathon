@@ -25,6 +25,7 @@ export const bidItemSchema = z.object({
   totalAmount: z.number().int().positive(),
   status: z.enum([BidStatus.ACCEPTED, BidStatus.WON, BidStatus.LOST]),
   placedAt: z.string().datetime(),
+  seq: z.number().int().positive().optional(),
 });
 
 export type BidItem = z.infer<typeof bidItemSchema>;

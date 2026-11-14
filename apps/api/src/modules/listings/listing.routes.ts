@@ -1,10 +1,19 @@
 import { Router } from "express";
-import { UserRole, createListingRequestSchema, farmerListingQuerySchema } from "@bazarbeat/shared";
+import {
+  UserRole,
+  createListingRequestSchema,
+  farmerListingQuerySchema,
+  placeBidRequestSchema,
+} from "@bazarbeat/shared";
 
 import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { validateBody } from "../../shared/validate-body.js";
 import { validateQuery } from "../../shared/validate-query.js";
 import { requireAuthentication, requireRole } from "../auth/auth.middleware.js";
+import {
+  getListingBidsController,
+  placeBidController,
+} from "../bids/bid.controller.js";
 import {
   createListingController,
   getFarmerListingsController,
@@ -34,4 +43,19 @@ listingsRouter.get(
   "/:id",
   requireAuthentication,
   getListingByIdController,
+);
+
+listingsRouter.post(
+  "/:id/bids",
+  requireAuthentication,
+  requireRole(UserRole.BUYER),
+  requireCsrfProtection,
+  validateBody(placeBidRequestSchema),
+  placeBidController,
+);
+
+listingsRouter.get(
+  "/:id/bids",
+  requireAuthentication,
+  getListingBidsController,
 );

@@ -155,10 +155,11 @@ Indexes: unique `assessmentTokenHash`; TTL on `expiresAt` (`expireAfterSeconds: 
 | buyerId | ref | Authenticated buyer placing the bid |
 | amountPerKg | int poisha | Bid price per kg in integer poisha |
 | totalAmount | int poisha | amount × quantity at bid time |
+| seq | number | Monotonic 1..N bid sequence number per listing |
 | status | enum ACCEPTED \| WON \| LOST | Stored status. `WINNING` and `OUTBID` are dynamic query projections computed relative to the current winning bid for the requesting buyer (AUCTION_RULES §8) |
 | idempotencyKey? | string | Optional unique client key for safe retry via Idempotency-Key header |
 | placedAt | Date | Server time stamped via Clock interface |
-Indexes: (listingId, amountPerKg desc), (buyerId, placedAt desc), unique sparse (listingId, buyerId, idempotencyKey). Bids are append-only; never edited or deleted.
+Indexes: unique (listingId, seq), (listingId, amountPerKg desc), (buyerId, placedAt desc), unique (listingId, buyerId, idempotencyKey) with partial filter for string idempotencyKey. Bids are append-only; never edited or deleted.
 
 ### Bidder Privacy and Anonymization
 AUCTION_RULES §10: In public and farmer bid histories (`GET /listings/:id/bids`), buyer identities are masked behind sequential per-listing labels (`Buyer #1`, `Buyer #2`, etc.) assigned chronologically by each buyer's first bid on that listing. The raw `buyerId` is strictly concealed from farmers and competing buyers until auction award and order creation.
