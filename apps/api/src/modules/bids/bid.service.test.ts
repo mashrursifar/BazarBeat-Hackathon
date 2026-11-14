@@ -22,6 +22,7 @@ import {
 import { Listing } from "../listings/listing.model.js";
 import { User } from "../users/user.model.js";
 import { Bid } from "./bid.model.js";
+import { IdempotencyRecord } from "./idempotency-record.model.js";
 import { getListingBids, placeBid } from "./bid.service.js";
 
 let mongoReplSet: MongoMemoryReplSet | undefined;
@@ -71,7 +72,12 @@ beforeAll(async () => {
     replSet: { count: 1 },
   });
   await mongoose.connect(mongoReplSet.getUri());
-  await Promise.all([Listing.init(), Bid.init(), User.init()]);
+  await Promise.all([
+    Listing.init(),
+    Bid.init(),
+    User.init(),
+    IdempotencyRecord.init(),
+  ]);
 }, 180_000);
 
 afterAll(async () => {
@@ -86,7 +92,12 @@ beforeEach(async () => {
   setClock(testClock);
   eventEmitter = new DomainEventEmitter();
   setDomainEventEmitter(eventEmitter);
-  await Promise.all([Listing.deleteMany({}), Bid.deleteMany({}), User.deleteMany({})]);
+  await Promise.all([
+    Listing.deleteMany({}),
+    Bid.deleteMany({}),
+    User.deleteMany({}),
+    IdempotencyRecord.deleteMany({}),
+  ]);
 });
 
 afterEach(() => {
@@ -455,6 +466,15 @@ describe("Bid Placement Service (AUCTION_RULES §4, §5, §6)", () => {
 
       expect(retry.bid.id).toBe(first.bid.id);
       expect(retry.bid.seq).toBe(first.bid.seq);
+      expect(retry.isReplay).toBe(true);
+
+      const storedRecord = await IdempotencyRecord.findOne({
+        key: idempotencyKey,
+        userId: buyerOne.id,
+      });
+      expect(storedRecord).toBeDefined();
+      expect(storedRecord?.listingId.toString()).toBe(listing._id.toString());
+      expect(storedRecord?.bidId.toString()).toBe(first.bid.id);
 
       const allBids = await Bid.find({ listingId: listing._id });
       expect(allBids).toHaveLength(1);

@@ -18,7 +18,12 @@ export const placeBidController: RequestHandler<
 > = async (req, res): Promise<void> => {
   const clock = getClock();
   const idempotencyHeader = req.headers["idempotency-key"];
-  const idempotencyKey = typeof idempotencyHeader === "string" ? idempotencyHeader : undefined;
+  const idempotencyKey =
+    typeof idempotencyHeader === "string"
+      ? idempotencyHeader
+      : Array.isArray(idempotencyHeader)
+        ? idempotencyHeader[0]
+        : undefined;
 
   const result = await placeBid(res.locals.currentUser, req.params.id, {
     amountPerKg: req.body.amountPerKg,

@@ -10,6 +10,7 @@ import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { validateBody } from "../../shared/validate-body.js";
 import { validateQuery } from "../../shared/validate-query.js";
 import { requireAuthentication, requireRole } from "../auth/auth.middleware.js";
+import { bidsRateLimit } from "../bids/bid.rate-limit.js";
 import {
   getListingBidsController,
   placeBidController,
@@ -50,6 +51,7 @@ listingsRouter.post(
   requireAuthentication,
   requireRole(UserRole.BUYER),
   requireCsrfProtection,
+  bidsRateLimit,
   validateBody(placeBidRequestSchema),
   placeBidController,
 );

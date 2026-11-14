@@ -19,6 +19,7 @@ import { AppError } from "../../shared/errors.js";
 import { logger } from "../../shared/logger.js";
 import { Listing } from "../listings/listing.model.js";
 import { Bid } from "./bid.model.js";
+import { IdempotencyRecord } from "./idempotency-record.model.js";
 
 function ensureObjectId(value: string): string {
   if (!/^[\da-f]{24}$/i.test(value)) {
@@ -142,6 +143,7 @@ export interface PlaceBidExecutionResult {
   newEndsAt?: Date;
   newExtensionCount?: number;
   seq: number;
+  isReplay?: boolean;
 }
 
 /**
@@ -169,32 +171,55 @@ export async function placeBid(
   const validListingId = ensureObjectId(listingId);
   const validBuyerId = ensureObjectId(buyer.id);
 
-  // Idempotency check if key provided
-  const idempotencyKey = input.idempotencyKey?.trim();
-  if (idempotencyKey) {
+  // Idempotency check if key provided through IdempotencyRecord
+  let idempotencyKey: string | undefined;
+  if (input.idempotencyKey !== undefined) {
+    idempotencyKey = input.idempotencyKey.trim();
+    if (idempotencyKey.length === 0) {
+      throw new AppError(400, "VALIDATION_ERROR", "Idempotency key cannot be empty");
+    }
     if (idempotencyKey.length > 128) {
       throw new AppError(400, "VALIDATION_ERROR", "Idempotency key must be at most 128 characters");
     }
-    const existing = await Bid.findOne({
+
+    const existingRecord = await IdempotencyRecord.findOne({
+      key: idempotencyKey,
+      userId: validBuyerId,
+    }).lean();
+
+    if (existingRecord) {
+      if (existingRecord.listingId.toString().toLowerCase() !== validListingId) {
+        throw new AppError(409, "CONFLICT", "Idempotency key already used for another listing");
+      }
+      return {
+        bid: existingRecord.responseBody as BidItem,
+        wasExtended: false,
+        seq: (existingRecord.responseBody as BidItem).seq ?? 0,
+        isReplay: true,
+      };
+    }
+
+    const existingBid = await Bid.findOne({
       listingId: validListingId,
       buyerId: validBuyerId,
       idempotencyKey,
     }).lean();
 
-    if (existing) {
+    if (existingBid) {
       return {
         bid: {
-          id: existing._id.toString(),
-          listingId: existing.listingId.toString(),
-          buyerId: existing.buyerId.toString(),
-          amountPerKg: existing.amountPerKg,
-          totalAmount: existing.totalAmount,
-          seq: existing.seq,
-          status: existing.status as BidStatus,
-          placedAt: existing.placedAt.toISOString(),
+          id: existingBid._id.toString(),
+          listingId: existingBid.listingId.toString(),
+          buyerId: existingBid.buyerId.toString(),
+          amountPerKg: existingBid.amountPerKg,
+          totalAmount: existingBid.totalAmount,
+          seq: existingBid.seq,
+          status: existingBid.status as BidStatus,
+          placedAt: existingBid.placedAt.toISOString(),
         },
         wasExtended: false,
-        seq: existing.seq,
+        seq: existingBid.seq,
+        isReplay: true,
       };
     }
   }
@@ -339,6 +364,22 @@ export async function placeBid(
         newExtensionCount,
         seq,
       };
+
+      if (idempotencyKey) {
+        await IdempotencyRecord.create(
+          [
+            {
+              key: idempotencyKey,
+              userId: validBuyerId,
+              listingId: validListingId,
+              bidId: createdBid._id,
+              responseBody: executionResult.bid,
+              expiresAt: new Date(nowMs + 24 * 60 * 60 * 1000),
+            },
+          ],
+          { session },
+        );
+      }
     });
     transactionSucceeded = true;
   } catch (error: unknown) {
@@ -458,10 +499,34 @@ export async function placeBid(
       newExtensionCount,
       seq,
     };
+
+    if (idempotencyKey) {
+      try {
+        await IdempotencyRecord.create([
+          {
+            key: idempotencyKey,
+            userId: validBuyerId,
+            listingId: validListingId,
+            bidId: createdBid._id,
+            responseBody: executionResult.bid,
+            expiresAt: new Date(nowMs + 24 * 60 * 60 * 1000),
+          },
+        ]);
+      } catch (idempotencyErr: unknown) {
+        logger.warn(
+          { err: idempotencyErr, key: idempotencyKey },
+          "IdempotencyRecord duplicate or creation issue in fallback mode",
+        );
+      }
+    }
   }
 
   if (!executionResult) {
     throw new AppError(500, "INTERNAL", "Bid placement failed unexpectedly");
+  }
+
+  if (executionResult.isReplay) {
+    return executionResult;
   }
 
   // Compute anonymized bidder label and publish domain events
@@ -527,7 +592,10 @@ export async function getListingBids(
   return allBids
     .map((bid) => {
       const buyerIdStr = bid.buyerId.toString().toLowerCase();
-      const isMyBid = user ? buyerIdStr === user.id.toLowerCase() : false;
+      const isMyBid =
+        user && user.role === UserRole.BUYER
+          ? buyerIdStr === user.id.toLowerCase()
+          : false;
       return {
         id: bid._id.toString(),
         listingId: validListingId,

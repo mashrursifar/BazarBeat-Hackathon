@@ -31,6 +31,7 @@ import {
 import { Listing } from "../listings/listing.model.js";
 import { User } from "../users/user.model.js";
 import { Bid } from "./bid.model.js";
+import { IdempotencyRecord } from "./idempotency-record.model.js";
 
 const farmerId = new Types.ObjectId().toString();
 const buyerId = new Types.ObjectId().toString();
@@ -74,7 +75,7 @@ beforeAll(async () => {
     replSet: { count: 1 },
   });
   await mongoose.connect(mongoReplicaSet.getUri());
-  await Promise.all([Listing.init(), Bid.init(), User.init()]);
+  await Promise.all([Listing.init(), Bid.init(), User.init(), IdempotencyRecord.init()]);
   authenticateAccessTokenMock.mockImplementation(async (token) => {
     const user = sessionUsers[token];
     if (user === undefined) throw new Error("Unexpected test access token");
@@ -91,7 +92,12 @@ beforeEach(async () => {
   testClock = new TestClock(new Date("2026-11-14T10:00:00.000Z"));
   setClock(testClock);
   setDomainEventEmitter(new DomainEventEmitter());
-  await Promise.all([Listing.deleteMany({}), Bid.deleteMany({}), User.deleteMany({})]);
+  await Promise.all([
+    Listing.deleteMany({}),
+    Bid.deleteMany({}),
+    User.deleteMany({}),
+    IdempotencyRecord.deleteMany({}),
+  ]);
 });
 
 afterEach(() => {
@@ -262,15 +268,170 @@ describe("Bid HTTP Routes", () => {
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("BID_TOO_LOW");
     });
+
+    describe("Idempotency-Key support through IdempotencyRecord", () => {
+      it("returns original result on replay and never creates a second bid", async () => {
+        const listing = await createSampleListing({ floorPricePerKg: 5000 });
+        const idempotencyKey = "client-req-uuid-999";
+
+        // First attempt with Idempotency-Key
+        const firstRes = await request(app)
+          .post(`/api/v1/listings/${listing._id}/bids`)
+          .set("Cookie", ["accessToken=buyer"])
+          .set("X-CSRF-Protection", "1")
+          .set("Idempotency-Key", idempotencyKey)
+          .send({ amountPerKg: 5300 });
+
+        expect(firstRes.status).toBe(201);
+        const firstParsed = bidResponseSchema.parse(firstRes.body);
+        expect(firstParsed.data.amountPerKg).toBe(5300);
+
+        // Verify IdempotencyRecord is persisted in MongoDB
+        const storedRecord = await IdempotencyRecord.findOne({
+          key: idempotencyKey,
+          userId: buyerId,
+        });
+        expect(storedRecord).toBeDefined();
+        expect(storedRecord?.listingId.toString()).toBe(listing._id.toString());
+        expect(storedRecord?.bidId.toString()).toBe(firstParsed.data.id);
+
+        // Second attempt with exact same Idempotency-Key (replay)
+        const replayRes = await request(app)
+          .post(`/api/v1/listings/${listing._id}/bids`)
+          .set("Cookie", ["accessToken=buyer"])
+          .set("X-CSRF-Protection", "1")
+          .set("Idempotency-Key", idempotencyKey)
+          .send({ amountPerKg: 5300 });
+
+        expect(replayRes.status).toBe(201);
+        const replayParsed = bidResponseSchema.parse(replayRes.body);
+        expect(replayParsed.data.id).toBe(firstParsed.data.id);
+        expect(replayParsed.data.amountPerKg).toBe(firstParsed.data.amountPerKg);
+        expect(replayParsed.data.totalAmount).toBe(firstParsed.data.totalAmount);
+        expect(replayParsed.meta.serverTime).toBe(testClock.iso());
+
+        // Crucial invariant: never creates a second bid in the database
+        const totalBidsInDb = await Bid.countDocuments({ listingId: listing._id });
+        expect(totalBidsInDb).toBe(1);
+
+        const updatedListing = await Listing.findById(listing._id);
+        expect(updatedListing?.bidCount).toBe(1);
+      });
+
+      it("rejects replaying an idempotency key across different listings with 409 CONFLICT", async () => {
+        const listingOne = await createSampleListing({ floorPricePerKg: 5000 });
+        const listingTwo = await createSampleListing({ floorPricePerKg: 4000 });
+        const sharedKey = "cross-listing-key-1";
+
+        // Place on listingOne
+        const resOne = await request(app)
+          .post(`/api/v1/listings/${listingOne._id}/bids`)
+          .set("Cookie", ["accessToken=buyer"])
+          .set("X-CSRF-Protection", "1")
+          .set("Idempotency-Key", sharedKey)
+          .send({ amountPerKg: 5200 });
+        expect(resOne.status).toBe(201);
+
+        // Attempt replay on listingTwo with the same key
+        const resTwo = await request(app)
+          .post(`/api/v1/listings/${listingTwo._id}/bids`)
+          .set("Cookie", ["accessToken=buyer"])
+          .set("X-CSRF-Protection", "1")
+          .set("Idempotency-Key", sharedKey)
+          .send({ amountPerKg: 4200 });
+
+        expect(resTwo.status).toBe(409);
+        expect(resTwo.body.error.code).toBe("CONFLICT");
+      });
+
+      it("rejects empty idempotency key with 400 VALIDATION_ERROR", async () => {
+        const listing = await createSampleListing({ floorPricePerKg: 5000 });
+
+        const res = await request(app)
+          .post(`/api/v1/listings/${listing._id}/bids`)
+          .set("Cookie", ["accessToken=buyer"])
+          .set("X-CSRF-Protection", "1")
+          .set("Idempotency-Key", "   ")
+          .send({ amountPerKg: 5200 });
+
+        expect(res.status).toBe(400);
+        expect(res.body.error.code).toBe("VALIDATION_ERROR");
+      });
+    });
+
+    describe("Rate limiting (20 bids per minute per user)", () => {
+      it("enforces rate limit of 20 bids per minute per user and allows other users", async () => {
+        const rateLimitBuyerId = new Types.ObjectId().toString();
+        const otherBuyerId = new Types.ObjectId().toString();
+
+        sessionUsers["rateBuyer"] = {
+          id: rateLimitBuyerId,
+          role: UserRole.BUYER,
+          name: "Rate Buyer",
+          division: "Dhaka",
+          district: "Dhaka",
+          organization: "Rate Traders",
+          language: "en",
+        };
+
+        sessionUsers["otherBuyer"] = {
+          id: otherBuyerId,
+          role: UserRole.BUYER,
+          name: "Other Buyer",
+          division: "Dhaka",
+          district: "Dhaka",
+          organization: "Other Traders",
+          language: "en",
+        };
+
+        // 20 requests by rateBuyer (they can fail on validation or succeed, rate limiter counts all hits to the endpoint)
+        const listing = await createSampleListing({ floorPricePerKg: 5000 });
+
+        for (let i = 0; i < 20; i++) {
+          const res = await request(app)
+            .post(`/api/v1/listings/${listing._id}/bids`)
+            .set("Cookie", ["accessToken=rateBuyer"])
+            .set("X-CSRF-Protection", "1")
+            .send({ amountPerKg: 0 }); // Intentionally invalid body to trigger quick validation after rate limiter
+          expect(res.status).toBe(400);
+          expect(res.body.error.code).toBe("VALIDATION_ERROR");
+        }
+
+        // 21st request by rateBuyer is rate limited
+        const rateLimitedRes = await request(app)
+          .post(`/api/v1/listings/${listing._id}/bids`)
+          .set("Cookie", ["accessToken=rateBuyer"])
+          .set("X-CSRF-Protection", "1")
+          .send({ amountPerKg: 5100 });
+
+        expect(rateLimitedRes.status).toBe(429);
+        expect(rateLimitedRes.body).toMatchObject({
+          error: {
+            code: "RATE_LIMITED",
+            message: expect.stringContaining("20 bids per minute per user"),
+          },
+        });
+
+        // otherBuyer is unaffected
+        const otherRes = await request(app)
+          .post(`/api/v1/listings/${listing._id}/bids`)
+          .set("Cookie", ["accessToken=otherBuyer"])
+          .set("X-CSRF-Protection", "1")
+          .send({ amountPerKg: 5100 });
+
+        expect(otherRes.status).toBe(201);
+      });
+    });
   });
 
   describe("GET /api/v1/listings/:id/bids", () => {
-    it("requires authentication (401)", async () => {
+    it("requires authentication (401 UNAUTHENTICATED)", async () => {
       const listing = await createSampleListing();
 
       const response = await request(app).get(`/api/v1/listings/${listing._id}/bids`);
 
       expect(response.status).toBe(401);
+      expect(response.body.error.code).toBe("UNAUTHENTICATED");
     });
 
     it("returns anonymized bid history with serverTime (200)", async () => {
@@ -310,6 +471,133 @@ describe("Bid HTTP Routes", () => {
       }
 
       expect(parsed.meta.serverTime).toBe(testClock.iso());
+    });
+
+    it("verifies stable anonymization by order of each buyer's first bid without leaking PII", async () => {
+      const listing = await createSampleListing({ floorPricePerKg: 5000, minIncrementPerKg: 100 });
+
+      const buyerThreeId = new Types.ObjectId().toString();
+      sessionUsers["buyerThree"] = {
+        id: buyerThreeId,
+        role: UserRole.BUYER,
+        name: "Buyer Three Tarek",
+        division: "Sylhet",
+        district: "Sylhet",
+        organization: "Sylhet Spices",
+        language: "en",
+      };
+
+      // Bid 1: Buyer Kabir -> Buyer #1
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5100 });
+
+      // Bid 2: Buyer Salam -> Buyer #2
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5200 });
+
+      // Bid 3: Buyer Tarek -> Buyer #3
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyerThree"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5300 });
+
+      // Bid 4: Buyer Kabir bids again -> must still be Buyer #1!
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5400 });
+
+      // Inspect history as buyerTwo
+      const response = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyerTwo"]);
+
+      expect(response.status).toBe(200);
+      const parsed = anonymizedBidHistoryResponseSchema.parse(response.body);
+      expect(parsed.data).toHaveLength(4);
+
+      // Newest first order
+      expect(parsed.data[0]?.amountPerKg).toBe(5400);
+      expect(parsed.data[0]?.bidderLabel).toBe("Buyer #1"); // Kabir's second bid is still Buyer #1
+      expect(parsed.data[0]?.isMyBid).toBe(false);
+
+      expect(parsed.data[1]?.amountPerKg).toBe(5300);
+      expect(parsed.data[1]?.bidderLabel).toBe("Buyer #3");
+      expect(parsed.data[1]?.isMyBid).toBe(false);
+
+      expect(parsed.data[2]?.amountPerKg).toBe(5200);
+      expect(parsed.data[2]?.bidderLabel).toBe("Buyer #2");
+      expect(parsed.data[2]?.isMyBid).toBe(true); // Salam's own bid
+
+      expect(parsed.data[3]?.amountPerKg).toBe(5100);
+      expect(parsed.data[3]?.bidderLabel).toBe("Buyer #1");
+      expect(parsed.data[3]?.isMyBid).toBe(false);
+
+      // STRICT PII CHECK: Ensure buyer IDs, names, organizations or phone numbers are NEVER exposed
+      const jsonStr = JSON.stringify(response.body);
+      expect(jsonStr).not.toContain(buyerId);
+      expect(jsonStr).not.toContain(buyerTwoId);
+      expect(jsonStr).not.toContain(buyerThreeId);
+      expect(jsonStr).not.toContain("Kabir");
+      expect(jsonStr).not.toContain("Salam");
+      expect(jsonStr).not.toContain("Tarek");
+    });
+
+    it("returns anonymized history with amounts and times only to the farmer (isMyBid false, no PII)", async () => {
+      const listing = await createSampleListing({ floorPricePerKg: 5000, minIncrementPerKg: 100 });
+
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5200 });
+
+      const response = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=farmer"]);
+
+      expect(response.status).toBe(200);
+      const parsed = anonymizedBidHistoryResponseSchema.parse(response.body);
+      expect(parsed.data).toHaveLength(1);
+      expect(parsed.data[0]?.bidderLabel).toBe("Buyer #1");
+      expect(parsed.data[0]?.amountPerKg).toBe(5200);
+      expect(parsed.data[0]?.isMyBid).toBe(false);
+
+      // Verify no PII leak to farmer
+      const jsonStr = JSON.stringify(response.body);
+      expect(jsonStr).not.toContain(buyerId);
+      expect(jsonStr).not.toContain("Kabir");
+    });
+
+    it("blocks buyers from viewing bids of non-active listings (404 NOT_FOUND), while allowing the farmer owner", async () => {
+      const draftListing = await createSampleListing({
+        floorPricePerKg: 5000,
+        status: ListingStatus.DRAFT,
+      });
+
+      // Buyer receives 404 NOT_FOUND on non-active listing
+      const buyerRes = await request(app)
+        .get(`/api/v1/listings/${draftListing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"]);
+
+      expect(buyerRes.status).toBe(404);
+      expect(buyerRes.body.error.code).toBe("NOT_FOUND");
+
+      // Farmer owner can view their own listing bids
+      const farmerRes = await request(app)
+        .get(`/api/v1/listings/${draftListing._id}/bids`)
+        .set("Cookie", ["accessToken=farmer"]);
+
+      expect(farmerRes.status).toBe(200);
+      expect(farmerRes.body.data).toEqual([]);
     });
   });
 });

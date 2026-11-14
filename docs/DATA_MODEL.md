@@ -164,6 +164,17 @@ Indexes: unique (listingId, seq), (listingId, amountPerKg desc), (buyerId, place
 ### Bidder Privacy and Anonymization
 AUCTION_RULES §10: In public and farmer bid histories (`GET /listings/:id/bids`), buyer identities are masked behind sequential per-listing labels (`Buyer #1`, `Buyer #2`, etc.) assigned chronologically by each buyer's first bid on that listing. The raw `buyerId` is strictly concealed from farmers and competing buyers until auction award and order creation.
 
+## IdempotencyRecord
+| Field | Type | Notes |
+|---|---|---|
+| key | string | Unique idempotency key supplied via `Idempotency-Key` header |
+| userId | ref User | Authenticated buyer who submitted the key |
+| listingId | ref Listing | Associated listing |
+| bidId | ref Bid | Resulting created bid reference |
+| responseBody | Mixed | Cached response data payload returned on idempotent retries |
+| expiresAt | Date | TTL index (`expireAfterSeconds: 0`) expiring records after 24 hours |
+Indexes: unique `(key, userId)`. Ensures repeat requests return identical original output without creating additional bids.
+
 ## Domain Events
 Domain events are typed in-process events defined in `@bazarbeat/shared` and emitted by services to decouple asynchronous side effects (SSE broadcasts, notifications, cache invalidation):
 - `bid.placed`: `{ listingId, bidId, buyerId, bidderLabel, amountPerKg, totalAmount, bidCount, currentBidPerKg, placedAt }`
