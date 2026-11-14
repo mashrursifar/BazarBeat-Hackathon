@@ -16,6 +16,7 @@ import {
   placeBidController,
 } from "../bids/bid.controller.js";
 import {
+  acceptCurrentBidController,
   createListingController,
   getFarmerListingsController,
   getListingByIdController,
@@ -44,6 +45,14 @@ listingsRouter.get(
   "/:id",
   requireAuthentication,
   getListingByIdController,
+);
+
+listingsRouter.post(
+  "/:id/accept-current-bid",
+  requireAuthentication,
+  requireRole(UserRole.FARMER),
+  requireCsrfProtection,
+  acceptCurrentBidController,
 );
 
 listingsRouter.post(

@@ -19,6 +19,7 @@ interface MovementInput {
   listingId?: string;
   orderId?: string;
   note?: string;
+  session?: mongoose.ClientSession;
 }
 
 interface MovementCommand extends MovementInput {
@@ -150,29 +151,40 @@ function isTransactionUnsupported(error: unknown): boolean {
     (typeof candidate.message === "string" && candidate.message.includes("Transaction numbers are only allowed"));
 }
 
+async function executeTransactionSteps(
+  command: MovementCommand,
+  session: mongoose.ClientSession,
+): Promise<void> {
+  const existing = await StockMovement.findOne({ operationId: command.operationId }).session(session).lean();
+  if (existing !== null) {
+    assertSameOperation(existing, command);
+    if (existing.status === "PENDING") throw new FallbackRequiredError("Pending fallback movement requires recovery");
+    return;
+  }
+  await ensureInventoryItem(command, session);
+  const updated = await changeInventory(command, { session, pendingMarker: false });
+  if (!updated) {
+    const item = await InventoryItem.findOne({
+      farmerId: ensureObjectId(command.farmerId),
+      cropId: ensureObjectId(command.cropId),
+    }).session(session).lean();
+    if (item?.pendingMovementId !== undefined) {
+      throw new FallbackRequiredError("Pending fallback movement requires recovery");
+    }
+    throw insufficientStockError();
+  }
+  await StockMovement.create([movementDocument(command, "APPLIED")], { session });
+}
+
 async function applyTransaction(command: MovementCommand): Promise<void> {
+  if (command.session) {
+    await executeTransactionSteps(command, command.session);
+    return;
+  }
   const session = await mongoose.startSession();
   try {
     await session.withTransaction(async () => {
-      const existing = await StockMovement.findOne({ operationId: command.operationId }).session(session).lean();
-      if (existing !== null) {
-        assertSameOperation(existing, command);
-        if (existing.status === "PENDING") throw new FallbackRequiredError("Pending fallback movement requires recovery");
-        return;
-      }
-      await ensureInventoryItem(command, session);
-      const updated = await changeInventory(command, { session, pendingMarker: false });
-      if (!updated) {
-        const item = await InventoryItem.findOne({
-          farmerId: ensureObjectId(command.farmerId),
-          cropId: ensureObjectId(command.cropId),
-        }).session(session).lean();
-        if (item?.pendingMovementId !== undefined) {
-          throw new FallbackRequiredError("Pending fallback movement requires recovery");
-        }
-        throw insufficientStockError();
-      }
-      await StockMovement.create([movementDocument(command, "APPLIED")], { session });
+      await executeTransactionSteps(command, session);
     });
   } finally {
     await session.endSession();
@@ -200,7 +212,9 @@ async function finishPendingMovement(farmerId: string, cropId: string, operation
 }
 
 async function findExistingMovement(command: MovementCommand): Promise<"missing" | "pending" | "applied"> {
-  const existing = await StockMovement.findOne({ operationId: command.operationId });
+  const query = StockMovement.findOne({ operationId: command.operationId });
+  if (command.session) query.session(command.session);
+  const existing = await query;
   if (existing === null) return "missing";
   assertSameOperation(existing, command);
   return existing.status === "APPLIED" ? "applied" : "pending";

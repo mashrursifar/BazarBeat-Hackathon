@@ -79,14 +79,51 @@ export type BidStatus = (typeof BidStatus)[keyof typeof BidStatus];
 export const AuctionErrorCode = {
   OWN_LISTING: "OWN_LISTING",
   AUCTION_CLOSED: "AUCTION_CLOSED",
+  AUCTION_NOT_EXPIRED: "AUCTION_NOT_EXPIRED",
   BID_TOO_LOW: "BID_TOO_LOW",
   CANNOT_OUTBID_SELF: "CANNOT_OUTBID_SELF",
   HAS_BIDS: "HAS_BIDS",
+  NO_BIDS: "NO_BIDS",
   BELOW_FLOOR: "BELOW_FLOOR",
   INVALID_TRANSITION: "INVALID_TRANSITION",
 } as const;
 
 export type AuctionErrorCode = (typeof AuctionErrorCode)[keyof typeof AuctionErrorCode];
+
+export const OrderStatus = {
+  PENDING: "PENDING",
+  CONFIRMED: "CONFIRMED",
+  IN_TRANSIT: "IN_TRANSIT",
+  DELIVERED: "DELIVERED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  DISPUTED: "DISPUTED",
+} as const;
+
+export type OrderStatus = (typeof OrderStatus)[keyof typeof OrderStatus];
+
+export const PaymentStatus = {
+  UNPAID: "UNPAID",
+  PAID: "PAID",
+  REFUNDED: "REFUNDED",
+} as const;
+
+export type PaymentStatus = (typeof PaymentStatus)[keyof typeof PaymentStatus];
+
+export const PaymentMethod = {
+  COD: "COD",
+  WALLET_SIM: "WALLET_SIM",
+} as const;
+
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const AuctionCloseTrigger = {
+  TIMER_EXPIRED: "TIMER_EXPIRED",
+  FARMER_ACCEPT: "FARMER_ACCEPT",
+  SCHEDULER: "SCHEDULER",
+} as const;
+
+export type AuctionCloseTrigger = (typeof AuctionCloseTrigger)[keyof typeof AuctionCloseTrigger];
 
 export const DomainEventName = {
   BID_PLACED: "bid.placed",

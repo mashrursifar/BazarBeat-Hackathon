@@ -1,14 +1,16 @@
 import type { RequestHandler } from "express";
-import type {
-  CreateListingRequest,
-  FarmerListingListResponse,
-  FarmerListingQuery,
-  FarmerListingResponse,
+import {
+  AuctionCloseTrigger,
+  type CreateListingRequest,
+  type FarmerListingListResponse,
+  type FarmerListingQuery,
+  type FarmerListingResponse,
 } from "@bazarbeat/shared";
 
 import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
 import type { QueryValidationLocals } from "../../shared/validate-query.js";
 import { getClock } from "../../shared/clock.js";
+import { closeAuction } from "../auctions/closing.service.js";
 import {
   createAndPublishListing,
   getFarmerListings,
@@ -65,3 +67,26 @@ export const getListingByIdController: RequestHandler<
     meta: { serverTime: getClock().iso() },
   });
 };
+
+export const acceptCurrentBidController: RequestHandler<
+  { id: string },
+  unknown,
+  unknown,
+  unknown,
+  AuthenticatedLocals
+> = async (request, response): Promise<void> => {
+  const result = await closeAuction(request.params.id, {
+    trigger: AuctionCloseTrigger.FARMER_ACCEPT,
+    farmerId: response.locals.currentUser.id,
+  });
+
+  response.status(200).json({
+    data: result.order ?? {
+      listingId: result.listingId,
+      status: result.status,
+      closedAt: result.closedAt,
+    },
+    meta: { serverTime: getClock().iso() },
+  });
+};
+
