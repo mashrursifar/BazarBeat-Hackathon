@@ -125,8 +125,8 @@ Every movement quantity is positive; the movement type defines which bucket chan
 | pickupNote                                                                                                                                 | string?                                                     |                                                                  |
 | closedAt                                                                                                                                   | Date?                                                       |                                                                  |
 | relistedFromId?                                                                                                                            | ref Listing                                                 | Originating unsold listing for relisted lots (gap 5)             |
-| relistedToListingId?                                                                                                                       | ref Listing                                                 | Relisted lot destination, enforces one relist per unsold listing |
-| Indexes: (status, endsAt) for the closer; (status, cropId, location.division) and (status, createdAt) for marketplace; (farmerId, status). |
+| relistedToListingId?                                                                                                                       | ref Listing                                                 | Relisted lot destination, enforces one relist per unsold listing (internal DB persistence only; excluded from public/farmer API responses) |
+| Indexes: (status, endsAt) for the closer; (status, cropId, location.division) and (status, createdAt) for marketplace; (farmerId, status). `currentBidderId` and `relistedToListingId` remain internal to the database to preserve bidder anonymity and strict schema boundaries. |
 
 ### aiAssessment (embedded)
 

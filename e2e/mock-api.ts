@@ -5,6 +5,18 @@ export const CROP_BITTER_GOURD_ID = "507f191e810c19729de86001";
 export const CROP_POTATO_ID = "507f191e810c19729de86002";
 export const CROP_ONION_ID = "507f191e810c19729de86003";
 
+export interface MockBid {
+  id: string;
+  listingId: string;
+  buyerId: string;
+  amountPerKg: number;
+  totalAmount: number;
+  seq: number;
+  status: string;
+  placedAt: string;
+  bidderLabel?: string;
+}
+
 export interface MockState {
   authenticated: boolean;
   inventory: Array<{
@@ -26,14 +38,19 @@ export interface MockState {
     soldKg: number;
   }>;
   listings: FarmerListing[];
+  bids: MockBid[];
+}
+
+export interface SetupMockApiOptions {
+  initialAuthenticated?: boolean;
+  initialAvailableKg?: number;
+  initialListings?: FarmerListing[];
+  initialBids?: MockBid[];
 }
 
 export async function setupMockApi(
   page: Page,
-  options?: {
-    initialAuthenticated?: boolean;
-    initialAvailableKg?: number;
-  },
+  options?: SetupMockApiOptions,
 ): Promise<MockState> {
   const bitterGourdCrop = {
     id: CROP_BITTER_GOURD_ID,
@@ -95,8 +112,25 @@ export async function setupMockApi(
         soldKg: 0,
       },
     ],
-    listings: [],
+    listings: options?.initialListings ? [...options.initialListings] : [],
+    bids: options?.initialBids ? [...options.initialBids] : [],
   };
+
+  // Adjust inventory if initialListings were provided
+  if (options?.initialListings) {
+    for (const listing of options.initialListings) {
+      const inv = state.inventory.find((i) => i.crop.id === listing.cropId);
+      if (inv) {
+        if (listing.status === "ACTIVE") {
+          inv.availableKg = Math.max(0, inv.availableKg - listing.quantityKg);
+          inv.listedKg += listing.quantityKg;
+        } else if (listing.status === "SOLD") {
+          inv.availableKg = Math.max(0, inv.availableKg - listing.quantityKg);
+          inv.soldKg += listing.quantityKg;
+        }
+      }
+    }
+  }
 
   const farmerUser = {
     id: "farmer-user-1",
@@ -107,6 +141,67 @@ export async function setupMockApi(
     upazila: "Savar",
     language: "en",
   };
+
+  // Inject in-memory MockEventSource for deterministic SSE delivery
+  await page.addInitScript(() => {
+    class MockEventSource extends EventTarget {
+      url: string;
+      withCredentials?: boolean;
+      readyState: number = 0; // CONNECTING
+      onopen: ((event: Event) => void) | null = null;
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+
+      constructor(url: string, init?: EventSourceInit) {
+        super();
+        this.url = url;
+        this.withCredentials = init?.withCredentials;
+        if (!(window as unknown as { __mockEventSources?: MockEventSource[] }).__mockEventSources) {
+          (window as unknown as { __mockEventSources: MockEventSource[] }).__mockEventSources = [];
+        }
+        (window as unknown as { __mockEventSources: MockEventSource[] }).__mockEventSources.push(this);
+
+        setTimeout(() => {
+          this.readyState = 1; // OPEN
+          const ev = new Event("open");
+          this.onopen?.(ev);
+          this.dispatchEvent(ev);
+        }, 20);
+      }
+
+      close(): void {
+        this.readyState = 2; // CLOSED
+        const win = window as unknown as { __mockEventSources?: MockEventSource[] };
+        const sources = win.__mockEventSources || [];
+        const idx = sources.indexOf(this);
+        if (idx !== -1) sources.splice(idx, 1);
+      }
+    }
+
+    (window as unknown as { EventSource: typeof MockEventSource }).EventSource = MockEventSource;
+
+    (window as unknown as {
+      __dispatchMockSse?: (listingId: string, eventName: string, payload: unknown) => void;
+    }).__dispatchMockSse = (
+      listingId: string,
+      eventName: string,
+      payload: unknown,
+    ): void => {
+      const win = window as unknown as { __mockEventSources?: MockEventSource[] };
+      const sources = win.__mockEventSources || [];
+      for (const es of sources) {
+        if (es.url && es.url.includes(`/listings/${listingId}/stream`)) {
+          const msgEvent = new MessageEvent(eventName, {
+            data: JSON.stringify(payload),
+          });
+          es.dispatchEvent(msgEvent);
+          if (eventName === "message" && es.onmessage) {
+            es.onmessage(msgEvent);
+          }
+        }
+      }
+    };
+  });
 
   await page.route("**/api/v1/**", async (route: Route) => {
     const url = new URL(route.request().url());
@@ -297,7 +392,7 @@ export async function setupMockApi(
 
       const listingId = `507f191e810c19729de8${String(state.listings.length + 1).padStart(4, "0")}`;
 
-      const listing = {
+      const listing: FarmerListing = {
         id: listingId,
         cropId: crop.id,
         quantityKg: body.quantityKg,
@@ -376,7 +471,348 @@ export async function setupMockApi(
       });
     }
 
-    // 11. Listing by ID
+    // 11. SSE Stream fallback/handshake
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/stream$/) && method === "GET") {
+      return route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+        body: ": heartbeat\n\n",
+      });
+    }
+
+    // 12. Submit Bid (POST /api/v1/listings/:id/bids)
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/bids$/) && method === "POST") {
+      const parts = path.split("/");
+      const listingId = parts[parts.length - 2];
+      const listing = state.listings.find((l) => l.id === listingId);
+      if (!listing) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Listing not found" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const amountPerKg = Number(body.amountPerKg);
+      const minRequired = listing.currentBidPerKg
+        ? listing.currentBidPerKg + (listing.minIncrementPerKg || 100)
+        : listing.floorPricePerKg;
+
+      if (amountPerKg < minRequired) {
+        return route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "BID_TOO_LOW",
+              message: `Bid must be at least ${minRequired} poisha`,
+            },
+          }),
+        });
+      }
+
+      const now = new Date();
+      const bidId = `507f191e810c19729de8b${String(state.bids.length + 1).padStart(3, "0")}`;
+      const bidSeq = (listing.bidCount || 0) + 1;
+      const bid: MockBid = {
+        id: bidId,
+        listingId: listing.id,
+        buyerId: "buyer-user-1",
+        bidderLabel: `Buyer #${bidSeq}`,
+        amountPerKg,
+        totalAmount: amountPerKg * listing.quantityKg,
+        seq: bidSeq,
+        status: "ACCEPTED",
+        placedAt: now.toISOString(),
+      };
+      state.bids.push(bid);
+
+      listing.bidCount = bidSeq;
+      listing.currentBidPerKg = amountPerKg;
+
+      let extendedPatch = undefined;
+      if (body.isLateBid) {
+        listing.extensionCount = (listing.extensionCount || 0) + 1;
+        const newEndsAt = new Date(now.getTime() + 120_000);
+        listing.endsAt = newEndsAt.toISOString();
+        extendedPatch = {
+          listingId: listing.id,
+          endsAt: listing.endsAt,
+          endTime: listing.endsAt,
+          extensionCount: listing.extensionCount,
+          extendedAt: now.toISOString(),
+          serverTime: now.toISOString(),
+        };
+      }
+
+      const bidPlacedPatch = {
+        listingId: listing.id,
+        bidId,
+        bidderLabel: `Buyer #${bidSeq}`,
+        currentPrice: amountPerKg,
+        currentBidPerKg: amountPerKg,
+        amountPerKg,
+        totalAmount: amountPerKg * listing.quantityKg,
+        bidCount: bidSeq,
+        placedAt: now.toISOString(),
+        serverTime: now.toISOString(),
+      };
+
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            bid,
+            patch: bidPlacedPatch,
+            extended: extendedPatch,
+          },
+          meta: { serverTime: now.toISOString() },
+        }),
+      });
+    }
+
+    // 13. Get Bids (GET /api/v1/listings/:id/bids)
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/bids$/) && method === "GET") {
+      const parts = path.split("/");
+      const listingId = parts[parts.length - 2];
+      const listingBids = state.bids
+        .filter((b) => b.listingId === listingId)
+        .map((b) => ({
+          id: b.id,
+          listingId: b.listingId,
+          bidderLabel: b.bidderLabel || `Buyer #${b.seq}`,
+          amountPerKg: b.amountPerKg,
+          totalAmount: b.totalAmount,
+          seq: b.seq,
+          status: b.status,
+          placedAt: b.placedAt,
+        }))
+        .reverse();
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: listingBids,
+          meta: {
+            serverTime: new Date().toISOString(),
+            total: listingBids.length,
+          },
+        }),
+      });
+    }
+
+    // 14. Cancel Listing (POST /api/v1/listings/:id/cancel)
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/cancel$/) && method === "POST") {
+      const parts = path.split("/");
+      const listingId = parts[parts.length - 2];
+      const listing = state.listings.find((l) => l.id === listingId);
+      if (!listing) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Listing not found" } }),
+        });
+      }
+
+      if (listing.bidCount > 0) {
+        return route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "HAS_BIDS",
+              message: "Cannot cancel listing with existing bids",
+            },
+          }),
+        });
+      }
+
+      listing.status = "CANCELLED";
+      listing.closedAt = new Date().toISOString();
+
+      // Restore inventory
+      const item = state.inventory.find((inv) => inv.crop.id === listing.cropId);
+      if (item) {
+        item.availableKg += listing.quantityKg;
+        item.listedKg = Math.max(0, item.listedKg - listing.quantityKg);
+      }
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: listing,
+          meta: { serverTime: new Date().toISOString() },
+        }),
+      });
+    }
+
+    // 15. Relist Listing (POST /api/v1/listings/:id/relist)
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/relist$/) && method === "POST") {
+      const parts = path.split("/");
+      const listingId = parts[parts.length - 2];
+      const oldListing = state.listings.find((l) => l.id === listingId);
+      if (!oldListing) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Listing not found" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const now = new Date();
+      const durationMinutes = body.durationMinutes ?? 120;
+      const endsAt = new Date(now.getTime() + durationMinutes * 60 * 1000);
+
+      const newId = `507f191e810c19729de8${String(state.listings.length + 1).padStart(4, "0")}`;
+      const newListing: FarmerListing = {
+        id: newId,
+        cropId: oldListing.cropId,
+        quantityKg: oldListing.quantityKg,
+        images: oldListing.images,
+        aiAssessment: oldListing.aiAssessment,
+        aiPriceGuidance: oldListing.aiPriceGuidance,
+        floorPricePerKg: body.floorPricePerKg ?? oldListing.floorPricePerKg,
+        minIncrementPerKg: oldListing.minIncrementPerKg || 100,
+        startsAt: now.toISOString(),
+        endsAt: endsAt.toISOString(),
+        originalEndsAt: endsAt.toISOString(),
+        extensionCount: 0,
+        status: "ACTIVE",
+        bidCount: 0,
+        currentBidPerKg: undefined,
+        location: oldListing.location,
+        pickupNote: body.pickupNote ?? oldListing.pickupNote,
+        closedAt: undefined,
+        relistedFromId: oldListing.id,
+        createdAt: now.toISOString(),
+      };
+
+      // Deduct inventory stock for new active listing
+      const item = state.inventory.find((inv) => inv.crop.id === newListing.cropId);
+      if (item) {
+        item.availableKg = Math.max(0, item.availableKg - newListing.quantityKg);
+        item.listedKg += newListing.quantityKg;
+      }
+
+      state.listings.unshift(newListing);
+
+      return route.fulfill({
+        status: 201,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: newListing,
+          meta: { serverTime: now.toISOString() },
+        }),
+      });
+    }
+
+    // 16. Accept Current Bid (POST /api/v1/listings/:id/accept-current-bid)
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/accept-current-bid$/) && method === "POST") {
+      const parts = path.split("/");
+      const listingId = parts[parts.length - 2];
+      const listing = state.listings.find((l) => l.id === listingId);
+      if (!listing) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Listing not found" } }),
+        });
+      }
+
+      const now = new Date();
+      listing.status = "SOLD";
+      listing.closedAt = now.toISOString();
+
+      const item = state.inventory.find((inv) => inv.crop.id === listing.cropId);
+      if (item) {
+        item.listedKg = Math.max(0, item.listedKg - listing.quantityKg);
+        item.soldKg += listing.quantityKg;
+      }
+
+      const closedPatch = {
+        listingId: listing.id,
+        status: "SOLD" as const,
+        closedAt: now.toISOString(),
+        winningAmountPerKg: listing.currentBidPerKg,
+        totalAmount: listing.currentBidPerKg ? listing.currentBidPerKg * listing.quantityKg : undefined,
+        serverTime: now.toISOString(),
+      };
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            listing,
+            patch: closedPatch,
+          },
+          meta: { serverTime: now.toISOString() },
+        }),
+      });
+    }
+
+    // 17. Close Auction simulation (POST /api/v1/listings/:id/close)
+    if (path.match(/\/api\/v1\/listings\/[^/]+\/close$/) && method === "POST") {
+      const parts = path.split("/");
+      const listingId = parts[parts.length - 2];
+      const listing = state.listings.find((l) => l.id === listingId);
+      if (!listing) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Listing not found" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const targetStatus = body.status as "SOLD" | "EXPIRED_UNSOLD";
+      const now = new Date();
+      listing.status = targetStatus;
+      listing.closedAt = now.toISOString();
+
+      const item = state.inventory.find((inv) => inv.crop.id === listing.cropId);
+      if (item) {
+        if (targetStatus === "SOLD") {
+          item.listedKg = Math.max(0, item.listedKg - listing.quantityKg);
+          item.soldKg += listing.quantityKg;
+        } else if (targetStatus === "EXPIRED_UNSOLD") {
+          item.listedKg = Math.max(0, item.listedKg - listing.quantityKg);
+          item.availableKg += listing.quantityKg;
+        }
+      }
+
+      const closedPatch = {
+        listingId: listing.id,
+        status: targetStatus,
+        closedAt: now.toISOString(),
+        winningAmountPerKg: listing.currentBidPerKg,
+        totalAmount: listing.currentBidPerKg ? listing.currentBidPerKg * listing.quantityKg : undefined,
+        serverTime: now.toISOString(),
+      };
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            listing,
+            patch: closedPatch,
+          },
+          meta: { serverTime: now.toISOString() },
+        }),
+      });
+    }
+
+    // 18. Listing by ID (GET /api/v1/listings/:id)
     if (path.startsWith("/api/v1/listings/") && method === "GET") {
       const id = path.replace("/api/v1/listings/", "");
       const listing = state.listings.find((l) => l.id === id) ?? state.listings[0];

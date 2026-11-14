@@ -92,7 +92,15 @@ npm test
 npm run test:e2e
 ```
 
-Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically. End-to-end specs in `e2e/` test Journey 1 (farmer publishing live auction with AI grading and price guidance) and Journey 1 Part 2 (floor warnings and inventory stock deduction check) using deterministic fixture sample photos in `e2e/fixtures/`.
+Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically. End-to-end specs in `e2e/` test:
+- **Journey 1:** Farmer publishing a live auction with AI quality grading and price guidance (`e2e/journey-1-farmer-publishes.spec.ts`).
+- **Journey 1 (Part 2):** Floor warnings and inventory stock deduction check (`e2e/journey-1-floor-warnings-stock.spec.ts`).
+- **Phase 4 E2E (Auction Engine & Bidding):**
+  1. Live bidding updates without page reload over real-time SSE stream (`e2e/journey-phase-4-auction-bidding.spec.ts`).
+  2. Late bids within anti-sniping threshold triggering the visual "Extended" timer state.
+  3. Auction sold completion with post-close inventory reconciliation (listed decreases, sold increases).
+  4. Auction unsold completion with relist dialog workflow and immediate re-activation in the live grid.
+  5. Cancel with no bids releasing inventory, and cancellation blocked with HTTP 400 `HAS_BIDS` once bids exist.
 
 ## Manually testing an auction
 

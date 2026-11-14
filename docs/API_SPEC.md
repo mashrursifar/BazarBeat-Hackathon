@@ -52,7 +52,7 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 | GET | /listings | A | Marketplace search with filters: cropId, grade, division, district, minPrice, maxPrice, minQty, endingWithin, status (default ACTIVE); sort |
 | GET | /listings/:id | A | Detail incl. bid summary and AI data (farmers see their own in any status; other roles see ACTIVE listings only; never exposes private fields; non-public listings return 404 for non-owners). Returns meta with `serverTime` |
 | GET | /listings/mine | F | Farmer's listings with status filter (`status`), pagination (`page`, `limit`), sorted newest first. Returns meta with `serverTime`, `page`, `limit`, `total` |
-| POST | /listings/:id/cancel | F | Only if zero bids (conditional atomic update; releases stock; status CANCELLED) |
+| POST | /listings/:id/cancel | F | Only if zero bids (conditional atomic update; releases reserved stock; status CANCELLED; returns 400 HAS_BIDS if bids already exist) |
 | POST | /listings/:id/accept-current-bid | F | Close early if current bid ≥ floor (uses closing service; creates order; status SOLD) |
 | POST | /listings/:id/relist | F | Create a new listing from an unsold one with new floor & duration (re-runs stock check; keeps grade only if within shelf-life freshness window returning GRADE_STALE if expired; recomputes price guidance; sets relistedFromId; max one relist per unsold listing) |
 | GET | /listings/:id/stream | A | SSE: bid.placed, auction.extended, auction.closed |
