@@ -181,10 +181,11 @@ describe("MyListingsPage component", () => {
     expect(card).toHaveTextContent("৳45.00");
     expect(card).toHaveTextContent("৳48.00");
 
-    // Plain text time left
+    // Countdown timer
     const timeLeft = screen.getByTestId(`time-left-${listing.id}`);
     expect(timeLeft).toBeInTheDocument();
-    expect(timeLeft).toHaveTextContent(/2h 1[45]m left/);
+    expect(timeLeft.querySelector('[data-testid="countdown-timer"]')).toBeInTheDocument();
+    expect(timeLeft).toHaveTextContent(/02:1[45]:/);
   });
 
   it("filters listings by status tabs", async () => {

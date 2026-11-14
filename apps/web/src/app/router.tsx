@@ -13,6 +13,7 @@ const PlaceholderPage = lazy(() => import("./role-layouts.js").then((module) => 
 const InventoryPage = lazy(() => import("../features/inventory/inventory-page.js"));
 const NewListingPage = lazy(() => import("../features/listings/new-listing-page.js"));
 const MyListingsPage = lazy(() => import("../features/listings/my-listings-page.js"));
+const CropBiddingPage = lazy(() => import("../features/listings/crop-bidding-page.js"));
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -53,6 +54,7 @@ function page(path: string, pageKey: string): { path: string; element: ReactElem
   if (path === "inventory") return { path, element: <InventoryPage /> };
   if (path === "new-listing") return { path, element: <NewListingPage /> };
   if (path === "products") return { path, element: <MyListingsPage /> };
+  if (path === "crop-bidding") return { path, element: <CropBiddingPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 
@@ -69,6 +71,7 @@ export const router = createBrowserRouter([
         element: <Suspense fallback={<RouteLoading />}><FarmerLayout /></Suspense>,
         children: [
           { index: true, element: <Navigate to="dashboard" replace /> },
+          { path: "bidding", element: <Navigate to="/farmer/crop-bidding" replace /> },
           ...FARMER_PAGES.map(([path, pageKey]) => page(path, pageKey)),
         ],
       },

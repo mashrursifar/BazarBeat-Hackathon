@@ -1,4 +1,5 @@
 import {
+  type AnonymizedBidHistoryResponse,
   type AssessmentResult,
   type CreateListingRequest,
   type CropResponse,
@@ -8,6 +9,8 @@ import {
   type PredictPriceRequest,
   type PriceGuidance,
   type PublicConfig,
+  type RelistListingRequest,
+  anonymizedBidHistoryResponseSchema,
   assessmentResultSchema,
   createListingRequestSchema,
   cropResponseSchema,
@@ -16,6 +19,7 @@ import {
   predictPriceRequestSchema,
   priceGuidanceSchema,
   publicConfigResponseSchema,
+  relistListingRequestSchema,
 } from "@bazarbeat/shared";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
@@ -142,4 +146,39 @@ export async function getMyListings(
 export async function getListingById(id: string): Promise<FarmerListingResponse> {
   const response = await request<unknown>(`/listings/${id}`);
   return farmerListingResponseSchema.parse(response);
+}
+
+/** Cancels an active listing with zero bids */
+export async function cancelListing(id: string): Promise<FarmerListingResponse> {
+  const response = await request<unknown>(`/listings/${id}/cancel`, {
+    method: "POST",
+  });
+  return farmerListingResponseSchema.parse(response);
+}
+
+/** Accepts the current highest bid early and closes the auction */
+export async function acceptCurrentBid(id: string): Promise<unknown> {
+  return request<unknown>(`/listings/${id}/accept-current-bid`, {
+    method: "POST",
+  });
+}
+
+/** Relists an unsold listing creating a new active auction */
+export async function relistListing(
+  id: string,
+  input: RelistListingRequest,
+): Promise<FarmerListingResponse> {
+  const parsed = relistListingRequestSchema.parse(input);
+  const response = await request<unknown>(`/listings/${id}/relist`, {
+    method: "POST",
+    body: JSON.stringify(parsed),
+    headers: { "Content-Type": "application/json" },
+  });
+  return farmerListingResponseSchema.parse(response);
+}
+
+/** Fetches anonymized bid history for a listing */
+export async function getListingBids(id: string): Promise<AnonymizedBidHistoryResponse> {
+  const response = await request<unknown>(`/listings/${id}/bids`);
+  return anonymizedBidHistoryResponseSchema.parse(response);
 }

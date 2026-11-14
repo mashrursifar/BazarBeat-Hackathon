@@ -1,14 +1,13 @@
 import { type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { Link } from "react-router-dom";
 import {
   type CropResponse,
-  type FarmerListing,
   type ListingStatus,
   formatPoisha,
 } from "@bazarbeat/shared";
 
+import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { PriceTag } from "../../components/shared/price-tag.js";
 import { Button } from "../../components/ui/button.js";
@@ -23,29 +22,6 @@ const STATUS_TABS: readonly { id: StatusTab; key: string }[] = [
   { id: "EXPIRED_UNSOLD", key: "filterExpired" },
   { id: "CANCELLED", key: "filterCancelled" },
 ];
-
-function formatTimeLeft(
-  listing: FarmerListing,
-  t: TFunction,
-): string {
-  if (listing.status !== "ACTIVE") {
-    return t(`listings.status.${listing.status}`);
-  }
-
-  const msRemaining = new Date(listing.endsAt).getTime() - Date.now();
-  if (msRemaining <= 0) {
-    return t("listings.endingSoon");
-  }
-
-  const totalMinutes = Math.floor(msRemaining / (1000 * 60));
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours > 0) {
-    return t("listings.hoursMinutesLeft", { hours, minutes });
-  }
-  return t("listings.minutesLeft", { minutes });
-}
 
 function StatusBadge({ status }: { status: ListingStatus }): ReactElement {
   const { t } = useTranslation();
@@ -277,13 +253,16 @@ export function ListingDetailDrawer({
                           <span>{dateFormatter.format(new Date(listing.endsAt))}</span>
                         </div>
                       </div>
-                      <div className="pt-1">
+                      <div className="pt-1 flex items-center justify-between">
                         <span className="font-semibold text-stone-700">
-                          {t("listings.timeLeft", "Time left:")}{" "}
-                          <strong className="text-primary font-bold">
-                            {formatTimeLeft(listing, t)}
-                          </strong>
+                          {t("listings.timeLeft", "Time left:")}
                         </span>
+                        <CountdownTimer
+                          endsAt={listing.endsAt}
+                          status={listing.status}
+                          size="sm"
+                          showIcon={true}
+                        />
                       </div>
                     </div>
 
@@ -516,15 +495,18 @@ export function MyListingsPage(): ReactElement {
                       </div>
                     </div>
 
-                    {/* Time left (plain text for now) */}
+                    {/* Time left (using shared countdown) */}
                     <div
                       data-testid={`time-left-${listing.id}`}
                       className="rounded-lg bg-stone-50 px-2.5 py-1.5 text-xs font-semibold text-stone-600 flex items-center justify-between"
                     >
                       <span className="text-muted-foreground">{t("listings.timeLeft", "Time left:")}</span>
-                      <span className={listing.status === "ACTIVE" ? "text-primary font-bold" : "text-stone-500"}>
-                        {formatTimeLeft(listing, t)}
-                      </span>
+                      <CountdownTimer
+                        endsAt={listing.endsAt}
+                        status={listing.status}
+                        size="sm"
+                        showIcon={false}
+                      />
                     </div>
                   </div>
                 </div>

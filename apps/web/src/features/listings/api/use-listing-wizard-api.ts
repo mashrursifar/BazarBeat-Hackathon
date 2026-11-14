@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import type {
+  AnonymizedBidHistoryResponse,
   AssessmentResult,
   CreateListingRequest,
   CropResponse,
@@ -15,17 +16,22 @@ import type {
   PredictPriceRequest,
   PriceGuidance,
   PublicConfig,
+  RelistListingRequest,
 } from "@bazarbeat/shared";
 
 import {
   ApiError,
+  acceptCurrentBid,
   assessQuality,
+  cancelListing,
   createListing,
   getConfig,
   getCrops,
+  getListingBids,
   getListingById,
   getMyListings,
   predictPrice,
+  relistListing,
 } from "./listing-api.js";
 
 export const listingKeys = {
@@ -35,6 +41,7 @@ export const listingKeys = {
   mine: (query?: FarmerListingQuery) => ["listings", "mine", query] as const,
   mineAll: ["listings", "mine"] as const,
   detail: (id: string | null) => ["listings", "detail", id] as const,
+  bids: (id: string | null) => ["listings", "bids", id] as const,
 };
 
 export function useCrops(): UseQueryResult<CropResponse[], Error> {
@@ -108,5 +115,64 @@ export function useListingDetail(
     queryKey: listingKeys.detail(id),
     queryFn: () => (id ? getListingById(id) : Promise.reject(new Error("No ID"))),
     enabled: Boolean(id),
+  });
+}
+
+export function useListingBids(
+  id: string | null,
+): UseQueryResult<AnonymizedBidHistoryResponse, ApiError> {
+  return useQuery({
+    queryKey: listingKeys.bids(id),
+    queryFn: () => (id ? getListingBids(id) : Promise.reject(new Error("No ID"))),
+    enabled: Boolean(id),
+  });
+}
+
+export function useCancelListing(): UseMutationResult<
+  FarmerListingResponse,
+  ApiError,
+  string
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => cancelListing(id),
+    onSuccess: async (_data, id) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listingKeys.mineAll }),
+        queryClient.invalidateQueries({ queryKey: listingKeys.detail(id) }),
+      ]);
+    },
+  });
+}
+
+export function useAcceptCurrentBid(): UseMutationResult<
+  unknown,
+  ApiError,
+  string
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => acceptCurrentBid(id),
+    onSuccess: async (_data, id) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: listingKeys.mineAll }),
+        queryClient.invalidateQueries({ queryKey: listingKeys.detail(id) }),
+      ]);
+    },
+  });
+}
+
+export function useRelistListing(): UseMutationResult<
+  FarmerListingResponse,
+  ApiError,
+  { id: string; input: RelistListingRequest }
+> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: RelistListingRequest }) =>
+      relistListing(id, input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: listingKeys.mineAll });
+    },
   });
 }
