@@ -13,7 +13,7 @@ State-changing requests require the `X-CSRF-Protection: 1` header.
 
 ## Error codes
 
-`VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN` 403 · `NOT_FOUND` 404 · `CONFLICT` 409 · `RATE_LIMITED` 429 · `INTERNAL` 500 · Business: `AUCTION_CLOSED`, `BID_TOO_LOW`, `CANNOT_OUTBID_SELF`, `OWN_LISTING`, `INSUFFICIENT_STOCK`, `GRADE_UNAVAILABLE`, `GRADE_STALE`, `CROP_MISMATCH`, `INVALID_TRANSITION`, `HAS_BIDS`, `NO_BIDS`, `BELOW_FLOOR` (400, 403, 409, or 422 as noted in the module).
+`VALIDATION_ERROR` 400 · `UNAUTHENTICATED` 401 · `FORBIDDEN` 403 · `NOT_FOUND` 404 · `CONFLICT` 409 · `RATE_LIMITED` 429 · `INTERNAL` 500 · Business: `AUCTION_CLOSED`, `BID_TOO_LOW`, `CANNOT_OUTBID_SELF`, `OWN_LISTING`, `INSUFFICIENT_STOCK`, `GRADE_UNAVAILABLE`, `GRADE_STALE`, `CROP_MISMATCH`, `COMPARE_MIXED_CROPS`, `INVALID_TRANSITION`, `HAS_BIDS`, `NO_BIDS`, `BELOW_FLOOR` (400, 403, 409, or 422 as noted in the module).
 
 ## Auth
 
@@ -49,20 +49,20 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 ## Listings
 
 | POST | /listings | F | Create and publish (requires valid assessment token, stock, valid floor and duration). Returns meta with `serverTime` |
-| GET | /listings | A | Marketplace search with filters: cropId, grade, division, district, minPrice, maxPrice, minQty, endingWithin, status (default ACTIVE); sort |
+| GET | /listings | A | Marketplace search with filters: `crop` / `cropId`, `grade` (A, B, C), `division` and `district` (case-insensitive, district validated against division), `minPrice`, `maxPrice` (poisha/kg), `minQty` / `minQuantity`, `endingWithin` (presets: 1, 3, 6, 24 hours), `status` (default ACTIVE); `sort` (`ending-soonest`, `lowest-price`, `highest-grade`, `newest`), pagination (`page` default 1, `limit` default 20, max 50). Returns `{ data: BuyerListingCard[], meta: { serverTime, page, limit, total } }` |
 | GET | /listings/:id | A | Detail incl. bid summary and AI data (farmers see their own in any status; other roles see ACTIVE listings only; never exposes private fields; non-public listings return 404 for non-owners). Returns meta with `serverTime` |
 | GET | /listings/mine | F | Farmer's listings with status filter (`status`), pagination (`page`, `limit`), sorted newest first. Returns meta with `serverTime`, `page`, `limit`, `total` |
 | POST | /listings/:id/cancel | F | Only if zero bids (conditional atomic update; releases reserved stock; status CANCELLED; returns 400 HAS_BIDS if bids already exist) |
 | POST | /listings/:id/accept-current-bid | F | Close early if current bid ≥ floor (uses closing service; creates order; status SOLD) |
 | POST | /listings/:id/relist | F | Create a new listing from an unsold one with new floor & duration (re-runs stock check; keeps grade only if within shelf-life freshness window returning GRADE_STALE if expired; recomputes price guidance; sets relistedFromId; max one relist per unsold listing) |
 | GET | /listings/:id/stream | A | SSE: bid.placed, auction.extended, auction.closed |
-| GET | /listings/compare?ids=a,b,c,d | B | Compare payload (max 4) |
+| GET | /listings/compare?ids=a,b,c,d | B | Compare payload (1–4 listings of the same crop; returns 400 `COMPARE_MIXED_CROPS` if crops differ). Returns `{ data: ComparePayload, meta: { serverTime } }`. Highlights compute lowest price per kg, best grade (A>B>C), largest quantity, and lowest percentage vs AI expected price (best value) among ACTIVE listings; ties highlight all tied listings; ended listings are displayed without highlights |
 
 ## Bids
 
-| POST | /listings/:id/bids | B | Place bid `{ amountPerKg }` (poisha per kg). Accepts optional `Idempotency-Key` header. Returns `{ data: BidItem, meta: { serverTime } }`. Errors: `VALIDATION_ERROR`, `AUCTION_CLOSED`, `BID_TOO_LOW`, `CANNOT_OUTBID_SELF`, `OWN_LISTING` |
-| GET | /listings/:id/bids | A | Bid history (bidders anonymized as `Buyer #1`, `Buyer #2`, etc. for non-owners and farmers; buyer names revealed only on confirmed order). Returns `{ data: AnonymizedBidHistoryItem[], meta: { serverTime } }` |
-| GET | /bids/mine | B | My bids grouped: active (winning/outbid), won, lost |
+| POST | /listings/:id/bids | B | Place bid `{ amountPerKg }` (poisha per kg). Accepts optional `Idempotency-Key` header. Returns `{ data: BidItem, meta: { serverTime } }`. Errors: `VALIDATION_ERROR`, `AUCTION_CLOSED`, `BID_TOO_LOW` (includes `{ minimumRequiredPerKg, currentBidPerKg, floorPricePerKg, minIncrementPerKg }`), `CANNOT_OUTBID_SELF`, `OWN_LISTING` |
+| GET | /listings/:id/bids | A | Bid history (bidders anonymized as `Buyer #1`, `Buyer #2`, etc. for non-owners and farmers; includes boolean `isMine` for the calling buyer; buyer names revealed only on confirmed order). Returns `{ data: AnonymizedBidHistoryItem[], meta: { serverTime } }` |
+| GET | /bids/mine | B | My bids grouped: active (winning/outbid), won, lost. Returns `{ data: { active: MyBidsRow[], won: MyBidsRow[], lost: MyBidsRow[] }, meta: { serverTime } }` |
 
 ### Real-Time Domain Events (SSE)
 

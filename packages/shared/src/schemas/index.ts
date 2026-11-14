@@ -9,3 +9,4 @@ export * from "./ai-listings.js";
 export * from "./bids.js";
 export * from "./orders.js";
 export * from "./listing-stream.js";
+export * from "./marketplace.js";

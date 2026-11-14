@@ -88,9 +88,25 @@ export const AuctionErrorCode = {
   BELOW_FLOOR: "BELOW_FLOOR",
   INVALID_TRANSITION: "INVALID_TRANSITION",
   GRADE_STALE: "GRADE_STALE",
+  COMPARE_MIXED_CROPS: "COMPARE_MIXED_CROPS",
 } as const;
 
 export type AuctionErrorCode = (typeof AuctionErrorCode)[keyof typeof AuctionErrorCode];
+
+export const MarketplaceErrorCode = {
+  COMPARE_MIXED_CROPS: "COMPARE_MIXED_CROPS",
+} as const;
+
+export type MarketplaceErrorCode = (typeof MarketplaceErrorCode)[keyof typeof MarketplaceErrorCode];
+
+export const MarketplaceSort = {
+  ENDING_SOONEST: "ending-soonest",
+  LOWEST_PRICE: "lowest-price",
+  HIGHEST_GRADE: "highest-grade",
+  NEWEST: "newest",
+} as const;
+
+export type MarketplaceSort = (typeof MarketplaceSort)[keyof typeof MarketplaceSort];
 
 export const OrderStatus = {
   PENDING: "PENDING",

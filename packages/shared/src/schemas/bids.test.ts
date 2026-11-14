@@ -5,6 +5,9 @@ import {
   anonymizedBidHistoryResponseSchema,
   bidItemSchema,
   bidResponseSchema,
+  bidTooLowDetailsSchema,
+  myBidsResponseSchema,
+  myBidsRowSchema,
   placeBidRequestSchema,
 } from "./bids.js";
 
@@ -106,6 +109,23 @@ describe("Bid schemas", () => {
       expect(listResult.success).toBe(true);
     });
 
+    it("accepts isMine property on anonymized bid history item", () => {
+      const validItem = {
+        id: "bid-101",
+        listingId: "listing-202",
+        amountPerKg: 6200,
+        totalAmount: 620000,
+        bidderLabel: "Buyer #1",
+        placedAt: "2026-11-14T10:05:00.000Z",
+        isMine: true,
+      };
+      const result = anonymizedBidHistoryItemSchema.safeParse(validItem);
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.isMine).toBe(true);
+      }
+    });
+
     it("rejects invalid date formats in bid history", () => {
       const result = anonymizedBidHistoryItemSchema.safeParse({
         id: "bid-101",
@@ -116,6 +136,77 @@ describe("Bid schemas", () => {
         placedAt: "not-a-date",
       });
       expect(result.success).toBe(false);
+    });
+  });
+
+  describe("bidTooLowDetailsSchema", () => {
+    it("validates valid BID_TOO_LOW details payload", () => {
+      const validWithCurrentBid = {
+        minimumRequiredPerKg: 5100,
+        currentBidPerKg: 5000,
+        floorPricePerKg: 4000,
+        minIncrementPerKg: 100,
+      };
+      const result1 = bidTooLowDetailsSchema.safeParse(validWithCurrentBid);
+      expect(result1.success).toBe(true);
+
+      const validWithoutCurrentBid = {
+        minimumRequiredPerKg: 4000,
+        currentBidPerKg: null,
+        floorPricePerKg: 4000,
+        minIncrementPerKg: 100,
+      };
+      const result2 = bidTooLowDetailsSchema.safeParse(validWithoutCurrentBid);
+      expect(result2.success).toBe(true);
+    });
+
+    it("rejects non-positive minimumRequiredPerKg", () => {
+      const invalid = {
+        minimumRequiredPerKg: 0,
+        currentBidPerKg: null,
+        floorPricePerKg: 4000,
+        minIncrementPerKg: 100,
+      };
+      expect(bidTooLowDetailsSchema.safeParse(invalid).success).toBe(false);
+    });
+  });
+
+  describe("myBidsRowSchema & myBidsResponseSchema", () => {
+    it("validates My Bids row and grouped response envelope", () => {
+      const row = {
+        bidId: "507f1f77bcf86cd799439011",
+        listingId: "507f1f77bcf86cd799439012",
+        cropId: "507f1f77bcf86cd799439013",
+        cropNameEn: "Onion",
+        cropNameBn: "পেঁয়াজ",
+        grade: "A" as const,
+        quantityKg: 100,
+        myBidPerKg: 5500,
+        myTotalAmount: 550000,
+        currentBidPerKg: 5500,
+        currentTotalAmount: 550000,
+        bidCount: 4,
+        status: "WINNING" as const,
+        listingStatus: "ACTIVE" as const,
+        endsAt: "2026-11-14T15:00:00.000Z",
+        placedAt: "2026-11-14T11:00:00.000Z",
+        thumbnailUrl: "/uploads/onion.jpg",
+      };
+
+      const rowResult = myBidsRowSchema.safeParse(row);
+      expect(rowResult.success).toBe(true);
+
+      const envelopeResult = myBidsResponseSchema.safeParse({
+        data: {
+          active: [row],
+          won: [],
+          lost: [],
+        },
+        meta: {
+          serverTime: "2026-11-14T11:05:00.000Z",
+        },
+      });
+      expect(envelopeResult.success).toBe(true);
     });
   });
 });

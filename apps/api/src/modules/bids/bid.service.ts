@@ -115,6 +115,12 @@ async function reportMismatchReason(
         400,
         "BID_TOO_LOW",
         `Bid must be at least the floor price of ${listing.floorPricePerKg} poisha`,
+        {
+          minimumRequiredPerKg: listing.floorPricePerKg,
+          currentBidPerKg: null,
+          floorPricePerKg: listing.floorPricePerKg,
+          minIncrementPerKg: listing.minIncrementPerKg,
+        },
       );
     }
   } else {
@@ -124,6 +130,12 @@ async function reportMismatchReason(
         400,
         "BID_TOO_LOW",
         `Bid must be at least ${minRequired} poisha`,
+        {
+          minimumRequiredPerKg: minRequired,
+          currentBidPerKg: listing.currentBidPerKg ?? null,
+          floorPricePerKg: listing.floorPricePerKg,
+          minIncrementPerKg: listing.minIncrementPerKg,
+        },
       );
     }
   }
@@ -603,7 +615,7 @@ export async function getListingBids(
         totalAmount: bid.totalAmount,
         bidderLabel: buyerLabelMap.get(buyerIdStr) ?? "Buyer #?",
         placedAt: bid.placedAt.toISOString(),
-        ...(user ? { isMyBid } : {}),
+        ...(user ? { isMyBid, isMine: isMyBid } : {}),
       };
     })
     .reverse(); // Newest bids first
