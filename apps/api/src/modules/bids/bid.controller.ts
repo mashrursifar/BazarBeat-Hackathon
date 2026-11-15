@@ -2,12 +2,15 @@ import type { RequestHandler } from "express";
 import type {
   AnonymizedBidHistoryResponse,
   BidResponse,
+  MyBidsQuery,
+  MyBidsResponse,
   PlaceBidRequest,
 } from "@bazarbeat/shared";
 
 import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
+import type { QueryValidationLocals } from "../../shared/validate-query.js";
 import { getClock } from "../../shared/clock.js";
-import { getListingBids, placeBid } from "./bid.service.js";
+import { getListingBids, getMyBids, placeBid } from "./bid.service.js";
 
 export const placeBidController: RequestHandler<
   { id: string },
@@ -54,4 +57,15 @@ export const getListingBidsController: RequestHandler<
       serverTime: clock.iso(),
     },
   });
+};
+
+export const getMyBidsController: RequestHandler<
+  unknown,
+  MyBidsResponse,
+  unknown,
+  unknown,
+  AuthenticatedLocals & QueryValidationLocals<MyBidsQuery>
+> = async (_req, res): Promise<void> => {
+  const result = await getMyBids(res.locals.currentUser, res.locals.validatedQuery);
+  res.status(200).json(result);
 };

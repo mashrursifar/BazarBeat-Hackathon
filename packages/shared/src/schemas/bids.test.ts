@@ -6,8 +6,10 @@ import {
   bidItemSchema,
   bidResponseSchema,
   bidTooLowDetailsSchema,
+  myBidsQuerySchema,
   myBidsResponseSchema,
   myBidsRowSchema,
+  paginatedMyBidsResponseSchema,
   placeBidRequestSchema,
 } from "./bids.js";
 
@@ -207,6 +209,105 @@ describe("Bid schemas", () => {
         },
       });
       expect(envelopeResult.success).toBe(true);
+    });
+
+    it("validates an OUTBID row with gapToCurrentPerKg and gap", () => {
+      const outbidRow = {
+        bidId: "507f1f77bcf86cd799439011",
+        listingId: "507f1f77bcf86cd799439012",
+        cropId: "507f1f77bcf86cd799439013",
+        cropNameEn: "Potato",
+        cropNameBn: "আলু",
+        grade: "B" as const,
+        quantityKg: 200,
+        myBidPerKg: 3000,
+        myTotalAmount: 600000,
+        currentBidPerKg: 3200,
+        currentTotalAmount: 640000,
+        bidCount: 5,
+        status: "OUTBID" as const,
+        listingStatus: "ACTIVE" as const,
+        endsAt: "2026-11-14T15:00:00.000Z",
+        placedAt: "2026-11-14T11:00:00.000Z",
+        thumbnailUrl: null,
+        gapToCurrentPerKg: 200,
+        gap: 200,
+        orderId: null,
+      };
+
+      const rowResult = myBidsRowSchema.safeParse(outbidRow);
+      expect(rowResult.success).toBe(true);
+    });
+
+    it("validates a WON row with orderId and paginated response envelope", () => {
+      const wonRow = {
+        bidId: "507f1f77bcf86cd799439011",
+        listingId: "507f1f77bcf86cd799439012",
+        cropId: "507f1f77bcf86cd799439013",
+        cropNameEn: "Bitter Gourd",
+        cropNameBn: "করলা",
+        grade: "A" as const,
+        quantityKg: 50,
+        myBidPerKg: 7500,
+        myTotalAmount: 375000,
+        currentBidPerKg: 7500,
+        currentTotalAmount: 375000,
+        bidCount: 2,
+        status: "WON" as const,
+        listingStatus: "SOLD" as const,
+        endsAt: "2026-11-14T15:00:00.000Z",
+        placedAt: "2026-11-14T11:00:00.000Z",
+        thumbnailUrl: "/uploads/gourd.jpg",
+        gapToCurrentPerKg: null,
+        gap: null,
+        orderId: "507f1f77bcf86cd799439099",
+      };
+
+      const rowResult = myBidsRowSchema.safeParse(wonRow);
+      expect(rowResult.success).toBe(true);
+
+      const paginatedResult = myBidsResponseSchema.safeParse({
+        data: [wonRow],
+        meta: {
+          serverTime: "2026-11-14T16:00:00.000Z",
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+          group: "won",
+        },
+      });
+      expect(paginatedResult.success).toBe(true);
+
+      const specificPaginatedResult = paginatedMyBidsResponseSchema.safeParse({
+        data: [wonRow],
+        meta: {
+          serverTime: "2026-11-14T16:00:00.000Z",
+          page: 1,
+          limit: 20,
+          total: 1,
+          totalPages: 1,
+          group: "won",
+        },
+      });
+      expect(specificPaginatedResult.success).toBe(true);
+    });
+
+    it("parses myBidsQuerySchema with defaults and case normalization", () => {
+      expect(myBidsQuerySchema.parse({})).toEqual({
+        page: 1,
+        limit: 20,
+      });
+
+      expect(myBidsQuerySchema.parse({ group: "ACTIVE", page: "2", limit: "10" })).toEqual({
+        group: "active",
+        page: 2,
+        limit: 10,
+      });
+
+      expect(myBidsQuerySchema.safeParse({ group: "invalid" }).success).toBe(false);
+      expect(myBidsQuerySchema.safeParse({ page: "0" }).success).toBe(false);
+      expect(myBidsQuerySchema.safeParse({ limit: "51" }).success).toBe(false);
     });
   });
 });

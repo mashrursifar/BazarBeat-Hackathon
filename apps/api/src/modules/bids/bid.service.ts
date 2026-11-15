@@ -1,13 +1,20 @@
 import mongoose from "mongoose";
+import { ObjectId } from "bson";
 import {
   AUCTION_TIMING,
   type AnonymizedBidHistoryItem,
   type BidItem,
   BidStatus,
+  type BuyerBidStatus,
+  type CropGrade,
   DomainEventName,
   ListingStatus,
+  type MyBidsQuery,
+  type MyBidsResponse,
+  type MyBidsRow,
   type PublicUser,
   UserRole,
+  calculateSubtotal,
   getAntiSnipingExtensionDurationMs,
   getAntiSnipingTriggerWindowMs,
 } from "@bazarbeat/shared";
@@ -17,7 +24,9 @@ import { getClock } from "../../shared/clock.js";
 import { getDomainEventEmitter } from "../../shared/domain-event-emitter.js";
 import { AppError } from "../../shared/errors.js";
 import { logger } from "../../shared/logger.js";
+import { Crop } from "../crops/crop.model.js";
 import { Listing } from "../listings/listing.model.js";
+import { Order } from "../orders/order.model.js";
 import { Bid } from "./bid.model.js";
 import { IdempotencyRecord } from "./idempotency-record.model.js";
 
@@ -637,4 +646,236 @@ export async function getListingBids(
       };
     })
     .reverse(); // Newest bids first
+}
+
+/**
+ * Retrieves the authenticated buyer's bids grouped by listing (Task 5.5).
+ * One row per listing the buyer bid on:
+ * - Listing summary (crop, grade, quantity, thumbnails, listingStatus)
+ * - Buyer's highest bid on that listing (amountPerKg, totalAmount, bidId, placedAt)
+ * - Current price (currentBidPerKg, currentTotalAmount, bidCount)
+ * - Derived status (WINNING or OUTBID while active; WON or LOST after closing)
+ * - Gap to current price when outbid (in poisha per kg)
+ * - End time (endsAt)
+ * - Order ID when won
+ * - Newest activity first (sorted by the buyer's latest bid placedAt on that listing)
+ * - Filterable by group (active | won | lost) with pagination (page, limit, total, totalPages)
+ */
+export async function getMyBids(
+  buyer: PublicUser,
+  query: MyBidsQuery,
+): Promise<MyBidsResponse> {
+  const clock = getClock();
+  const validBuyerId = ensureObjectId(buyer.id);
+  const buyerObjectId = new ObjectId(validBuyerId);
+
+  // 1. Fetch all bids placed by this buyer, sorted newest first
+  const buyerBids = await Bid.find({ buyerId: buyerObjectId })
+    .sort({ placedAt: -1, _id: -1 })
+    .lean();
+
+  if (buyerBids.length === 0) {
+    if (query.group !== undefined) {
+      return {
+        data: [],
+        meta: {
+          serverTime: clock.iso(),
+          page: query.page,
+          limit: query.limit,
+          total: 0,
+          totalPages: 0,
+          group: query.group,
+        },
+      };
+    }
+    return {
+      data: {
+        active: [],
+        won: [],
+        lost: [],
+      },
+      meta: {
+        serverTime: clock.iso(),
+        total: 0,
+      },
+    };
+  }
+
+  // 2. Group bids by listingId to produce exactly one row per listing
+  interface ListingGroup {
+    listingIdStr: string;
+    highestBid: (typeof buyerBids)[0];
+    latestActivityAt: Date;
+  }
+
+  const groupMap = new Map<string, ListingGroup>();
+
+  for (const bid of buyerBids) {
+    const lid = bid.listingId.toString().toLowerCase();
+    const existing = groupMap.get(lid);
+
+    if (!existing) {
+      groupMap.set(lid, {
+        listingIdStr: lid,
+        highestBid: bid,
+        latestActivityAt: bid.placedAt,
+      });
+    } else {
+      if (bid.placedAt > existing.latestActivityAt) {
+        existing.latestActivityAt = bid.placedAt;
+      }
+      if (bid.amountPerKg > existing.highestBid.amountPerKg) {
+        existing.highestBid = bid;
+      }
+    }
+  }
+
+  // 3. Fetch listings, crops, and orders in bulk
+  const listingObjectIds = Array.from(groupMap.keys()).map((id) => new ObjectId(id));
+  const listings = await Listing.find({ _id: { $in: listingObjectIds } }).lean();
+  const listingsMap = new Map(listings.map((l) => [l._id.toString().toLowerCase(), l]));
+
+  const cropObjectIds = Array.from(
+    new Set(listings.map((l) => l.cropId.toString().toLowerCase())),
+  ).map((id) => new ObjectId(id));
+  const crops = await Crop.find({ _id: { $in: cropObjectIds } }).lean();
+  const cropsMap = new Map(crops.map((c) => [c._id.toString().toLowerCase(), c]));
+
+  const orders = await Order.find({
+    listingId: { $in: listingObjectIds },
+    buyerId: buyerObjectId,
+  }).lean();
+  const ordersMap = new Map(orders.map((o) => [o.listingId.toString().toLowerCase(), o]));
+
+  // 4. Construct MyBidsRow for each listing
+  const rowsWithActivity: Array<{ row: MyBidsRow; latestActivityAt: Date }> = [];
+
+  for (const group of groupMap.values()) {
+    const listing = listingsMap.get(group.listingIdStr);
+    if (!listing) continue; // In case listing was removed or not accessible
+
+    const crop = cropsMap.get(listing.cropId.toString().toLowerCase());
+    const order = ordersMap.get(group.listingIdStr);
+    const highestBid = group.highestBid;
+
+    // Derived status
+    let derivedStatus: BuyerBidStatus;
+    if (listing.status === ListingStatus.ACTIVE) {
+      const isCurrentHighest =
+        listing.currentBidderId !== undefined &&
+        listing.currentBidderId !== null &&
+        listing.currentBidderId.toString().toLowerCase() === validBuyerId;
+      derivedStatus = isCurrentHighest ? "WINNING" : "OUTBID";
+    } else if (listing.status === ListingStatus.SOLD) {
+      const isWinner =
+        order !== undefined ||
+        highestBid.status === BidStatus.WON ||
+        (listing.winningBidId !== undefined &&
+          listing.winningBidId !== null &&
+          listing.winningBidId.toString().toLowerCase() ===
+            highestBid._id.toString().toLowerCase()) ||
+        (listing.currentBidderId !== undefined &&
+          listing.currentBidderId !== null &&
+          listing.currentBidderId.toString().toLowerCase() === validBuyerId);
+      derivedStatus = isWinner ? "WON" : "LOST";
+    } else {
+      // EXPIRED_UNSOLD, CANCELLED, etc.
+      derivedStatus = "LOST";
+    }
+
+    const currentBidPerKg = listing.currentBidPerKg ?? listing.floorPricePerKg;
+    const currentTotalAmount = calculateSubtotal(currentBidPerKg, listing.quantityKg);
+
+    let gapToCurrentPerKg: number | null = null;
+    let gap: number | null = null;
+    if (derivedStatus === "OUTBID") {
+      const diff = Math.max(0, currentBidPerKg - highestBid.amountPerKg);
+      gapToCurrentPerKg = diff;
+      gap = diff;
+    }
+
+    const orderId = derivedStatus === "WON" && order ? order._id.toString() : null;
+
+    const row: MyBidsRow = {
+      bidId: highestBid._id.toString(),
+      listingId: listing._id.toString(),
+      cropId: listing.cropId.toString(),
+      cropNameEn: crop?.nameEn ?? "Produce",
+      cropNameBn: crop?.nameBn ?? "শস্য",
+      grade: listing.aiAssessment.grade as CropGrade,
+      quantityKg: listing.quantityKg,
+      myBidPerKg: highestBid.amountPerKg,
+      myTotalAmount: highestBid.totalAmount,
+      currentBidPerKg,
+      currentTotalAmount,
+      bidCount: listing.bidCount,
+      status: derivedStatus,
+      listingStatus: listing.status as ListingStatus,
+      endsAt: listing.endsAt.toISOString(),
+      placedAt: highestBid.placedAt.toISOString(),
+      thumbnailUrl: listing.images?.[0]?.url ?? null,
+      gapToCurrentPerKg,
+      gap,
+      orderId,
+    };
+
+    rowsWithActivity.push({
+      row,
+      latestActivityAt: group.latestActivityAt,
+    });
+  }
+
+  // 5. Newest activity first
+  rowsWithActivity.sort((a, b) => {
+    const diff = b.latestActivityAt.getTime() - a.latestActivityAt.getTime();
+    if (diff !== 0) return diff;
+    return b.row.listingId.localeCompare(a.row.listingId);
+  });
+
+  const allRows = rowsWithActivity.map((item) => item.row);
+
+  function getRowGroup(status: BuyerBidStatus): "active" | "won" | "lost" {
+    if (status === "WINNING" || status === "OUTBID") return "active";
+    if (status === "WON") return "won";
+    return "lost";
+  }
+
+  // 6. Handle query with or without group filter
+  if (query.group !== undefined) {
+    const targetGroup = query.group;
+    const filteredRows = allRows.filter((r) => getRowGroup(r.status) === targetGroup);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const total = filteredRows.length;
+    const totalPages = Math.ceil(total / limit);
+    const paginated = filteredRows.slice((page - 1) * limit, page * limit);
+
+    return {
+      data: paginated,
+      meta: {
+        serverTime: clock.iso(),
+        page,
+        limit,
+        total,
+        totalPages,
+        group: targetGroup,
+      },
+    };
+  }
+
+  const activeRows = allRows.filter((r) => getRowGroup(r.status) === "active");
+  const wonRows = allRows.filter((r) => getRowGroup(r.status) === "won");
+  const lostRows = allRows.filter((r) => getRowGroup(r.status) === "lost");
+
+  return {
+    data: {
+      active: activeRows,
+      won: wonRows,
+      lost: lostRows,
+    },
+    meta: {
+      serverTime: clock.iso(),
+      total: allRows.length,
+    },
+  };
 }

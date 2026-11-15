@@ -1,3 +1,4 @@
+import { ObjectId } from "bson";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose, { Types } from "mongoose";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
@@ -20,11 +21,13 @@ import {
   setDomainEventEmitter,
 } from "../../shared/domain-event-emitter.js";
 import { env } from "../../config/env.js";
+import { Crop } from "../crops/crop.model.js";
 import { Listing } from "../listings/listing.model.js";
+import { Order } from "../orders/order.model.js";
 import { User } from "../users/user.model.js";
 import { Bid } from "./bid.model.js";
 import { IdempotencyRecord } from "./idempotency-record.model.js";
-import { getListingBids, placeBid } from "./bid.service.js";
+import { getListingBids, getMyBids, placeBid } from "./bid.service.js";
 
 let mongoReplSet: MongoMemoryReplSet | undefined;
 let testClock: TestClock;
@@ -78,6 +81,8 @@ beforeAll(async () => {
     Bid.init(),
     User.init(),
     IdempotencyRecord.init(),
+    Crop.init(),
+    Order.init(),
   ]);
 }, 180_000);
 
@@ -98,6 +103,8 @@ beforeEach(async () => {
     Bid.deleteMany({}),
     User.deleteMany({}),
     IdempotencyRecord.deleteMany({}),
+    Crop.deleteMany({}),
+    Order.deleteMany({}),
   ]);
 });
 
@@ -716,6 +723,175 @@ describe("Bid Placement Service (AUCTION_RULES §4, §5, §6)", () => {
       for (const b of acceptedBids) {
         expect(b.totalAmount).toBe(Math.round(b.amountPerKg * listing.quantityKg));
       }
+    });
+  });
+
+  describe("getMyBids (Task 5.5)", () => {
+    let testCropId: Types.ObjectId;
+
+    beforeEach(async () => {
+      testCropId = new Types.ObjectId();
+      await Crop.create({
+        _id: testCropId,
+        slug: "onion",
+        nameEn: "Onion",
+        nameBn: "পেঁয়াজ",
+        unit: "KG",
+        minLotKg: 10,
+        maxLotKg: 1000,
+        shelfLifeHours: 120,
+        gradeGuide: { A: "Dry, firm", B: "Slight blemishes", C: "Irregular size" },
+        imageUrl: "/crops/onion.png",
+        isActive: true,
+      });
+    });
+
+    it("returns empty grouped object when buyer has zero bids and no group query", async () => {
+      const result = await getMyBids(buyerOne, { page: 1, limit: 20 });
+      expect(result).toMatchObject({
+        data: {
+          active: [],
+          won: [],
+          lost: [],
+        },
+        meta: {
+          total: 0,
+        },
+      });
+      expect(typeof result.meta.serverTime).toBe("string");
+    });
+
+    it("returns empty paginated array when group query is provided and buyer has zero bids", async () => {
+      const result = await getMyBids(buyerOne, { group: "active", page: 1, limit: 20 });
+      expect(result).toMatchObject({
+        data: [],
+        meta: {
+          page: 1,
+          limit: 20,
+          total: 0,
+          totalPages: 0,
+          group: "active",
+        },
+      });
+    });
+
+    it("correctly derives WINNING, OUTBID, WON, and LOST across listings", async () => {
+      const activeListing = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 4000,
+        minIncrementPerKg: 100,
+        quantityKg: 50,
+      });
+
+      const wonListing = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 5000,
+        minIncrementPerKg: 100,
+        quantityKg: 100,
+      });
+
+      const lostListing = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 6000,
+        minIncrementPerKg: 100,
+        quantityKg: 30,
+      });
+
+      // 1. On activeListing: buyerOne bids 4000 (WINNING)
+      await placeBid(buyerOne, activeListing._id.toString(), { amountPerKg: 4000 });
+
+      // 2. On wonListing: buyerOne bids 5000, then listing is closed SOLD with order
+      const wonBidRes = await placeBid(buyerOne, wonListing._id.toString(), { amountPerKg: 5000 });
+      const order = await Order.create({
+        listingId: wonListing._id,
+        farmerId: new ObjectId(farmerUser.id),
+        buyerId: new ObjectId(buyerOne.id),
+        cropId: testCropId,
+        quantityKg: 100,
+        grade: CropGrade.A,
+        pricePerKg: 5000,
+        subtotal: 500000,
+        platformFee: 10000,
+        farmerNet: 490000,
+        status: "CONFIRMED",
+      });
+
+      await Listing.findByIdAndUpdate(wonListing._id, {
+        status: ListingStatus.SOLD,
+        winningBidId: new ObjectId(wonBidRes.bid.id),
+        currentBidderId: new ObjectId(buyerOne.id),
+        closedAt: testClock.now(),
+      });
+      await Bid.findByIdAndUpdate(wonBidRes.bid.id, { status: BidStatus.WON });
+
+      // 3. On lostListing: buyerOne bids 6000, then buyerTwo outbids with 6200, then listing SOLD to buyerTwo
+      await placeBid(buyerOne, lostListing._id.toString(), { amountPerKg: 6000 });
+      const buyerTwoWinningBid = await placeBid(buyerTwo, lostListing._id.toString(), {
+        amountPerKg: 6200,
+      });
+
+      await Listing.findByIdAndUpdate(lostListing._id, {
+        status: ListingStatus.SOLD,
+        winningBidId: new ObjectId(buyerTwoWinningBid.bid.id),
+        currentBidderId: new ObjectId(buyerTwo.id),
+        closedAt: testClock.now(),
+      });
+      await Bid.findByIdAndUpdate(buyerTwoWinningBid.bid.id, { status: BidStatus.WON });
+
+      // Fetch buyerOne's grouped bids
+      const res = await getMyBids(buyerOne, { page: 1, limit: 20 });
+      const groupedData = (res as { data: { active: unknown[]; won: unknown[]; lost: unknown[] } }).data;
+
+      expect(groupedData.active).toHaveLength(1);
+      const activeRow = groupedData.active[0] as {
+        status: string;
+        myBidPerKg: number;
+        gapToCurrentPerKg: unknown;
+        orderId: unknown;
+      };
+      expect(activeRow.status).toBe("WINNING");
+      expect(activeRow.myBidPerKg).toBe(4000);
+      expect(activeRow.gapToCurrentPerKg).toBeNull();
+      expect(activeRow.orderId).toBeNull();
+
+      expect(groupedData.won).toHaveLength(1);
+      const wonRow = groupedData.won[0] as {
+        status: string;
+        myBidPerKg: number;
+        orderId: string;
+      };
+      expect(wonRow.status).toBe("WON");
+      expect(wonRow.myBidPerKg).toBe(5000);
+      expect(wonRow.orderId).toBe(order._id.toString());
+
+      expect(groupedData.lost).toHaveLength(1);
+      const lostRow = groupedData.lost[0] as {
+        status: string;
+        myBidPerKg: number;
+        orderId: unknown;
+      };
+      expect(lostRow.status).toBe("LOST");
+      expect(lostRow.myBidPerKg).toBe(6000);
+      expect(lostRow.orderId).toBeNull();
+
+      // Now buyerTwo outbids buyerOne on activeListing
+      await placeBid(buyerTwo, activeListing._id.toString(), { amountPerKg: 4300 });
+
+      // Fetch buyerOne active group
+      const outbidRes = await getMyBids(buyerOne, { group: "active", page: 1, limit: 10 });
+      const outbidData = outbidRes.data as Array<{
+        status: string;
+        currentBidPerKg: number;
+        myBidPerKg: number;
+        gapToCurrentPerKg: number;
+        gap: number;
+      }>;
+      expect(outbidData).toHaveLength(1);
+      expect(outbidData[0]?.status).toBe("OUTBID");
+      expect(outbidData[0]?.currentBidPerKg).toBe(4300);
+      expect(outbidData[0]?.myBidPerKg).toBe(4000);
+      expect(outbidData[0]?.gapToCurrentPerKg).toBe(300);
+      expect(outbidData[0]?.gap).toBe(300);
     });
   });
 });

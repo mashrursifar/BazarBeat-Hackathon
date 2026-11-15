@@ -1,3 +1,4 @@
+import { ObjectId } from "bson";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
 import mongoose, { Types } from "mongoose";
 import request from "supertest";
@@ -6,11 +7,14 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import {
   CropGrade,
   ListingStatus,
+  OrderStatus,
   type PublicUser,
   UserRole,
   anonymizedBidHistoryResponseSchema,
   bidResponseSchema,
   bidTooLowDetailsSchema,
+  myBidsResponseSchema,
+  paginatedMyBidsResponseSchema,
 } from "@bazarbeat/shared";
 
 const { authenticateAccessTokenMock } = vi.hoisted(() => ({
@@ -29,7 +33,9 @@ import {
   resetDomainEventEmitter,
   setDomainEventEmitter,
 } from "../../shared/domain-event-emitter.js";
+import { Crop } from "../crops/crop.model.js";
 import { Listing } from "../listings/listing.model.js";
+import { Order } from "../orders/order.model.js";
 import { User } from "../users/user.model.js";
 import { Bid } from "./bid.model.js";
 import { IdempotencyRecord } from "./idempotency-record.model.js";
@@ -37,6 +43,7 @@ import { IdempotencyRecord } from "./idempotency-record.model.js";
 const farmerId = new Types.ObjectId().toString();
 const buyerId = new Types.ObjectId().toString();
 const buyerTwoId = new Types.ObjectId().toString();
+const buyerThreeId = new Types.ObjectId().toString();
 
 const sessionUsers: Record<string, PublicUser> = {
   farmer: {
@@ -65,6 +72,15 @@ const sessionUsers: Record<string, PublicUser> = {
     organization: "Salam Trading",
     language: "en",
   },
+  buyerThree: {
+    id: buyerThreeId,
+    role: UserRole.BUYER,
+    name: "Buyer Amin",
+    division: "Sylhet",
+    district: "Sylhet",
+    organization: "Amin Produce",
+    language: "en",
+  },
 };
 
 let mongoReplicaSet: MongoMemoryReplSet | undefined;
@@ -76,7 +92,14 @@ beforeAll(async () => {
     replSet: { count: 1 },
   });
   await mongoose.connect(mongoReplicaSet.getUri());
-  await Promise.all([Listing.init(), Bid.init(), User.init(), IdempotencyRecord.init()]);
+  await Promise.all([
+    Listing.init(),
+    Bid.init(),
+    User.init(),
+    IdempotencyRecord.init(),
+    Crop.init(),
+    Order.init(),
+  ]);
   authenticateAccessTokenMock.mockImplementation(async (token) => {
     const user = sessionUsers[token];
     if (user === undefined) throw new Error("Unexpected test access token");
@@ -98,6 +121,8 @@ beforeEach(async () => {
     Bid.deleteMany({}),
     User.deleteMany({}),
     IdempotencyRecord.deleteMany({}),
+    Crop.deleteMany({}),
+    Order.deleteMany({}),
   ]);
 });
 
@@ -734,6 +759,575 @@ describe("Bid HTTP Routes", () => {
 
       expect(nonBidderRes.status).toBe(404);
       expect(nonBidderRes.body.error.code).toBe("NOT_FOUND");
+    });
+  });
+
+  describe("GET /api/v1/bids/mine (Task 5.5)", () => {
+    let testCropId: Types.ObjectId;
+    let myBidsBuyerId: string;
+    let myBidsBuyerTwoId: string;
+    let myBidsBuyerThreeId: string;
+
+    beforeEach(async () => {
+      myBidsBuyerId = new Types.ObjectId().toString();
+      myBidsBuyerTwoId = new Types.ObjectId().toString();
+      myBidsBuyerThreeId = new Types.ObjectId().toString();
+
+      sessionUsers.myBuyer = {
+        id: myBidsBuyerId,
+        role: UserRole.BUYER,
+        name: "Buyer Kabir",
+        division: "Dhaka",
+        district: "Dhaka",
+        organization: "Kabir Foods",
+        language: "en",
+      };
+      sessionUsers.myBuyerTwo = {
+        id: myBidsBuyerTwoId,
+        role: UserRole.BUYER,
+        name: "Buyer Salam",
+        division: "Chittagong",
+        district: "Chittagong",
+        organization: "Salam Trading",
+        language: "en",
+      };
+      sessionUsers.myBuyerThree = {
+        id: myBidsBuyerThreeId,
+        role: UserRole.BUYER,
+        name: "Buyer Amin",
+        division: "Sylhet",
+        district: "Sylhet",
+        organization: "Amin Produce",
+        language: "en",
+      };
+
+      testCropId = new Types.ObjectId();
+      await Crop.create({
+        _id: testCropId,
+        slug: "onion",
+        nameEn: "Onion",
+        nameBn: "পেঁয়াজ",
+        unit: "KG",
+        minLotKg: 10,
+        maxLotKg: 1000,
+        shelfLifeHours: 120,
+        gradeGuide: { A: "Dry, firm", B: "Slight blemishes", C: "Irregular size" },
+        imageUrl: "/crops/onion.png",
+        isActive: true,
+      });
+    });
+
+    it("rejects unauthenticated requests with 401 UNAUTHORIZED", async () => {
+      const res = await request(app).get("/api/v1/bids/mine");
+      expect(res.status).toBe(401);
+      expect(res.body.error.code).toBe("UNAUTHENTICATED");
+    });
+
+    it("rejects requests from farmers with 403 FORBIDDEN", async () => {
+      const res = await request(app)
+        .get("/api/v1/bids/mine")
+        .set("Cookie", ["accessToken=farmer"]);
+      expect(res.status).toBe(403);
+      expect(res.body.error.code).toBe("FORBIDDEN");
+    });
+
+    it("returns empty grouped object when buyer has placed no bids", async () => {
+      const res = await request(app)
+        .get("/api/v1/bids/mine")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(res.status).toBe(200);
+      const parsed = myBidsResponseSchema.safeParse(res.body);
+      expect(parsed.success).toBe(true);
+
+      expect(res.body.data).toEqual({
+        active: [],
+        won: [],
+        lost: [],
+      });
+      expect(typeof res.body.meta.serverTime).toBe("string");
+      expect(res.body.meta.total).toBe(0);
+    });
+
+    it("returns empty paginated array when group query is specified and buyer has no bids", async () => {
+      const res = await request(app)
+        .get("/api/v1/bids/mine?group=active&page=1&limit=10")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(res.status).toBe(200);
+      const parsed = paginatedMyBidsResponseSchema.safeParse(res.body);
+      expect(parsed.success).toBe(true);
+
+      expect(res.body.data).toEqual([]);
+      expect(res.body.meta).toMatchObject({
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+        group: "active",
+      });
+    });
+
+    it("correctly derives WINNING and OUTBID for active listings, computing gapToCurrentPerKg when outbid", async () => {
+      const listing = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 5000,
+        minIncrementPerKg: 100,
+        quantityKg: 50,
+      });
+
+      // 1. Buyer Kabir bids 5000 -> Kabir is WINNING
+      const b1 = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5000 });
+      expect(b1.status).toBe(201);
+
+      const kabirWinningRes = await request(app)
+        .get("/api/v1/bids/mine?group=active")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(kabirWinningRes.status).toBe(200);
+      expect(kabirWinningRes.body.data).toHaveLength(1);
+      const kabirRow1 = kabirWinningRes.body.data[0];
+      expect(kabirRow1.status).toBe("WINNING");
+      expect(kabirRow1.myBidPerKg).toBe(5000);
+      expect(kabirRow1.currentBidPerKg).toBe(5000);
+      expect(kabirRow1.gapToCurrentPerKg).toBeNull();
+      expect(kabirRow1.gap).toBeNull();
+      expect(kabirRow1.orderId).toBeNull();
+      expect(kabirRow1.cropNameEn).toBe("Onion");
+      expect(kabirRow1.cropNameBn).toBe("পেঁয়াজ");
+
+      // Advance clock slightly
+      testClock.advanceBy(5000);
+
+      // 2. Buyer Salam outbids with 5300 -> Salam is WINNING, Kabir is OUTBID
+      const b2 = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5300 });
+      expect(b2.status).toBe(201);
+
+      // Check Kabir's view (OUTBID)
+      const kabirOutbidRes = await request(app)
+        .get("/api/v1/bids/mine?group=active")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(kabirOutbidRes.status).toBe(200);
+      expect(kabirOutbidRes.body.data).toHaveLength(1);
+      const kabirRow2 = kabirOutbidRes.body.data[0];
+      expect(kabirRow2.status).toBe("OUTBID");
+      expect(kabirRow2.myBidPerKg).toBe(5000);
+      expect(kabirRow2.currentBidPerKg).toBe(5300);
+      expect(kabirRow2.gapToCurrentPerKg).toBe(300); // 5300 - 5000
+      expect(kabirRow2.gap).toBe(300);
+      expect(kabirRow2.orderId).toBeNull();
+
+      // Check Salam's view (WINNING)
+      const salamWinningRes = await request(app)
+        .get("/api/v1/bids/mine?group=active")
+        .set("Cookie", ["accessToken=myBuyerTwo"]);
+
+      expect(salamWinningRes.status).toBe(200);
+      expect(salamWinningRes.body.data).toHaveLength(1);
+      const salamRow = salamWinningRes.body.data[0];
+      expect(salamRow.status).toBe("WINNING");
+      expect(salamRow.myBidPerKg).toBe(5300);
+      expect(salamRow.currentBidPerKg).toBe(5300);
+      expect(salamRow.gapToCurrentPerKg).toBeNull();
+      expect(salamRow.gap).toBeNull();
+      expect(salamRow.orderId).toBeNull();
+    });
+
+    it("correctly derives WON with order ID and LOST after listings close", async () => {
+      // Listing 1: will be WON by Salam
+      const listingWon = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 4000,
+        minIncrementPerKg: 100,
+        quantityKg: 100,
+      });
+
+      // Listing 2: will EXPIRE UNSOLD (Kabir bid, but listing expired)
+      const listingExpired = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 6000,
+        minIncrementPerKg: 100,
+        quantityKg: 40,
+      });
+
+      // Kabir bids on Listing 1 (4000)
+      const b1 = await request(app)
+        .post(`/api/v1/listings/${listingWon._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 4000 });
+      expect(b1.status).toBe(201);
+
+      testClock.advanceBy(2000);
+
+      // Salam outbids Kabir on Listing 1 (4500)
+      const salamBidRes = await request(app)
+        .post(`/api/v1/listings/${listingWon._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 4500 });
+      expect(salamBidRes.status).toBe(201);
+      const salamWinningBidId = salamBidRes.body.data.id;
+
+      // Kabir bids on Listing 2 (6000)
+      const b2 = await request(app)
+        .post(`/api/v1/listings/${listingExpired._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 6000 });
+      expect(b2.status).toBe(201);
+
+      // Close Listing 1 as SOLD to Salam and create Order
+      const order = await Order.create({
+        listingId: listingWon._id,
+        farmerId: new ObjectId(farmerId),
+        buyerId: new ObjectId(myBidsBuyerTwoId),
+        cropId: testCropId,
+        quantityKg: 100,
+        grade: CropGrade.A,
+        pricePerKg: 4500,
+        subtotal: 450000,
+        platformFee: 9000,
+        farmerNet: 441000,
+        status: OrderStatus.CONFIRMED,
+      });
+
+      await Listing.findByIdAndUpdate(listingWon._id, {
+        status: ListingStatus.SOLD,
+        winningBidId: new ObjectId(salamWinningBidId),
+        currentBidderId: new ObjectId(myBidsBuyerTwoId),
+        closedAt: testClock.now(),
+      });
+
+      await Bid.findByIdAndUpdate(salamWinningBidId, { status: "WON" });
+
+      // Close Listing 2 as EXPIRED_UNSOLD
+      await Listing.findByIdAndUpdate(listingExpired._id, {
+        status: ListingStatus.EXPIRED_UNSOLD,
+        closedAt: testClock.now(),
+      });
+
+      // Verify Salam's bids: Listing 1 must be in "won" group with orderId
+      const salamWonRes = await request(app)
+        .get("/api/v1/bids/mine?group=won")
+        .set("Cookie", ["accessToken=myBuyerTwo"]);
+
+      expect(salamWonRes.status).toBe(200);
+      expect(salamWonRes.body.data).toHaveLength(1);
+      const salamWonRow = salamWonRes.body.data[0];
+      expect(salamWonRow.status).toBe("WON");
+      expect(salamWonRow.listingId).toBe(listingWon._id.toString());
+      expect(salamWonRow.orderId).toBe(order._id.toString());
+      expect(salamWonRow.myBidPerKg).toBe(4500);
+
+      // Verify Kabir's bids:
+      // Kabir has zero won listings
+      const kabirWonRes = await request(app)
+        .get("/api/v1/bids/mine?group=won")
+        .set("Cookie", ["accessToken=myBuyer"]);
+      expect(kabirWonRes.status).toBe(200);
+      expect(kabirWonRes.body.data).toHaveLength(0);
+
+      // Kabir has 2 lost listings: Listing 1 (sold to Salam) and Listing 2 (expired unsold)
+      const kabirLostRes = await request(app)
+        .get("/api/v1/bids/mine?group=lost")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(kabirLostRes.status).toBe(200);
+      expect(kabirLostRes.body.data).toHaveLength(2);
+      expect(kabirLostRes.body.data.every((r: { status: string }) => r.status === "LOST")).toBe(true);
+      expect(kabirLostRes.body.data.every((r: { orderId: unknown }) => r.orderId === null)).toBe(true);
+    });
+
+    it("deduplicates multiple bids by one buyer on the same listing to exactly one row showing the highest bid", async () => {
+      const listing = await createSampleListing({
+        cropId: testCropId,
+        floorPricePerKg: 3000,
+        minIncrementPerKg: 100,
+      });
+
+      // Kabir bids 3000 at T1
+      const b1 = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3000 });
+      expect(b1.status).toBe(201);
+
+      testClock.advanceBy(10000);
+
+      // Salam outbids with 3200
+      const b2 = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3200 });
+      expect(b2.status).toBe(201);
+
+      testClock.advanceBy(10000);
+
+      // Kabir bids again with 3500 at T2
+      const b3 = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3500 });
+      expect(b3.status).toBe(201);
+
+      testClock.advanceBy(10000);
+
+      // Salam outbids again with 3700
+      const b4 = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3700 });
+      expect(b4.status).toBe(201);
+
+      testClock.advanceBy(10000);
+
+      // Kabir bids a third time with 4000 at T3
+      const kabirThirdBid = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 4000 });
+      expect(kabirThirdBid.status).toBe(201);
+
+      // Kabir bid 3 times on this listing. Verify Kabir appears ONCE in /bids/mine
+      const res = await request(app)
+        .get("/api/v1/bids/mine?group=active")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(1);
+
+      const row = res.body.data[0];
+      expect(row.listingId).toBe(listing._id.toString());
+      expect(row.bidId).toBe(kabirThirdBid.body.data.id);
+      expect(row.myBidPerKg).toBe(4000);
+      expect(row.currentBidPerKg).toBe(4000);
+      expect(row.status).toBe("WINNING");
+      expect(row.bidCount).toBe(5);
+    });
+
+    it("sorts by newest activity first across multiple listings", async () => {
+      const listing1 = await createSampleListing({ cropId: testCropId, floorPricePerKg: 3000 });
+      const listing2 = await createSampleListing({ cropId: testCropId, floorPricePerKg: 4000 });
+      const listing3 = await createSampleListing({ cropId: testCropId, floorPricePerKg: 5000 });
+
+      // 10:00 - Kabir bids on listing 1
+      const b1 = await request(app)
+        .post(`/api/v1/listings/${listing1._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3000 });
+      expect(b1.status).toBe(201);
+
+      testClock.advanceBy(30000); // 10:00:30 - Salam outbids on listing 1
+      const bSalam = await request(app)
+        .post(`/api/v1/listings/${listing1._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3100 });
+      expect(bSalam.status).toBe(201);
+
+      testClock.advanceBy(30000); // 10:01
+
+      // 10:01 - Kabir bids on listing 2
+      const b2 = await request(app)
+        .post(`/api/v1/listings/${listing2._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 4000 });
+      expect(b2.status).toBe(201);
+
+      testClock.advanceBy(60000); // 10:02
+
+      // 10:02 - Kabir bids on listing 3
+      const b3 = await request(app)
+        .post(`/api/v1/listings/${listing3._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5000 });
+      expect(b3.status).toBe(201);
+
+      testClock.advanceBy(60000); // 10:03
+
+      // 10:03 - Kabir places a NEW bid on listing 1 (refreshing Kabir's activity time to 10:03)
+      const b4 = await request(app)
+        .post(`/api/v1/listings/${listing1._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3300 });
+      expect(b4.status).toBe(201);
+
+      // Order should be: listing 1 (10:03), listing 3 (10:02), listing 2 (10:01)
+      const res = await request(app)
+        .get("/api/v1/bids/mine?group=active")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(3);
+      expect(res.body.data[0].listingId).toBe(listing1._id.toString());
+      expect(res.body.data[1].listingId).toBe(listing3._id.toString());
+      expect(res.body.data[2].listingId).toBe(listing2._id.toString());
+    });
+
+    it("strictly isolates buyers so a buyer never sees another buyer's data", async () => {
+      const listingKabir = await createSampleListing({ cropId: testCropId, floorPricePerKg: 2000 });
+      const listingSalam = await createSampleListing({ cropId: testCropId, floorPricePerKg: 3000 });
+      const listingAmin = await createSampleListing({ cropId: testCropId, floorPricePerKg: 4000 });
+
+      // Kabir bids on listingKabir
+      const b1 = await request(app)
+        .post(`/api/v1/listings/${listingKabir._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 2000 });
+      expect(b1.status).toBe(201);
+
+      // Salam bids on listingSalam
+      const b2 = await request(app)
+        .post(`/api/v1/listings/${listingSalam._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 3000 });
+      expect(b2.status).toBe(201);
+
+      // Amin bids on listingAmin
+      const b3 = await request(app)
+        .post(`/api/v1/listings/${listingAmin._id}/bids`)
+        .set("Cookie", ["accessToken=myBuyerThree"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 4000 });
+      expect(b3.status).toBe(201);
+
+      // 1. Kabir only sees listingKabir
+      const kabirRes = await request(app)
+        .get("/api/v1/bids/mine")
+        .set("Cookie", ["accessToken=myBuyer"]);
+      expect(kabirRes.status).toBe(200);
+      expect(kabirRes.body.data.active).toHaveLength(1);
+      expect(kabirRes.body.data.active[0].listingId).toBe(listingKabir._id.toString());
+
+      // 2. Salam only sees listingSalam
+      const salamRes = await request(app)
+        .get("/api/v1/bids/mine")
+        .set("Cookie", ["accessToken=myBuyerTwo"]);
+      expect(salamRes.status).toBe(200);
+      expect(salamRes.body.data.active).toHaveLength(1);
+      expect(salamRes.body.data.active[0].listingId).toBe(listingSalam._id.toString());
+
+      // 3. Amin only sees listingAmin
+      const aminRes = await request(app)
+        .get("/api/v1/bids/mine")
+        .set("Cookie", ["accessToken=myBuyerThree"]);
+      expect(aminRes.status).toBe(200);
+      expect(aminRes.body.data.active).toHaveLength(1);
+      expect(aminRes.body.data.active[0].listingId).toBe(listingAmin._id.toString());
+    });
+
+    it("paginates grouped listings correctly (?group=active&page=X&limit=Y)", async () => {
+      // Create 5 active listings and place bids as Kabir
+      const listings = [];
+      for (let i = 0; i < 5; i++) {
+        const l = await createSampleListing({
+          cropId: testCropId,
+          floorPricePerKg: 3000 + i * 100,
+        });
+        listings.push(l);
+        const b = await request(app)
+          .post(`/api/v1/listings/${l._id}/bids`)
+          .set("Cookie", ["accessToken=myBuyer"])
+          .set("X-CSRF-Protection", "1")
+          .send({ amountPerKg: 3000 + i * 100 });
+        expect(b.status).toBe(201);
+        testClock.advanceBy(1000);
+      }
+
+      // Page 1, limit 2
+      const page1Res = await request(app)
+        .get("/api/v1/bids/mine?group=active&page=1&limit=2")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(page1Res.status).toBe(200);
+      expect(page1Res.body.data).toHaveLength(2);
+      expect(page1Res.body.meta).toMatchObject({
+        page: 1,
+        limit: 2,
+        total: 5,
+        totalPages: 3,
+        group: "active",
+      });
+
+      // Page 2, limit 2
+      const page2Res = await request(app)
+        .get("/api/v1/bids/mine?group=active&page=2&limit=2")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(page2Res.status).toBe(200);
+      expect(page2Res.body.data).toHaveLength(2);
+      expect(page2Res.body.meta).toMatchObject({
+        page: 2,
+        limit: 2,
+        total: 5,
+        totalPages: 3,
+        group: "active",
+      });
+
+      // Page 3, limit 2
+      const page3Res = await request(app)
+        .get("/api/v1/bids/mine?group=active&page=3&limit=2")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(page3Res.status).toBe(200);
+      expect(page3Res.body.data).toHaveLength(1);
+      expect(page3Res.body.meta).toMatchObject({
+        page: 3,
+        limit: 2,
+        total: 5,
+        totalPages: 3,
+        group: "active",
+      });
+
+      // Page 4, limit 2 (out of bounds)
+      const page4Res = await request(app)
+        .get("/api/v1/bids/mine?group=active&page=4&limit=2")
+        .set("Cookie", ["accessToken=myBuyer"]);
+
+      expect(page4Res.status).toBe(200);
+      expect(page4Res.body.data).toHaveLength(0);
+      expect(page4Res.body.meta.total).toBe(5);
+    });
+
+    it("rejects invalid query parameters with 400 VALIDATION_ERROR", async () => {
+      const invalidGroupRes = await request(app)
+        .get("/api/v1/bids/mine?group=unknown")
+        .set("Cookie", ["accessToken=myBuyer"]);
+      expect(invalidGroupRes.status).toBe(400);
+      expect(invalidGroupRes.body.error.code).toBe("VALIDATION_ERROR");
+
+      const invalidPageRes = await request(app)
+        .get("/api/v1/bids/mine?page=0")
+        .set("Cookie", ["accessToken=myBuyer"]);
+      expect(invalidPageRes.status).toBe(400);
+      expect(invalidPageRes.body.error.code).toBe("VALIDATION_ERROR");
+
+      const invalidLimitRes = await request(app)
+        .get("/api/v1/bids/mine?limit=51")
+        .set("Cookie", ["accessToken=myBuyer"]);
+      expect(invalidLimitRes.status).toBe(400);
+      expect(invalidLimitRes.body.error.code).toBe("VALIDATION_ERROR");
     });
   });
 });

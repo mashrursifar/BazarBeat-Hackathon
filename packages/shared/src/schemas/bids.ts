@@ -91,6 +91,21 @@ export type BidTooLowDetails = z.infer<typeof bidTooLowDetailsSchema>;
 export const buyerBidStatusSchema = z.enum(["WINNING", "OUTBID", "WON", "LOST"]);
 export type BuyerBidStatus = z.infer<typeof buyerBidStatusSchema>;
 
+export const myBidsGroupQuerySchema = z.preprocess(
+  (val) => (typeof val === "string" ? val.toLowerCase().trim() : val),
+  z.enum(["active", "won", "lost"]),
+);
+export type MyBidsGroupQuery = z.infer<typeof myBidsGroupQuerySchema>;
+
+export const myBidsQuerySchema = z
+  .object({
+    group: myBidsGroupQuerySchema.optional(),
+    page: z.coerce.number().int().min(1).default(1),
+    limit: z.coerce.number().int().min(1).max(50).default(20),
+  })
+  .strict();
+export type MyBidsQuery = z.infer<typeof myBidsQuerySchema>;
+
 /**
  * Single row in the buyer's My Bids list.
  */
@@ -118,14 +133,17 @@ export const myBidsRowSchema = z.object({
   endsAt: z.string().datetime(),
   placedAt: z.string().datetime(),
   thumbnailUrl: z.string().optional().nullable(),
+  gapToCurrentPerKg: z.number().int().nonnegative().optional().nullable(),
+  gap: z.number().int().nonnegative().optional().nullable(),
+  orderId: databaseIdSchema.optional().nullable(),
 });
 
 export type MyBidsRow = z.infer<typeof myBidsRowSchema>;
 
 /**
- * Grouped response envelope for GET /bids/mine.
+ * Grouped response envelope for GET /bids/mine without a group query.
  */
-export const myBidsResponseSchema = z.object({
+export const groupedMyBidsResponseSchema = z.object({
   data: z.object({
     active: z.array(myBidsRowSchema),
     won: z.array(myBidsRowSchema),
@@ -133,8 +151,36 @@ export const myBidsResponseSchema = z.object({
   }),
   meta: z.object({
     serverTime: z.string().datetime(),
+    total: z.number().int().nonnegative().optional(),
   }),
 });
+
+export type GroupedMyBidsResponse = z.infer<typeof groupedMyBidsResponseSchema>;
+
+/**
+ * Paginated response envelope for GET /bids/mine?group=active|won|lost&page.
+ */
+export const paginatedMyBidsResponseSchema = z.object({
+  data: z.array(myBidsRowSchema),
+  meta: z.object({
+    serverTime: z.string().datetime(),
+    page: z.number().int().positive(),
+    limit: z.number().int().positive(),
+    total: z.number().int().nonnegative(),
+    totalPages: z.number().int().nonnegative().optional(),
+    group: myBidsGroupQuerySchema.optional(),
+  }),
+});
+
+export type PaginatedMyBidsResponse = z.infer<typeof paginatedMyBidsResponseSchema>;
+
+/**
+ * Response envelope for GET /bids/mine supporting either grouped or paginated shapes.
+ */
+export const myBidsResponseSchema = z.union([
+  groupedMyBidsResponseSchema,
+  paginatedMyBidsResponseSchema,
+]);
 
 export type MyBidsResponse = z.infer<typeof myBidsResponseSchema>;
 

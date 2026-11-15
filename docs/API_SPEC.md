@@ -62,7 +62,7 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 
 | POST | /listings/:id/bids | B | Place bid `{ amountPerKg }` (poisha per kg). Accepts optional `Idempotency-Key` header. Returns `{ data: BidItem, meta: { serverTime } }`. Errors: `VALIDATION_ERROR`, `AUCTION_CLOSED`, `BID_TOO_LOW` (includes `{ minimumRequiredPerKg, currentBidPerKg, floorPricePerKg, minIncrementPerKg }`), `CANNOT_OUTBID_SELF`, `OWN_LISTING` |
 | GET | /listings/:id/bids | A | Bid history (bidders anonymized as `Buyer #1`, `Buyer #2`, etc. for non-owners and farmers; includes boolean `isMine` for the calling buyer; buyer names revealed only on confirmed order). Returns `{ data: AnonymizedBidHistoryItem[], meta: { serverTime } }` |
-| GET | /bids/mine | B | My bids grouped: active (winning/outbid), won, lost. Returns `{ data: { active: MyBidsRow[], won: MyBidsRow[], lost: MyBidsRow[] }, meta: { serverTime } }` |
+| GET | /bids/mine | B | My bids for buyers grouped by listing (highest bid per listing): filter by `?group=active|won|lost` with pagination (`?page=1&limit=20`, max 50). When `group` is set, returns `{ data: MyBidsRow[], meta: { serverTime, page, limit, total, totalPages, group } }`. When omitted, returns `{ data: { active: MyBidsRow[], won: MyBidsRow[], lost: MyBidsRow[] }, meta: { serverTime, total } }`. Each row includes listing summary, buyer's highest bid, current price, derived status (`WINNING`/`OUTBID` while active; `WON`/`LOST` after closing), gap to current price when outbid (`gapToCurrentPerKg` and `gap`), endsAt, and `orderId` when won. Sorted newest activity first |
 
 ### Real-Time Domain Events (SSE)
 
