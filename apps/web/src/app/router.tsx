@@ -17,6 +17,7 @@ const CropBiddingPage = lazy(() => import("../features/listings/crop-bidding-pag
 const MarketplacePage = lazy(() => import("../features/marketplace/marketplace-page.js"));
 const BuyerListingDetailPage = lazy(() => import("../features/marketplace/listing-detail-page.js"));
 const ComparePage = lazy(() => import("../features/marketplace/compare-page.js"));
+const MyBidsPage = lazy(() => import("../features/bids/my-bids-page.js"));
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -55,6 +56,7 @@ function page(path: string, pageKey: string): { path: string; element: ReactElem
   if (path === "crop-bidding") return { path, element: <CropBiddingPage /> };
   if (path === "marketplace") return { path, element: <MarketplacePage /> };
   if (path === "compare") return { path, element: <ComparePage /> };
+  if (path === "my-bids") return { path, element: <MyBidsPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 
