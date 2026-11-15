@@ -2,12 +2,14 @@ import {
   type AnonymizedBidHistoryResponse,
   type BidResponse,
   type BuyerListingDetailResponse,
+  type CompareResponse,
   type MarketplaceListingListResponse,
   type MarketplaceQuery,
   type PlaceBidRequest,
   anonymizedBidHistoryResponseSchema,
   bidResponseSchema,
   buyerListingDetailResponseSchema,
+  compareResponseSchema,
   marketplaceListingListResponseSchema,
   placeBidRequestSchema,
 } from "@bazarbeat/shared";
@@ -238,3 +240,50 @@ export async function placeBidApi(
 
   return result;
 }
+
+/**
+ * Fetches side-by-side comparison payload for 2 to 4 listings.
+ */
+export async function getCompareListings(ids: string[]): Promise<CompareResponse> {
+  const searchParams = new URLSearchParams();
+  searchParams.set("ids", ids.join(","));
+
+  const response = await fetch(`${API_BASE_URL}/listings/compare?${searchParams.toString()}`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      Accept: "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    let errorCode = "API_ERROR";
+    let errorMessage = "Failed to fetch compare listings";
+    let errorDetails: unknown;
+
+    try {
+      const errBody = (await response.json()) as ErrorEnvelope;
+      if (errBody?.error?.code) {
+        errorCode = errBody.error.code;
+        errorMessage = errBody.error.message || errorMessage;
+        errorDetails = errBody.error.details;
+      }
+    } catch {
+      if (response.status === 401) errorCode = "UNAUTHENTICATED";
+      if (response.status === 403) errorCode = "FORBIDDEN";
+      if (response.status === 404) errorCode = "NOT_FOUND";
+    }
+
+    throw new MarketplaceApiError(response.status, errorCode, errorMessage, errorDetails);
+  }
+
+  const rawJson = (await response.json()) as unknown;
+  const parsed = compareResponseSchema.parse(rawJson);
+
+  if (parsed.meta?.serverTime) {
+    syncServerTime(parsed.meta.serverTime);
+  }
+
+  return parsed;
+}
+
