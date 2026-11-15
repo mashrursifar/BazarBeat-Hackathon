@@ -14,6 +14,7 @@ const InventoryPage = lazy(() => import("../features/inventory/inventory-page.js
 const NewListingPage = lazy(() => import("../features/listings/new-listing-page.js"));
 const MyListingsPage = lazy(() => import("../features/listings/my-listings-page.js"));
 const CropBiddingPage = lazy(() => import("../features/listings/crop-bidding-page.js"));
+const MarketplacePage = lazy(() => import("../features/marketplace/marketplace-page.js"));
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -45,22 +46,18 @@ function HomePage(): ReactElement {
   );
 }
 
-function MarketplacePage(): ReactElement {
-  const { t } = useTranslation();
-  return <main className="p-8">{t("marketplacePlaceholder")}</main>;
-}
-
 function page(path: string, pageKey: string): { path: string; element: ReactElement } {
   if (path === "inventory") return { path, element: <InventoryPage /> };
   if (path === "new-listing") return { path, element: <NewListingPage /> };
   if (path === "products") return { path, element: <MyListingsPage /> };
   if (path === "crop-bidding") return { path, element: <CropBiddingPage /> };
+  if (path === "marketplace") return { path, element: <MarketplacePage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 
 export const router = createBrowserRouter([
   { path: "/", element: <HomePage /> },
-  { path: "/market", element: <MarketplacePage /> },
+  { path: "/market", element: <Suspense fallback={<RouteLoading />}><MarketplacePage /></Suspense> },
   { path: "/login", element: <Suspense fallback={<RouteLoading />}><LoginPage /></Suspense> },
   { path: "/register", element: <Suspense fallback={<RouteLoading />}><RegisterPage /></Suspense> },
   {
