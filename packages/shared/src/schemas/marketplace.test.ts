@@ -6,6 +6,7 @@ import {
   buyerListingCardSchema,
   buyerListingDetailSchema,
   comparePayloadSchema,
+  compareQuerySchema,
   marketplaceListingListResponseSchema,
   marketplaceQuerySchema,
 } from "./marketplace.js";
@@ -350,6 +351,114 @@ describe("Marketplace schemas", () => {
       };
 
       expect(comparePayloadSchema.safeParse(payload).success).toBe(false);
+    });
+
+    it("validates compare payload with missingIds and extended fields", () => {
+      const payload = {
+        cropId: "507f1f77bcf86cd799439012",
+        listings: [
+          {
+            id: "507f1f77bcf86cd799439011",
+            cropId: "507f1f77bcf86cd799439012",
+            cropNameEn: "Onion",
+            cropNameBn: "পেঁয়াজ",
+            grade: CropGrade.A,
+            quantityKg: 100,
+            floorPricePerKg: 4000,
+            displayPricePerKg: 4000,
+            displayTotalCost: 400000,
+            totalDisplayCost: 400000,
+            minIncrementPerKg: 100,
+            bidCount: 0,
+            startsAt: "2026-11-14T10:00:00.000Z",
+            endsAt: "2026-11-14T16:00:00.000Z",
+            status: ListingStatus.ACTIVE,
+            location: { division: "Dhaka", district: "Gazipur" },
+            farmerRegion: "Dhaka",
+            timeLeftSeconds: 3600,
+            percentageVsAiExpected: 90,
+            aiRange: {
+              lowPerKg: 3500,
+              expectedPerKg: 4444,
+              highPerKg: 5000,
+            },
+            highlights: {
+              isLowestPrice: true,
+              isBestGrade: true,
+              isLargestQuantity: true,
+              isBestValue: true,
+            },
+          },
+        ],
+        highlights: {
+          lowestPriceListingIds: ["507f1f77bcf86cd799439011"],
+          bestGradeListingIds: ["507f1f77bcf86cd799439011"],
+          largestQuantityListingIds: ["507f1f77bcf86cd799439011"],
+          bestValueListingIds: ["507f1f77bcf86cd799439011"],
+          byListingId: {
+            "507f1f77bcf86cd799439011": {
+              isLowestPrice: true,
+              isBestGrade: true,
+              isLargestQuantity: true,
+              isBestValue: true,
+            },
+          },
+        },
+        missingIds: ["507f1f77bcf86cd799439019"],
+      };
+
+      const result = comparePayloadSchema.safeParse(payload);
+      expect(result.success).toBe(true);
+    });
+  });
+
+  describe("compareQuerySchema", () => {
+    const id1 = "507f1f77bcf86cd799439011";
+    const id2 = "507f1f77bcf86cd799439012";
+    const id3 = "507f1f77bcf86cd799439013";
+    const id4 = "507f1f77bcf86cd799439014";
+    const id5 = "507f1f77bcf86cd799439015";
+
+    it("parses comma-separated ids string with 2 to 4 unique IDs", () => {
+      const parsed2 = compareQuerySchema.safeParse({ ids: `${id1},${id2}` });
+      expect(parsed2.success).toBe(true);
+      if (parsed2.success) {
+        expect(parsed2.data.ids).toEqual([id1, id2]);
+      }
+
+      const parsed4 = compareQuerySchema.safeParse({ ids: `${id1}, ${id2}, ${id3}, ${id4}` });
+      expect(parsed4.success).toBe(true);
+      if (parsed4.success) {
+        expect(parsed4.data.ids).toEqual([id1, id2, id3, id4]);
+      }
+    });
+
+    it("parses string array with 2 to 4 unique IDs", () => {
+      const parsed = compareQuerySchema.safeParse({ ids: [id1, id2, id3] });
+      expect(parsed.success).toBe(true);
+      if (parsed.success) {
+        expect(parsed.data.ids).toEqual([id1, id2, id3]);
+      }
+    });
+
+    it("rejects 1 ID (below limit of 2)", () => {
+      const result = compareQuerySchema.safeParse({ ids: id1 });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects 5 IDs (above limit of 4)", () => {
+      const result = compareQuerySchema.safeParse({ ids: `${id1},${id2},${id3},${id4},${id5}` });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects duplicate IDs", () => {
+      const result = compareQuerySchema.safeParse({ ids: `${id1},${id2},${id1}` });
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid database ID format", () => {
+      const result = compareQuerySchema.safeParse({ ids: "invalid1,invalid2" });
+      expect(result.success).toBe(false);
     });
   });
 });

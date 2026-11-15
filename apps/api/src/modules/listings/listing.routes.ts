@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   UserRole,
+  compareQuerySchema,
   createListingRequestSchema,
   farmerListingQuerySchema,
   marketplaceQuerySchema,
@@ -17,6 +18,7 @@ import { getListingBidsController, placeBidController } from "../bids/bid.contro
 import {
   acceptCurrentBidController,
   cancelListingController,
+  compareListingsController,
   createListingController,
   getFarmerListingsController,
   getListingByIdController,
@@ -33,6 +35,14 @@ listingsRouter.get(
   requireRole(UserRole.BUYER),
   validateQuery(marketplaceQuerySchema),
   getMarketplaceListingsController,
+);
+
+listingsRouter.get(
+  "/compare",
+  requireAuthentication,
+  requireRole(UserRole.BUYER),
+  validateQuery(compareQuerySchema),
+  compareListingsController,
 );
 
 listingsRouter.post(

@@ -2,6 +2,8 @@ import type { RequestHandler } from "express";
 import {
   AuctionCloseTrigger,
   type BuyerListingDetailResponse,
+  type CompareQuery,
+  type CompareResponse,
   type CreateListingRequest,
   type FarmerListingListResponse,
   type FarmerListingQuery,
@@ -18,6 +20,7 @@ import { closeAuction } from "../auctions/closing.service.js";
 import { getListingStreamHub } from "../realtime/sse-hub.js";
 import {
   cancelListing,
+  compareListings,
   createAndPublishListing,
   getFarmerListings,
   getListingById,
@@ -79,6 +82,22 @@ export const getMarketplaceListingsController: RequestHandler<
       limit: query.limit,
       total: result.total,
     },
+  });
+};
+
+export const compareListingsController: RequestHandler<
+  Record<string, string>,
+  CompareResponse,
+  unknown,
+  unknown,
+  AuthenticatedLocals & QueryValidationLocals<CompareQuery>
+> = async (_request, response): Promise<void> => {
+  const query = response.locals.validatedQuery;
+  const result = await compareListings(query.ids, response.locals.currentUser);
+
+  response.status(200).json({
+    data: result,
+    meta: { serverTime: getClock().iso() },
   });
 };
 

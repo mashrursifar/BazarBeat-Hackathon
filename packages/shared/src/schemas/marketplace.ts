@@ -159,7 +159,7 @@ export const buyerListingCardSchema = z
     displayPricePerKg: poishaSchema,
     totalDisplayCost: poishaSchema,
     minIncrementPerKg: poishaSchema,
-    hasBids: z.boolean().default(false),
+    hasBids: z.boolean().optional().default(false),
     bidCount: z.number().int().nonnegative(),
     startsAt: z.iso.datetime(),
     endsAt: z.iso.datetime(),
@@ -263,12 +263,67 @@ export const buyerListingDetailResponseSchema = z
 export type BuyerListingDetailResponse = z.infer<typeof buyerListingDetailResponseSchema>;
 
 /**
+ * Query schema for GET /listings/compare?ids=a,b,c,d
+ * Enforces 2 to 4 unique IDs.
+ */
+export const compareQuerySchema = z
+  .object({
+    ids: z.preprocess((val) => {
+      if (typeof val === "string") {
+        return val.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      if (Array.isArray(val)) {
+        return val.flatMap((v) =>
+          typeof v === "string" ? v.split(",").map((s) => s.trim()).filter(Boolean) : []
+        );
+      }
+      return val;
+    }, z.array(databaseIdSchema, { message: "Invalid listing ID format" })
+      .min(2, "At least 2 listing IDs are required for comparison")
+      .max(4, "At most 4 listing IDs can be compared at once")
+      .refine((ids) => new Set(ids).size === ids.length, {
+        message: "Duplicate listing IDs are not allowed in compare",
+      })),
+  })
+  .strict();
+
+export type CompareQuery = z.infer<typeof compareQuerySchema>;
+
+/**
+ * Flags for highlighted comparison attributes.
+ */
+export const listingHighlightFlagsSchema = z
+  .object({
+    isLowestPrice: z.boolean(),
+    isBestGrade: z.boolean(),
+    isLargestQuantity: z.boolean(),
+    isBestValue: z.boolean(),
+  })
+  .strict();
+
+export type ListingHighlightFlagsDto = z.infer<typeof listingHighlightFlagsSchema>;
+
+/**
+ * Compact AI price guidance range for comparison cards.
+ */
+export const aiPriceRangeSchema = z
+  .object({
+    lowPerKg: poishaSchema,
+    expectedPerKg: poishaSchema,
+    highPerKg: poishaSchema,
+  })
+  .strict();
+
+export type AiPriceRangeDto = z.infer<typeof aiPriceRangeSchema>;
+
+/**
  * Listing item schema inside the compare payload.
  */
 export const compareListingSchema = z
   .object({
     id: databaseIdSchema,
     cropId: databaseIdSchema,
+    crop: buyerCropSummarySchema.optional(),
     cropNameEn: z.string(),
     cropNameBn: z.string(),
     grade: cropGradeSchema,
@@ -277,15 +332,24 @@ export const compareListingSchema = z
     currentBidPerKg: poishaSchema.optional().nullable(),
     displayPricePerKg: poishaSchema,
     displayTotalCost: poishaSchema,
+    totalDisplayCost: poishaSchema.optional(),
     minIncrementPerKg: poishaSchema,
+    hasBids: z.boolean().optional(),
     bidCount: z.number().int().nonnegative(),
     startsAt: z.iso.datetime(),
     endsAt: z.iso.datetime(),
     status: listingStatusSchema,
     location: listingLocationSchema,
+    farmerRegion: z.string().optional(),
+    timeLeftSeconds: z.number().int().nonnegative().optional(),
     aiExpectedPricePerKg: poishaSchema.optional().nullable(),
     aiPriceGuidance: priceGuidanceSchema.optional().nullable(),
+    aiRange: aiPriceRangeSchema.optional().nullable(),
+    percentageVsAiExpected: z.number().optional().nullable(),
+    highlights: listingHighlightFlagsSchema.optional(),
     thumbnailUrl: z.string().optional().nullable(),
+    images: z.array(listingImageSchema).min(1).max(4).optional(),
+    card: buyerListingCardSchema.optional(),
   })
   .strict();
 
@@ -300,17 +364,7 @@ export const compareHighlightsSchema = z
     bestGradeListingIds: z.array(z.string()),
     largestQuantityListingIds: z.array(z.string()),
     bestValueListingIds: z.array(z.string()),
-    byListingId: z.record(
-      z.string(),
-      z
-        .object({
-          isLowestPrice: z.boolean(),
-          isBestGrade: z.boolean(),
-          isLargestQuantity: z.boolean(),
-          isBestValue: z.boolean(),
-        })
-        .strict(),
-    ),
+    byListingId: z.record(z.string(), listingHighlightFlagsSchema),
   })
   .strict();
 
@@ -321,13 +375,26 @@ export type CompareHighlightsDto = z.infer<typeof compareHighlightsSchema>;
  */
 export const comparePayloadSchema = z
   .object({
-    cropId: databaseIdSchema,
-    listings: z.array(compareListingSchema).min(1).max(4),
+    cropId: databaseIdSchema.optional().nullable(),
+    listings: z.array(compareListingSchema).max(4),
     highlights: compareHighlightsSchema,
+    missingIds: z.array(z.string()).default([]),
   })
   .strict();
 
 export type ComparePayload = z.infer<typeof comparePayloadSchema>;
+
+/**
+ * Response envelope for GET /listings/compare.
+ */
+export const compareResponseSchema = z
+  .object({
+    data: comparePayloadSchema,
+    meta: listingResponseMetaSchema,
+  })
+  .strict();
+
+export type CompareResponse = z.infer<typeof compareResponseSchema>;
 
 /**
  * Response envelope for marketplace listings list.

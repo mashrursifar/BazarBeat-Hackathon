@@ -3,7 +3,11 @@ import { type PipelineStage, Types } from "mongoose";
 import {
   type BuyerListingCard,
   type BuyerListingDetail,
+  type CompareListing,
+  type CompareListingItem,
+  type ComparePayload,
   type CreateListingRequest,
+  CropGrade,
   DomainEventName,
   type FarmerListing,
   ListingStatus,
@@ -12,6 +16,8 @@ import {
   type PublicUser,
   type RelistListingRequest,
   UserRole,
+  calculateCompareHighlights,
+  calculateSubtotal,
   deriveBuyerListingStatus,
   evaluateFloorPrice,
 } from "@bazarbeat/shared";
@@ -881,5 +887,233 @@ export async function getMarketplaceListings(
   const total = facetResult?.totalCount?.[0]?.count ?? 0;
 
   return { listings, total };
+}
+
+/**
+ * Compares 2 to 4 listings of the same crop for buyers according to Task 5.4 rules.
+ * Applies Task 5.3 buyer visibility rules:
+ * - ACTIVE listings are visible.
+ * - Ended listings (SOLD, EXPIRED_UNSOLD, CANCELLED) are visible ONLY if the buyer bid on them.
+ * - Non-visible or non-existent listings are reported in missingIds.
+ * - DRAFT listings are strictly non-visible and reported in missingIds.
+ * - Throws 400 COMPARE_MIXED_CROPS if visible listings belong to different crops.
+ * - Computes highlights via shared calculateCompareHighlights.
+ */
+export async function compareListings(
+  ids: string[],
+  user: PublicUser,
+): Promise<ComparePayload> {
+  if (user.role !== UserRole.BUYER) {
+    throw new AppError(403, "FORBIDDEN", "Only buyers can access compare");
+  }
+
+  const validObjectIds = ids.map((id) => ensureObjectId(id));
+
+  // Fetch all requested listings
+  const records = await Listing.find({
+    _id: { $in: validObjectIds.map((id) => new ObjectId(id)) },
+  }).lean();
+
+  const recordMap = new Map(records.map((r) => [r._id.toString().toLowerCase(), r]));
+
+  // Check buyer bids for all ended listings in one batch query
+  const nonActiveIds = records
+    .filter((r) => r.status !== ListingStatus.ACTIVE && r.status !== ListingStatus.DRAFT)
+    .map((r) => r._id);
+
+  const buyerBidsOnListings = new Set<string>();
+  if (nonActiveIds.length > 0) {
+    const bids = await Bid.find({
+      listingId: { $in: nonActiveIds },
+      buyerId: new ObjectId(ensureObjectId(user.id)),
+    })
+      .select("listingId")
+      .lean();
+    for (const b of bids) {
+      buyerBidsOnListings.add(b.listingId.toString().toLowerCase());
+    }
+  }
+
+  const visibleRecords: typeof records = [];
+  const missingIds: string[] = [];
+
+  for (const requestedId of ids) {
+    const idKey = requestedId.toLowerCase();
+    const record = recordMap.get(idKey);
+
+    if (!record) {
+      missingIds.push(requestedId);
+      continue;
+    }
+
+    if (record.status === ListingStatus.DRAFT) {
+      // DRAFT is strictly invisible to buyers
+      missingIds.push(requestedId);
+      continue;
+    }
+
+    if (record.status !== ListingStatus.ACTIVE) {
+      // Ended listing is only visible if buyer placed a bid on it
+      if (!buyerBidsOnListings.has(idKey)) {
+        missingIds.push(requestedId);
+        continue;
+      }
+    }
+
+    visibleRecords.push(record);
+  }
+
+  // Check single-crop constraint among visible listings
+  const distinctCropIds = new Set(visibleRecords.map((r) => r.cropId.toString().toLowerCase()));
+  if (distinctCropIds.size > 1) {
+    throw new AppError(400, "COMPARE_MIXED_CROPS", "All listings in compare must belong to the same crop");
+  }
+
+  // If no visible listings, return empty compare payload with missingIds
+  if (visibleRecords.length === 0) {
+    return {
+      cropId: null,
+      listings: [],
+      highlights: {
+        lowestPriceListingIds: [],
+        bestGradeListingIds: [],
+        largestQuantityListingIds: [],
+        bestValueListingIds: [],
+        byListingId: {},
+      },
+      missingIds,
+    };
+  }
+
+  // Fetch crop info for the single crop
+  const cropIdStr = visibleRecords[0]!.cropId.toString();
+  const cropDoc = await Crop.findById(cropIdStr).lean();
+  const cropSummary = {
+    id: cropDoc?._id.toString() ?? cropIdStr,
+    slug: cropDoc?.slug ?? "unknown",
+    nameEn: cropDoc?.nameEn ?? "Unknown",
+    nameBn: cropDoc?.nameBn ?? "অজানা",
+    unit: cropDoc?.unit ?? "kg",
+  };
+  const cropMinIncrementPerKg = cropDoc?.minIncrementPerKg ?? 100;
+
+  // Build items for shared calculateCompareHighlights
+  const compareItems: CompareListingItem[] = visibleRecords.map((r) => ({
+    id: r._id.toString(),
+    cropId: r.cropId.toString(),
+    grade: r.aiAssessment.grade as CropGrade,
+    quantityKg: r.quantityKg,
+    floorPricePerKg: r.floorPricePerKg,
+    currentBidPerKg: r.currentBidPerKg,
+    bidCount: r.bidCount,
+    status: r.status as ListingStatus,
+    aiExpectedPricePerKg: r.aiPriceGuidance?.expectedPerKg,
+    aiPriceGuidance: r.aiPriceGuidance ? { expectedPerKg: r.aiPriceGuidance.expectedPerKg } : null,
+  }));
+
+  const highlights = calculateCompareHighlights(compareItems);
+  const now = getClock().now();
+
+  const compareListingsResult: CompareListing[] = visibleRecords.map((r) => {
+    const displayPricePerKg =
+      r.bidCount > 0 && r.currentBidPerKg != null ? r.currentBidPerKg : r.floorPricePerKg;
+    const totalDisplayCost = calculateSubtotal(displayPricePerKg, r.quantityKg);
+
+    const timeLeftSeconds =
+      r.status === ListingStatus.ACTIVE
+        ? Math.max(0, Math.floor((new Date(r.endsAt).getTime() - now.getTime()) / 1000))
+        : 0;
+
+    const farmerRegion = r.location?.division ?? "Dhaka";
+    const expectedPerKg = r.aiPriceGuidance?.expectedPerKg;
+    const percentageVsAiExpected =
+      expectedPerKg && expectedPerKg > 0
+        ? Math.round((displayPricePerKg / expectedPerKg) * 100)
+        : null;
+
+    const aiRange = r.aiPriceGuidance
+      ? {
+          lowPerKg: r.aiPriceGuidance.lowPerKg,
+          expectedPerKg: r.aiPriceGuidance.expectedPerKg,
+          highPerKg: r.aiPriceGuidance.highPerKg,
+        }
+      : null;
+
+    const itemHighlights = highlights.byListingId[r._id.toString()] ?? {
+      isLowestPrice: false,
+      isBestGrade: false,
+      isLargestQuantity: false,
+      isBestValue: false,
+    };
+
+    const buyerCard: BuyerListingCard = {
+      id: r._id.toString(),
+      cropId: r.cropId.toString(),
+      crop: cropSummary,
+      grade: r.aiAssessment.grade as CropGrade,
+      quantityKg: r.quantityKg,
+      floorPricePerKg: r.floorPricePerKg,
+      currentBidPerKg: r.currentBidPerKg ?? null,
+      displayPricePerKg,
+      totalDisplayCost,
+      minIncrementPerKg: cropMinIncrementPerKg,
+      hasBids: r.bidCount > 0,
+      bidCount: r.bidCount,
+      startsAt: r.startsAt instanceof Date ? r.startsAt.toISOString() : new Date(r.startsAt).toISOString(),
+      endsAt: r.endsAt instanceof Date ? r.endsAt.toISOString() : new Date(r.endsAt).toISOString(),
+      status: r.status as ListingStatus,
+      location: {
+        division: r.location?.division ?? "Dhaka",
+        district: r.location?.district ?? "Dhaka",
+        ...(r.location?.upazila ? { upazila: r.location.upazila } : {}),
+      },
+      thumbnailUrl: r.images?.[0]?.url ?? null,
+      images: r.images?.map((img: { url: string; width: number; height: number }) => ({
+        url: img.url,
+        width: img.width,
+        height: img.height,
+      })),
+      ...(expectedPerKg !== undefined ? { aiExpectedPricePerKg: expectedPerKg } : {}),
+    };
+
+    return {
+      ...buyerCard,
+      cropNameEn: cropSummary.nameEn,
+      cropNameBn: cropSummary.nameBn,
+      displayTotalCost: totalDisplayCost,
+      totalDisplayCost,
+      timeLeftSeconds,
+      farmerRegion,
+      aiExpectedPricePerKg: expectedPerKg ?? null,
+      aiPriceGuidance: r.aiPriceGuidance
+        ? {
+            lowPerKg: r.aiPriceGuidance.lowPerKg,
+            expectedPerKg: r.aiPriceGuidance.expectedPerKg,
+            highPerKg: r.aiPriceGuidance.highPerKg,
+            trend: r.aiPriceGuidance.trend,
+            confidence: r.aiPriceGuidance.confidence,
+            explanation: r.aiPriceGuidance.explanation,
+            modelVersion: r.aiPriceGuidance.modelVersion,
+            provider: r.aiPriceGuidance.provider,
+            degraded: r.aiPriceGuidance.degraded,
+            generatedAt: r.aiPriceGuidance.generatedAt instanceof Date
+              ? r.aiPriceGuidance.generatedAt.toISOString()
+              : new Date(r.aiPriceGuidance.generatedAt).toISOString(),
+            suggestedFloorPerKg: r.aiPriceGuidance.suggestedFloorPerKg,
+          }
+        : null,
+      aiRange,
+      percentageVsAiExpected,
+      highlights: itemHighlights,
+      card: buyerCard,
+    };
+  });
+
+  return {
+    cropId: cropSummary.id,
+    listings: compareListingsResult,
+    highlights,
+    missingIds,
+  };
 }
 
