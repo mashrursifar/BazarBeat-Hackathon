@@ -4,6 +4,7 @@ import {
   type AuctionClosedEventPayload,
   type AuctionExtendedEventPayload,
   type BidPlacedEventPayload,
+  type BuyerListingDetail,
   DomainEventName,
   type FarmerListing,
   type ListingStreamAuctionClosedPatch,
@@ -34,7 +35,7 @@ export interface ListingStreamClient {
 }
 
 export interface RegisterListingStreamOptions {
-  listing: FarmerListing;
+  listing: FarmerListing | BuyerListingDetail;
   user: PublicUser;
   req: Request<Record<string, string>, unknown, unknown, Record<string, unknown>>;
   res: Response;

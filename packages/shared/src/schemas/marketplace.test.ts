@@ -150,7 +150,7 @@ describe("Marketplace schemas", () => {
   });
 
   describe("buyerListingDetailSchema", () => {
-    it("validates buyer listing detail with AI guidance and assessment", () => {
+    it("validates buyer listing detail with AI guidance, snapshot, and buyer status", () => {
       const detail = {
         id: "507f1f77bcf86cd799439011",
         cropId: "507f1f77bcf86cd799439012",
@@ -162,11 +162,23 @@ describe("Marketplace schemas", () => {
           unit: "kg",
           minIncrementPerKg: 100,
         },
+        grade: CropGrade.A,
+        confidenceBand: "HIGH" as const,
+        reasons: ["Firm skin", "Uniform size"],
+        aiPriceSnapshot: {
+          lowPerKg: 4000,
+          expectedPerKg: 5000,
+          highPerKg: 6000,
+          trend: "UP" as const,
+        },
+        provider: "mock" as const,
+        degraded: false,
         quantityKg: 100,
         images: [{ url: "/uploads/img1.jpg", width: 800, height: 600 }],
         aiAssessment: {
           grade: CropGrade.A,
           confidence: 0.95,
+          confidenceBand: "HIGH" as const,
           classProbabilities: { A: 0.95, B: 0.04, C: 0.01 },
           qualityNotes: ["Firm skin", "Uniform size"],
           cropMatch: true,
@@ -200,11 +212,59 @@ describe("Marketplace schemas", () => {
         extensionCount: 0,
         status: ListingStatus.ACTIVE,
         location: { division: "Dhaka", district: "Gazipur" },
+        myStatus: "WINNING" as const,
+        myHighestBidPerKg: 4500,
         createdAt: "2026-11-14T09:30:00.000Z",
       };
 
       const result = buyerListingDetailSchema.safeParse(detail);
       expect(result.success).toBe(true);
+    });
+
+    it("rejects buyer listing detail if pickupNote is included (strict privacy)", () => {
+      const detail = {
+        id: "507f1f77bcf86cd799439011",
+        cropId: "507f1f77bcf86cd799439012",
+        crop: {
+          id: "507f1f77bcf86cd799439012",
+          slug: "onion",
+          nameEn: "Onion",
+          nameBn: "পেঁয়াজ",
+          unit: "kg",
+          minIncrementPerKg: 100,
+        },
+        grade: CropGrade.A,
+        confidenceBand: "HIGH" as const,
+        reasons: ["Firm skin"],
+        aiPriceSnapshot: {
+          lowPerKg: 4000,
+          expectedPerKg: 5000,
+          highPerKg: 6000,
+          trend: "UP" as const,
+        },
+        provider: "mock" as const,
+        degraded: false,
+        quantityKg: 100,
+        images: [{ url: "/uploads/img1.jpg", width: 800, height: 600 }],
+        floorPricePerKg: 4200,
+        minIncrementPerKg: 100,
+        currentBidPerKg: null,
+        displayPricePerKg: 4200,
+        displayTotalCost: 420000,
+        bidCount: 0,
+        startsAt: "2026-11-14T10:00:00.000Z",
+        endsAt: "2026-11-14T16:00:00.000Z",
+        extensionCount: 0,
+        status: ListingStatus.ACTIVE,
+        location: { division: "Dhaka", district: "Gazipur" },
+        myStatus: "NONE" as const,
+        myHighestBidPerKg: null,
+        createdAt: "2026-11-14T09:30:00.000Z",
+        pickupNote: "Call me behind the school",
+      };
+
+      const result = buyerListingDetailSchema.safeParse(detail);
+      expect(result.success).toBe(false);
     });
   });
 

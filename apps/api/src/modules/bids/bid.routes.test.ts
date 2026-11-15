@@ -10,6 +10,7 @@ import {
   UserRole,
   anonymizedBidHistoryResponseSchema,
   bidResponseSchema,
+  bidTooLowDetailsSchema,
 } from "@bazarbeat/shared";
 
 const { authenticateAccessTokenMock } = vi.hoisted(() => ({
@@ -248,7 +249,29 @@ describe("Bid HTTP Routes", () => {
       expect(response.body.error.code).toBe("CONFLICT");
     });
 
-    it("returns 400 BID_TOO_LOW if bid does not meet minIncrement", async () => {
+    it("returns 400 BID_TOO_LOW with error details if opening bid is below floor price", async () => {
+      const listing = await createSampleListing({ floorPricePerKg: 5000, minIncrementPerKg: 100 });
+
+      const response = await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 4900 });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error.code).toBe("BID_TOO_LOW");
+      expect(response.body.error.details).toBeDefined();
+
+      const details = bidTooLowDetailsSchema.parse(response.body.error.details);
+      expect(details).toEqual({
+        minimumRequiredPerKg: 5000,
+        currentBidPerKg: null,
+        floorPricePerKg: 5000,
+        minIncrementPerKg: 100,
+      });
+    });
+
+    it("returns 400 BID_TOO_LOW with error details if subsequent bid does not meet minIncrement", async () => {
       const listing = await createSampleListing({ floorPricePerKg: 5000, minIncrementPerKg: 100 });
 
       // First bid
@@ -267,6 +290,15 @@ describe("Bid HTTP Routes", () => {
 
       expect(response.status).toBe(400);
       expect(response.body.error.code).toBe("BID_TOO_LOW");
+      expect(response.body.error.details).toBeDefined();
+
+      const details = bidTooLowDetailsSchema.parse(response.body.error.details);
+      expect(details).toEqual({
+        minimumRequiredPerKg: 5300,
+        currentBidPerKg: 5200,
+        floorPricePerKg: 5000,
+        minIncrementPerKg: 100,
+      });
     });
 
     describe("Idempotency-Key support through IdempotencyRecord", () => {
@@ -528,18 +560,22 @@ describe("Bid HTTP Routes", () => {
       expect(parsed.data[0]?.amountPerKg).toBe(5400);
       expect(parsed.data[0]?.bidderLabel).toBe("Buyer #1"); // Kabir's second bid is still Buyer #1
       expect(parsed.data[0]?.isMyBid).toBe(false);
+      expect(parsed.data[0]?.isMine).toBe(false);
 
       expect(parsed.data[1]?.amountPerKg).toBe(5300);
       expect(parsed.data[1]?.bidderLabel).toBe("Buyer #3");
       expect(parsed.data[1]?.isMyBid).toBe(false);
+      expect(parsed.data[1]?.isMine).toBe(false);
 
       expect(parsed.data[2]?.amountPerKg).toBe(5200);
       expect(parsed.data[2]?.bidderLabel).toBe("Buyer #2");
       expect(parsed.data[2]?.isMyBid).toBe(true); // Salam's own bid
+      expect(parsed.data[2]?.isMine).toBe(true);
 
       expect(parsed.data[3]?.amountPerKg).toBe(5100);
       expect(parsed.data[3]?.bidderLabel).toBe("Buyer #1");
       expect(parsed.data[3]?.isMyBid).toBe(false);
+      expect(parsed.data[3]?.isMine).toBe(false);
 
       // STRICT PII CHECK: Ensure buyer IDs, names, organizations or phone numbers are NEVER exposed
       const jsonStr = JSON.stringify(response.body);
@@ -570,6 +606,7 @@ describe("Bid HTTP Routes", () => {
       expect(parsed.data[0]?.bidderLabel).toBe("Buyer #1");
       expect(parsed.data[0]?.amountPerKg).toBe(5200);
       expect(parsed.data[0]?.isMyBid).toBe(false);
+      expect(parsed.data[0]?.isMine).toBe(false);
 
       // Verify no PII leak to farmer
       const jsonStr = JSON.stringify(response.body);
@@ -598,6 +635,105 @@ describe("Bid HTTP Routes", () => {
 
       expect(farmerRes.status).toBe(200);
       expect(farmerRes.body.data).toEqual([]);
+    });
+
+    it("verifies isMine correctness between two distinct buyers", async () => {
+      const listing = await createSampleListing({ floorPricePerKg: 5000, minIncrementPerKg: 100 });
+
+      // Bid 1: buyerOne
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5100 });
+
+      // Bid 2: buyerTwo
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyerTwo"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5300 });
+
+      // As buyerOne:
+      const resBuyerOne = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"]);
+
+      expect(resBuyerOne.status).toBe(200);
+      const dataOne = anonymizedBidHistoryResponseSchema.parse(resBuyerOne.body).data;
+      expect(dataOne).toHaveLength(2);
+      // Newest first: dataOne[0] is 5300 (buyerTwo), dataOne[1] is 5100 (buyerOne)
+      expect(dataOne[0]?.amountPerKg).toBe(5300);
+      expect(dataOne[0]?.isMine).toBe(false);
+      expect(dataOne[0]?.isMyBid).toBe(false);
+
+      expect(dataOne[1]?.amountPerKg).toBe(5100);
+      expect(dataOne[1]?.isMine).toBe(true);
+      expect(dataOne[1]?.isMyBid).toBe(true);
+
+      // As buyerTwo:
+      const resBuyerTwo = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyerTwo"]);
+
+      expect(resBuyerTwo.status).toBe(200);
+      const dataTwo = anonymizedBidHistoryResponseSchema.parse(resBuyerTwo.body).data;
+      expect(dataTwo).toHaveLength(2);
+      expect(dataTwo[0]?.amountPerKg).toBe(5300);
+      expect(dataTwo[0]?.isMine).toBe(true);
+      expect(dataTwo[0]?.isMyBid).toBe(true);
+
+      expect(dataTwo[1]?.amountPerKg).toBe(5100);
+      expect(dataTwo[1]?.isMine).toBe(false);
+      expect(dataTwo[1]?.isMyBid).toBe(false);
+
+      // As farmer:
+      const resFarmer = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=farmer"]);
+
+      expect(resFarmer.status).toBe(200);
+      const dataFarmer = anonymizedBidHistoryResponseSchema.parse(resFarmer.body).data;
+      expect(dataFarmer[0]?.isMine).toBe(false);
+      expect(dataFarmer[1]?.isMine).toBe(false);
+    });
+
+    it("allows a buyer who bid on an ended listing to view bid history (200 OK), but rejects non-bidders with 404 NOT_FOUND", async () => {
+      const listing = await createSampleListing({
+        floorPricePerKg: 5000,
+        minIncrementPerKg: 100,
+      });
+
+      // buyerOne bids
+      await request(app)
+        .post(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"])
+        .set("X-CSRF-Protection", "1")
+        .send({ amountPerKg: 5200 });
+
+      // Update listing to SOLD
+      await Listing.findByIdAndUpdate(listing._id, {
+        status: ListingStatus.SOLD,
+        closedAt: new Date(),
+      });
+
+      // buyerOne (bidder) can view bids
+      const bidderRes = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyer"]);
+
+      expect(bidderRes.status).toBe(200);
+      const parsed = anonymizedBidHistoryResponseSchema.parse(bidderRes.body);
+      expect(parsed.data).toHaveLength(1);
+      expect(parsed.data[0]?.isMine).toBe(true);
+
+      // buyerTwo (non-bidder) gets 404 NOT_FOUND
+      const nonBidderRes = await request(app)
+        .get(`/api/v1/listings/${listing._id}/bids`)
+        .set("Cookie", ["accessToken=buyerTwo"]);
+
+      expect(nonBidderRes.status).toBe(404);
+      expect(nonBidderRes.body.error.code).toBe("NOT_FOUND");
     });
   });
 });

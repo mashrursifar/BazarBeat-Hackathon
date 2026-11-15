@@ -583,10 +583,27 @@ export async function getListingBids(
     throw new AppError(404, "NOT_FOUND", "Listing not found");
   }
 
-  // Non-owners can only see bids for ACTIVE listings
-  const isOwner = user && listing.farmerId.toString().toLowerCase() === user.id.toLowerCase();
-  if (!isOwner && listing.status !== ListingStatus.ACTIVE) {
-    throw new AppError(404, "NOT_FOUND", "Listing not found");
+  // Non-owners: owner farmers see any status; buyers see ACTIVE or any listing they have bid on
+  const isOwner =
+    user &&
+    user.role === UserRole.FARMER &&
+    listing.farmerId.toString().toLowerCase() === user.id.toLowerCase();
+
+  if (!isOwner) {
+    if (listing.status === ListingStatus.DRAFT) {
+      throw new AppError(404, "NOT_FOUND", "Listing not found");
+    }
+
+    if (listing.status !== ListingStatus.ACTIVE) {
+      const hasBuyerBid =
+        user && user.role === UserRole.BUYER
+          ? await Bid.exists({ listingId: validListingId, buyerId: ensureObjectId(user.id) })
+          : false;
+
+      if (!hasBuyerBid) {
+        throw new AppError(404, "NOT_FOUND", "Listing not found");
+      }
+    }
   }
 
   const allBids = await Bid.find({ listingId: validListingId }).sort({ seq: 1 }).lean();
@@ -615,7 +632,8 @@ export async function getListingBids(
         totalAmount: bid.totalAmount,
         bidderLabel: buyerLabelMap.get(buyerIdStr) ?? "Buyer #?",
         placedAt: bid.placedAt.toISOString(),
-        ...(user ? { isMyBid, isMine: isMyBid } : {}),
+        isMine: isMyBid,
+        isMyBid,
       };
     })
     .reverse(); // Newest bids first

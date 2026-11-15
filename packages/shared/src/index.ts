@@ -7,5 +7,6 @@ export * from "./display-price.js";
 export * from "./suggested-bids.js";
 export * from "./compare-highlights.js";
 export * from "./timing.js";
+export * from "./buyer-status.js";
 export * from "./events.js";
 export * from "./schemas/index.js";

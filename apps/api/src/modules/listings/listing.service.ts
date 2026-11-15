@@ -2,6 +2,7 @@ import { ObjectId } from "bson";
 import { type PipelineStage, Types } from "mongoose";
 import {
   type BuyerListingCard,
+  type BuyerListingDetail,
   type CreateListingRequest,
   DomainEventName,
   type FarmerListing,
@@ -10,6 +11,8 @@ import {
   MarketplaceSort,
   type PublicUser,
   type RelistListingRequest,
+  UserRole,
+  deriveBuyerListingStatus,
   evaluateFloorPrice,
 } from "@bazarbeat/shared";
 
@@ -18,6 +21,7 @@ import { getClock } from "../../shared/clock.js";
 import { getDomainEventEmitter } from "../../shared/domain-event-emitter.js";
 import { logger } from "../../shared/logger.js";
 import { Crop } from "../crops/crop.model.js";
+import { Bid } from "../bids/bid.model.js";
 import { AiAssessmentRecord } from "../ai/ai-assessment-record.model.js";
 import { getPricePredictionProvider, hashAssessmentToken } from "../ai/ai.service.js";
 import { releaseStock, reserveStockForListing } from "../inventory/inventory.service.js";
@@ -26,6 +30,7 @@ import { assertValidListingTransition } from "./listing-state-machine.js";
 import {
   type RawMarketplaceListingDoc,
   mapListingToBuyerCard,
+  mapListingToBuyerDetail,
   mapListingToFarmerListing,
 } from "./listing.mapper.js";
 
@@ -296,7 +301,10 @@ export async function getFarmerListings(
   return { listings, total };
 }
 
-export async function getListingById(listingId: string, user: PublicUser): Promise<FarmerListing> {
+export async function getListingById(
+  listingId: string,
+  user: PublicUser,
+): Promise<FarmerListing | BuyerListingDetail> {
   const id = ensureObjectId(listingId);
   const record = await Listing.findById(id).lean();
 
@@ -304,15 +312,75 @@ export async function getListingById(listingId: string, user: PublicUser): Promi
     throw new AppError(404, "NOT_FOUND", "Listing not found");
   }
 
-  const isOwner = record.farmerId.toString() === user.id;
+  const isOwner =
+    user.role === UserRole.FARMER &&
+    record.farmerId.toString().toLowerCase() === user.id.toLowerCase();
 
-  // Non-owners (other farmers, buyers) can only see ACTIVE listings
-  if (!isOwner && record.status !== ListingStatus.ACTIVE) {
+  // Owner farmer can view their own listing in any status with farmer fields
+  if (isOwner) {
+    return mapListingToFarmerListing(
+      record as unknown as ListingRecord & { _id: { toString(): string }; createdAt: Date },
+    );
+  }
+
+  // Non-owners (buyers, other farmers):
+  // DRAFT listings are strictly invisible to non-owners
+  if (record.status === ListingStatus.DRAFT) {
     throw new AppError(404, "NOT_FOUND", "Listing not found");
   }
 
-  return mapListingToFarmerListing(
+  let myHighestBidPerKg: number | null = null;
+  let hasBids = false;
+
+  if (user.role === UserRole.BUYER) {
+    const buyerBids = await Bid.find({
+      listingId: id,
+      buyerId: ensureObjectId(user.id),
+    })
+      .select("amountPerKg")
+      .lean();
+
+    // A buyer can open any ACTIVE listing, plus any listing they have bid on (so won and lost bids stay viewable);
+    // anything else is NOT_FOUND.
+    if (record.status !== ListingStatus.ACTIVE && buyerBids.length === 0) {
+      throw new AppError(404, "NOT_FOUND", "Listing not found");
+    }
+
+    if (buyerBids.length > 0) {
+      hasBids = true;
+      myHighestBidPerKg = Math.max(...buyerBids.map((b) => b.amountPerKg));
+    }
+  } else {
+    // Non-owner farmers can only view ACTIVE listings
+    if (record.status !== ListingStatus.ACTIVE) {
+      throw new AppError(404, "NOT_FOUND", "Listing not found");
+    }
+  }
+
+  const myStatus = deriveBuyerListingStatus({
+    listingStatus: record.status as ListingStatus,
+    currentBidderId: record.currentBidderId ? record.currentBidderId.toString() : null,
+    buyerId: user.id,
+    hasBids,
+  });
+
+  const cropDoc = await Crop.findById(record.cropId).lean();
+  const cropSummary = {
+    id: record.cropId.toString(),
+    slug: cropDoc?.slug ?? "unknown",
+    nameEn: cropDoc?.nameEn ?? "Unknown",
+    nameBn: cropDoc?.nameBn ?? "অজানা",
+    unit: cropDoc?.unit ?? "kg",
+    minIncrementPerKg: cropDoc?.minIncrementPerKg ?? record.minIncrementPerKg ?? 100,
+  };
+
+  return mapListingToBuyerDetail(
     record as unknown as ListingRecord & { _id: { toString(): string }; createdAt: Date },
+    cropSummary,
+    {
+      myStatus,
+      myHighestBidPerKg,
+    },
   );
 }
 

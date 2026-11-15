@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 import {
   AuctionCloseTrigger,
+  type BuyerListingDetailResponse,
   type CreateListingRequest,
   type FarmerListingListResponse,
   type FarmerListingQuery,
@@ -83,17 +84,27 @@ export const getMarketplaceListingsController: RequestHandler<
 
 export const getListingByIdController: RequestHandler<
   { id: string },
-  FarmerListingResponse,
+  FarmerListingResponse | BuyerListingDetailResponse,
   unknown,
   unknown,
   AuthenticatedLocals
 > = async (request, response): Promise<void> => {
   const listing = await getListingById(request.params.id, response.locals.currentUser);
 
-  response.status(200).json({
+  if ("reasons" in listing) {
+    const responseBody: BuyerListingDetailResponse = {
+      data: listing,
+      meta: { serverTime: getClock().iso() },
+    };
+    response.status(200).json(responseBody);
+    return;
+  }
+
+  const responseBody: FarmerListingResponse = {
     data: listing,
     meta: { serverTime: getClock().iso() },
-  });
+  };
+  response.status(200).json(responseBody);
 };
 
 export const acceptCurrentBidController: RequestHandler<

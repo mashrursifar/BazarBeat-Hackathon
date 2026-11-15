@@ -2,14 +2,18 @@ import { z } from "zod";
 
 import { ListingStatus, MarketplaceSort } from "../enums.js";
 import { BANGLADESH_DISTRICTS, BANGLADESH_DIVISIONS } from "../locations.js";
+import { BuyerListingStatus } from "../buyer-status.js";
 import {
   aiAssessmentSchema,
+  aiProviderSchema,
+  confidenceBandSchema,
   cropGradeSchema,
   listingImageSchema,
   listingLocationSchema,
   listingResponseMetaSchema,
   listingStatusSchema,
   priceGuidanceSchema,
+  priceTrendSchema,
 } from "./ai-listings.js";
 import { databaseIdSchema, inventoryQuantityKgSchema } from "./catalog-inventory.js";
 
@@ -170,7 +174,30 @@ export const buyerListingCardSchema = z
 export type BuyerListingCard = z.infer<typeof buyerListingCardSchema>;
 
 /**
+ * Immutable AI price guidance snapshot for buyer-facing detail.
+ */
+export const aiPriceSnapshotSchema = z
+  .object({
+    lowPerKg: poishaSchema,
+    expectedPerKg: poishaSchema,
+    highPerKg: poishaSchema,
+    trend: priceTrendSchema,
+  })
+  .strict();
+
+export type AiPriceSnapshot = z.infer<typeof aiPriceSnapshotSchema>;
+
+export const buyerListingStatusSchema = z.enum([
+  BuyerListingStatus.NONE,
+  BuyerListingStatus.WINNING,
+  BuyerListingStatus.OUTBID,
+  BuyerListingStatus.WON,
+  BuyerListingStatus.LOST,
+]);
+
+/**
  * Buyer-facing listing detail DTO.
+ * Excludes private farmer details (pickup notes, phone, exact address) and AI internal tokens.
  */
 export const buyerListingDetailSchema = z
   .object({
@@ -186,10 +213,14 @@ export const buyerListingDetailSchema = z
         minIncrementPerKg: poishaSchema,
       })
       .strict(),
+    grade: cropGradeSchema,
+    confidenceBand: confidenceBandSchema.optional().nullable(),
+    reasons: z.array(z.string().trim().min(1)),
+    aiPriceSnapshot: aiPriceSnapshotSchema,
+    provider: aiProviderSchema,
+    degraded: z.boolean(),
     quantityKg: inventoryQuantityKgSchema,
     images: z.array(listingImageSchema).min(1).max(4),
-    aiAssessment: aiAssessmentSchema,
-    aiPriceGuidance: priceGuidanceSchema,
     floorPricePerKg: poishaSchema,
     minIncrementPerKg: poishaSchema,
     currentBidPerKg: poishaSchema.optional().nullable(),
@@ -198,17 +229,38 @@ export const buyerListingDetailSchema = z
     bidCount: z.number().int().nonnegative(),
     startsAt: z.iso.datetime(),
     endsAt: z.iso.datetime(),
-    originalEndsAt: z.iso.datetime(),
+    originalEndsAt: z.iso.datetime().optional(),
     extensionCount: z.number().int().nonnegative(),
     status: listingStatusSchema,
-    location: listingLocationSchema,
-    pickupNote: z.string().optional(),
+    location: z
+      .object({
+        division: z.string().trim().min(1),
+        district: z.string().trim().min(1),
+      })
+      .strict(),
+    myStatus: buyerListingStatusSchema,
+    myHighestBidPerKg: poishaSchema.nullable().optional(),
+    highestBidPerKg: poishaSchema.nullable().optional(),
     closedAt: z.iso.datetime().optional(),
     createdAt: z.iso.datetime(),
+    aiAssessment: aiAssessmentSchema.optional(),
+    aiPriceGuidance: priceGuidanceSchema.optional(),
   })
   .strict();
 
 export type BuyerListingDetail = z.infer<typeof buyerListingDetailSchema>;
+
+/**
+ * Standard API response envelope for buyer-facing listing detail.
+ */
+export const buyerListingDetailResponseSchema = z
+  .object({
+    data: buyerListingDetailSchema,
+    meta: listingResponseMetaSchema,
+  })
+  .strict();
+
+export type BuyerListingDetailResponse = z.infer<typeof buyerListingDetailResponseSchema>;
 
 /**
  * Listing item schema inside the compare payload.

@@ -8,6 +8,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } 
 import {
   ListingStatus,
   type PublicUser,
+  buyerListingDetailResponseSchema,
   farmerListingListResponseSchema,
   farmerListingResponseSchema,
   publicConfigResponseSchema,
@@ -927,7 +928,7 @@ describe("POST /api/v1/listings (Task 3.6)", () => {
         .set("Cookie", withAccessToken("buyer"));
 
       expect(buyerRes.status).toBe(200);
-      expect(farmerListingResponseSchema.safeParse(buyerRes.body).success).toBe(true);
+      expect(buyerListingDetailResponseSchema.safeParse(buyerRes.body).success).toBe(true);
       expect(buyerRes.body.data.id).toBe(activeId);
       expect(buyerRes.body.data.status).toBe("ACTIVE");
       expect(typeof buyerRes.body.meta.serverTime).toBe("string");
