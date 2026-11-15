@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   AUCTION_TIMING,
+  type BuyerListingDetailResponse,
   type FarmerListingResponse,
   type ListingStreamAuctionClosedPatch,
   type ListingStreamAuctionExtendedPatch,
   type ListingStreamBidPlacedPatch,
   ListingStreamEventName,
   type ListingStreamSnapshot,
+  calculateSubtotal,
   listingStreamAuctionClosedPatchSchema,
   listingStreamAuctionExtendedPatchSchema,
   listingStreamBidPlacedPatchSchema,
@@ -121,7 +123,7 @@ export function useListingStream(
       }
 
       // Update React Query cache
-      queryClient.setQueryData<FarmerListingResponse>(
+      queryClient.setQueryData<FarmerListingResponse | BuyerListingDetailResponse>(
         listingKeys.detail(listingId),
         response,
       );
@@ -165,12 +167,29 @@ export function useListingStream(
       syncServerTime(snapshot.serverTime);
       setLastServerTime(snapshot.serverTime);
 
-      queryClient.setQueryData<FarmerListingResponse>(
+      queryClient.setQueryData<FarmerListingResponse | BuyerListingDetailResponse>(
         listingKeys.detail(snapshot.listingId),
         (old) => {
           if (!old) return old;
+          if ("reasons" in old.data) {
+            const currentPrice = snapshot.currentBidPerKg ?? snapshot.floorPricePerKg;
+            return {
+              meta: {
+                ...old.meta,
+                serverTime: snapshot.serverTime,
+              },
+              data: {
+                ...old.data,
+                currentBidPerKg: snapshot.currentBidPerKg,
+                bidCount: snapshot.bidCount,
+                endsAt: snapshot.endsAt,
+                status: snapshot.status,
+                displayPricePerKg: currentPrice,
+                displayTotalCost: calculateSubtotal(currentPrice, old.data.quantityKg),
+              },
+            };
+          }
           return {
-            ...old,
             meta: {
               ...old.meta,
               serverTime: snapshot.serverTime,
@@ -194,12 +213,26 @@ export function useListingStream(
       syncServerTime(patch.serverTime);
       setLastServerTime(patch.serverTime);
 
-      queryClient.setQueryData<FarmerListingResponse>(
+      queryClient.setQueryData<FarmerListingResponse | BuyerListingDetailResponse>(
         listingKeys.detail(patch.listingId),
         (old) => {
           if (!old) return old;
+          if ("reasons" in old.data) {
+            return {
+              meta: {
+                ...old.meta,
+                serverTime: patch.serverTime,
+              },
+              data: {
+                ...old.data,
+                currentBidPerKg: patch.currentBidPerKg,
+                bidCount: patch.bidCount,
+                displayPricePerKg: patch.currentBidPerKg,
+                displayTotalCost: calculateSubtotal(patch.currentBidPerKg, old.data.quantityKg),
+              },
+            };
+          }
           return {
-            ...old,
             meta: {
               ...old.meta,
               serverTime: patch.serverTime,
@@ -221,12 +254,24 @@ export function useListingStream(
       syncServerTime(patch.serverTime);
       setLastServerTime(patch.serverTime);
 
-      queryClient.setQueryData<FarmerListingResponse>(
+      queryClient.setQueryData<FarmerListingResponse | BuyerListingDetailResponse>(
         listingKeys.detail(patch.listingId),
         (old) => {
           if (!old) return old;
+          if ("reasons" in old.data) {
+            return {
+              meta: {
+                ...old.meta,
+                serverTime: patch.serverTime,
+              },
+              data: {
+                ...old.data,
+                endsAt: patch.endsAt,
+                extensionCount: patch.extensionCount,
+              },
+            };
+          }
           return {
-            ...old,
             meta: {
               ...old.meta,
               serverTime: patch.serverTime,
@@ -248,12 +293,24 @@ export function useListingStream(
       syncServerTime(patch.serverTime);
       setLastServerTime(patch.serverTime);
 
-      queryClient.setQueryData<FarmerListingResponse>(
+      queryClient.setQueryData<FarmerListingResponse | BuyerListingDetailResponse>(
         listingKeys.detail(patch.listingId),
         (old) => {
           if (!old) return old;
+          if ("reasons" in old.data) {
+            return {
+              meta: {
+                ...old.meta,
+                serverTime: patch.serverTime,
+              },
+              data: {
+                ...old.data,
+                status: patch.status,
+                closedAt: patch.closedAt,
+              },
+            };
+          }
           return {
-            ...old,
             meta: {
               ...old.meta,
               serverTime: patch.serverTime,

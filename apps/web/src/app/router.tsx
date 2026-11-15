@@ -15,6 +15,7 @@ const NewListingPage = lazy(() => import("../features/listings/new-listing-page.
 const MyListingsPage = lazy(() => import("../features/listings/my-listings-page.js"));
 const CropBiddingPage = lazy(() => import("../features/listings/crop-bidding-page.js"));
 const MarketplacePage = lazy(() => import("../features/marketplace/marketplace-page.js"));
+const BuyerListingDetailPage = lazy(() => import("../features/marketplace/listing-detail-page.js"));
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -77,6 +78,8 @@ export const router = createBrowserRouter([
         element: <Suspense fallback={<RouteLoading />}><BuyerLayout /></Suspense>,
         children: [
           { index: true, element: <Navigate to="dashboard" replace /> },
+          { path: "listings/:id", element: <BuyerListingDetailPage /> },
+          { path: "marketplace/:id", element: <BuyerListingDetailPage /> },
           ...BUYER_PAGES.map(([path, pageKey]) => page(path, pageKey)),
         ],
       },

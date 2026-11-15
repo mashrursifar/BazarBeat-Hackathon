@@ -1,21 +1,27 @@
 import {
   type AnonymizedBidHistoryResponse,
   type AssessmentResult,
+  type BidResponse,
+  type BuyerListingDetailResponse,
   type CreateListingRequest,
   type CropResponse,
   type FarmerListingListResponse,
   type FarmerListingQuery,
   type FarmerListingResponse,
+  type PlaceBidRequest,
   type PredictPriceRequest,
   type PriceGuidance,
   type PublicConfig,
   type RelistListingRequest,
   anonymizedBidHistoryResponseSchema,
   assessmentResultSchema,
+  bidResponseSchema,
+  buyerListingDetailResponseSchema,
   createListingRequestSchema,
   cropResponseSchema,
   farmerListingListResponseSchema,
   farmerListingResponseSchema,
+  placeBidRequestSchema,
   predictPriceRequestSchema,
   priceGuidanceSchema,
   publicConfigResponseSchema,
@@ -142,10 +148,47 @@ export async function getMyListings(
   return farmerListingListResponseSchema.parse(response);
 }
 
-/** Fetches a single listing's detail by ID */
-export async function getListingById(id: string): Promise<FarmerListingResponse> {
+/** Fetches a single listing's detail by ID (handles both farmer and buyer response shapes) */
+export async function getListingById(
+  id: string,
+): Promise<FarmerListingResponse | BuyerListingDetailResponse> {
   const response = await request<unknown>(`/listings/${id}`);
+  if (typeof response === "object" && response !== null && "data" in response) {
+    const rawData = (response as { data: unknown }).data;
+    if (typeof rawData === "object" && rawData !== null && "reasons" in rawData) {
+      return buyerListingDetailResponseSchema.parse(response);
+    }
+  }
   return farmerListingResponseSchema.parse(response);
+}
+
+/** Fetches buyer-facing listing detail by ID */
+export async function getBuyerListingDetail(
+  id: string,
+): Promise<BuyerListingDetailResponse> {
+  const response = await request<unknown>(`/listings/${id}`);
+  return buyerListingDetailResponseSchema.parse(response);
+}
+
+/** Places a binding bid on an active listing with optional Idempotency-Key */
+export async function placeBid(
+  listingId: string,
+  amountPerKg: number,
+  idempotencyKey?: string,
+): Promise<BidResponse> {
+  const parsed: PlaceBidRequest = placeBidRequestSchema.parse({ amountPerKg });
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (idempotencyKey) {
+    headers["Idempotency-Key"] = idempotencyKey;
+  }
+  const response = await request<unknown>(`/listings/${listingId}/bids`, {
+    method: "POST",
+    body: JSON.stringify(parsed),
+    headers,
+  });
+  return bidResponseSchema.parse(response);
 }
 
 /** Cancels an active listing with zero bids */
