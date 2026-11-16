@@ -4,7 +4,6 @@ import { ListingStatus, MarketplaceSort } from "../enums.js";
 import { BANGLADESH_DISTRICTS, BANGLADESH_DIVISIONS } from "../locations.js";
 import { BuyerListingStatus } from "../buyer-status.js";
 import {
-  aiAssessmentSchema,
   aiProviderSchema,
   confidenceBandSchema,
   cropGradeSchema,
@@ -12,7 +11,6 @@ import {
   listingLocationSchema,
   listingResponseMetaSchema,
   listingStatusSchema,
-  priceGuidanceSchema,
   priceTrendSchema,
 } from "./ai-listings.js";
 import { databaseIdSchema, inventoryQuantityKgSchema } from "./catalog-inventory.js";
@@ -243,8 +241,6 @@ export const buyerListingDetailSchema = z
     highestBidPerKg: poishaSchema.nullable().optional(),
     closedAt: z.iso.datetime().optional(),
     createdAt: z.iso.datetime(),
-    aiAssessment: aiAssessmentSchema.optional(),
-    aiPriceGuidance: priceGuidanceSchema.optional(),
   })
   .strict();
 
@@ -343,7 +339,6 @@ export const compareListingSchema = z
     farmerRegion: z.string().optional(),
     timeLeftSeconds: z.number().int().nonnegative().optional(),
     aiExpectedPricePerKg: poishaSchema.optional().nullable(),
-    aiPriceGuidance: priceGuidanceSchema.optional().nullable(),
     aiRange: aiPriceRangeSchema.optional().nullable(),
     percentageVsAiExpected: z.number().optional().nullable(),
     highlights: listingHighlightFlagsSchema.optional(),

@@ -5,6 +5,7 @@ import {
   type CompareListing,
   buyerListingCardSchema,
   buyerListingDetailSchema,
+  compareListingSchema,
   comparePayloadSchema,
   compareQuerySchema,
   marketplaceListingListResponseSchema,
@@ -176,31 +177,6 @@ describe("Marketplace schemas", () => {
         degraded: false,
         quantityKg: 100,
         images: [{ url: "/uploads/img1.jpg", width: 800, height: 600 }],
-        aiAssessment: {
-          grade: CropGrade.A,
-          confidence: 0.95,
-          confidenceBand: "HIGH" as const,
-          classProbabilities: { A: 0.95, B: 0.04, C: 0.01 },
-          qualityNotes: ["Firm skin", "Uniform size"],
-          cropMatch: true,
-          modelVersion: "mock-v1",
-          provider: "mock" as const,
-          degraded: false,
-          assessedAt: "2026-11-14T09:00:00.000Z",
-        },
-        aiPriceGuidance: {
-          lowPerKg: 4000,
-          expectedPerKg: 5000,
-          highPerKg: 6000,
-          trend: "UP" as const,
-          confidence: 0.9,
-          explanation: ["High demand"],
-          modelVersion: "mock-v1",
-          provider: "mock" as const,
-          degraded: false,
-          generatedAt: "2026-11-14T09:00:00.000Z",
-          suggestedFloorPerKg: 4200,
-        },
         floorPricePerKg: 4200,
         minIncrementPerKg: 100,
         currentBidPerKg: 4500,
@@ -266,6 +242,94 @@ describe("Marketplace schemas", () => {
 
       const result = buyerListingDetailSchema.safeParse(detail);
       expect(result.success).toBe(false);
+    });
+
+    it("rejects buyer listing detail if internal aiAssessment or aiPriceGuidance is included", () => {
+      const baseDetail = {
+        id: "507f1f77bcf86cd799439011",
+        cropId: "507f1f77bcf86cd799439012",
+        crop: {
+          id: "507f1f77bcf86cd799439012",
+          slug: "onion",
+          nameEn: "Onion",
+          nameBn: "পেঁয়াজ",
+          unit: "kg",
+          minIncrementPerKg: 100,
+        },
+        grade: CropGrade.A,
+        confidenceBand: "HIGH" as const,
+        reasons: ["Firm skin"],
+        aiPriceSnapshot: {
+          lowPerKg: 4000,
+          expectedPerKg: 5000,
+          highPerKg: 6000,
+          trend: "UP" as const,
+        },
+        provider: "mock" as const,
+        degraded: false,
+        quantityKg: 100,
+        images: [{ url: "/uploads/img1.jpg", width: 800, height: 600 }],
+        floorPricePerKg: 4200,
+        minIncrementPerKg: 100,
+        currentBidPerKg: null,
+        displayPricePerKg: 4200,
+        displayTotalCost: 420000,
+        bidCount: 0,
+        startsAt: "2026-11-14T10:00:00.000Z",
+        endsAt: "2026-11-14T16:00:00.000Z",
+        extensionCount: 0,
+        status: ListingStatus.ACTIVE,
+        location: { division: "Dhaka", district: "Gazipur" },
+        myStatus: "NONE" as const,
+        myHighestBidPerKg: null,
+        createdAt: "2026-11-14T09:30:00.000Z",
+      };
+
+      // With internal aiAssessment
+      expect(
+        buyerListingDetailSchema.safeParse({
+          ...baseDetail,
+          aiAssessment: {
+            grade: "A",
+            confidence: 0.95,
+            classProbabilities: { A: 0.95, B: 0.04, C: 0.01 },
+            qualityNotes: ["Firm skin"],
+            cropMatch: true,
+            modelVersion: "v1",
+            provider: "mock",
+            degraded: false,
+            assessedAt: "2026-11-14T09:00:00.000Z",
+          },
+        }).success,
+      ).toBe(false);
+
+      // With internal aiPriceGuidance (containing suggestedFloorPerKg)
+      expect(
+        buyerListingDetailSchema.safeParse({
+          ...baseDetail,
+          aiPriceGuidance: {
+            lowPerKg: 4000,
+            expectedPerKg: 5000,
+            highPerKg: 6000,
+            trend: "UP",
+            confidence: 0.9,
+            explanation: ["Demand"],
+            modelVersion: "v1",
+            provider: "mock",
+            degraded: false,
+            generatedAt: "2026-11-14T09:00:00.000Z",
+            suggestedFloorPerKg: 4200,
+          },
+        }).success,
+      ).toBe(false);
+
+      // With farmerId
+      expect(
+        buyerListingDetailSchema.safeParse({
+          ...baseDetail,
+          farmerId: "507f1f77bcf86cd799439099",
+        }).success,
+      ).toBe(false);
     });
   });
 
@@ -409,6 +473,62 @@ describe("Marketplace schemas", () => {
 
       const result = comparePayloadSchema.safeParse(payload);
       expect(result.success).toBe(true);
+    });
+
+    it("rejects compare listing item if private fields (farmerId, pickupNote, internal AI) are included", () => {
+      const validItem: CompareListing = {
+        id: "507f1f77bcf86cd799439011",
+        cropId: "507f1f77bcf86cd799439012",
+        cropNameEn: "Onion",
+        cropNameBn: "পেঁয়াজ",
+        grade: CropGrade.A,
+        quantityKg: 100,
+        floorPricePerKg: 4000,
+        displayPricePerKg: 4000,
+        displayTotalCost: 400000,
+        minIncrementPerKg: 100,
+        bidCount: 0,
+        startsAt: "2026-11-14T10:00:00.000Z",
+        endsAt: "2026-11-14T16:00:00.000Z",
+        status: ListingStatus.ACTIVE,
+        location: { division: "Dhaka", district: "Gazipur" },
+      };
+
+      // Rejects farmerId
+      expect(
+        compareListingSchema.safeParse({
+          ...validItem,
+          farmerId: "507f1f77bcf86cd799439099",
+        }).success,
+      ).toBe(false);
+
+      // Rejects pickupNote
+      expect(
+        compareListingSchema.safeParse({
+          ...validItem,
+          pickupNote: "Secret gate code",
+        }).success,
+      ).toBe(false);
+
+      // Rejects aiPriceGuidance with internal suggestedFloorPerKg
+      expect(
+        compareListingSchema.safeParse({
+          ...validItem,
+          aiPriceGuidance: {
+            lowPerKg: 4000,
+            expectedPerKg: 5000,
+            highPerKg: 6000,
+            trend: "UP",
+            confidence: 0.9,
+            explanation: ["Test"],
+            modelVersion: "m",
+            provider: "mock",
+            degraded: false,
+            generatedAt: "2026-11-14T10:00:00.000Z",
+            suggestedFloorPerKg: 4200,
+          },
+        }).success,
+      ).toBe(false);
     });
   });
 

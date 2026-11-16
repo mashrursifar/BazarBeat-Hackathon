@@ -1,4 +1,4 @@
-import { type ReactElement } from "react";
+import { type ReactElement, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { formatPoisha } from "@bazarbeat/shared";
 
@@ -29,11 +29,29 @@ export function BindingBidDialog({
   const { t, i18n } = useTranslation();
   const isBangla = i18n.language === "bn";
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent): void => {
+      if (e.key === "Escape" && !isPending) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return (): void => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen, isPending, onClose]);
+
   if (!isOpen) return null;
 
   return (
     <div
       role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget && !isPending) {
+          onClose();
+        }
+      }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-2xs"
     >
       <div

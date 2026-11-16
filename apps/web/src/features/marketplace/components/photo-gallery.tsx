@@ -62,6 +62,15 @@ export function PhotoGallery({
                 aria-label={`View photo ${index + 1}`}
                 data-testid={`thumbnail-${index}`}
                 onClick={() => setSelectedIndex(index)}
+                onKeyDown={(e) => {
+                  if (e.key === "ArrowRight") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev + 1) % safeImages.length);
+                  } else if (e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    setSelectedIndex((prev) => (prev - 1 + safeImages.length) % safeImages.length);
+                  }
+                }}
                 className={cn(
                   "relative h-16 w-16 shrink-0 overflow-hidden rounded-lg border-2 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                   isSelected

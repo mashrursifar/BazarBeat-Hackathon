@@ -642,11 +642,18 @@ describe("GET /api/v1/listings/compare", () => {
       expect(typeof item1.timeLeftSeconds).toBe("number");
       expect(item1.timeLeftSeconds).toBeGreaterThan(0);
 
-      // Farmer region
+      // Farmer region (location limited to division/district; upazila stripped for privacy)
       expect(item1.farmerRegion).toBe("Rajshahi");
       expect(item1.location.division).toBe("Rajshahi");
       expect(item1.location.district).toBe("Bogra");
-      expect(item1.location.upazila).toBe("Sariakandi");
+      expect(item1.location.upazila).toBeUndefined();
+
+      // Verify internal AI price guidance and sensitive fields are not leaked
+      expect(item1.aiPriceGuidance).toBeUndefined();
+      const rawBody = JSON.stringify(res.body);
+      expect(rawBody).not.toContain("suggestedFloorPerKg");
+      expect(rawBody).not.toContain("pickupNote");
+      expect(rawBody).not.toContain("farmerId");
 
       // AI range: lowPerKg, expectedPerKg, highPerKg
       expect(item1.aiRange).toEqual({

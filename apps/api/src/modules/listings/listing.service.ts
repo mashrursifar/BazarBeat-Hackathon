@@ -1065,7 +1065,6 @@ export async function compareListings(
       location: {
         division: r.location?.division ?? "Dhaka",
         district: r.location?.district ?? "Dhaka",
-        ...(r.location?.upazila ? { upazila: r.location.upazila } : {}),
       },
       thumbnailUrl: r.images?.[0]?.url ?? null,
       images: r.images?.map((img: { url: string; width: number; height: number }) => ({
@@ -1085,23 +1084,6 @@ export async function compareListings(
       timeLeftSeconds,
       farmerRegion,
       aiExpectedPricePerKg: expectedPerKg ?? null,
-      aiPriceGuidance: r.aiPriceGuidance
-        ? {
-            lowPerKg: r.aiPriceGuidance.lowPerKg,
-            expectedPerKg: r.aiPriceGuidance.expectedPerKg,
-            highPerKg: r.aiPriceGuidance.highPerKg,
-            trend: r.aiPriceGuidance.trend,
-            confidence: r.aiPriceGuidance.confidence,
-            explanation: r.aiPriceGuidance.explanation,
-            modelVersion: r.aiPriceGuidance.modelVersion,
-            provider: r.aiPriceGuidance.provider,
-            degraded: r.aiPriceGuidance.degraded,
-            generatedAt: r.aiPriceGuidance.generatedAt instanceof Date
-              ? r.aiPriceGuidance.generatedAt.toISOString()
-              : new Date(r.aiPriceGuidance.generatedAt).toISOString(),
-            suggestedFloorPerKg: r.aiPriceGuidance.suggestedFloorPerKg,
-          }
-        : null,
       aiRange,
       percentageVsAiExpected,
       highlights: itemHighlights,

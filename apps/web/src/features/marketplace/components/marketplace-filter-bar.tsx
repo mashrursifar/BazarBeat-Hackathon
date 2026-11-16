@@ -98,16 +98,23 @@ export function MarketplaceFilterBar({
     return count;
   }, [filters]);
 
-  // Lock background scroll when mobile bottom sheet is open
+  // Lock background scroll and handle Escape key when mobile bottom sheet is open
   useEffect(() => {
     if (mobileSheetOpen) {
       document.body.style.overflow = "hidden";
+      const handleKeyDown = (e: KeyboardEvent): void => {
+        if (e.key === "Escape") {
+          setMobileSheetOpen(false);
+        }
+      };
+      window.addEventListener("keydown", handleKeyDown);
+      return (): void => {
+        document.body.style.overflow = "";
+        window.removeEventListener("keydown", handleKeyDown);
+      };
     } else {
       document.body.style.overflow = "";
     }
-    return (): void => {
-      document.body.style.overflow = "";
-    };
   }, [mobileSheetOpen]);
 
   const renderFilterInputs = (isMobile = false): ReactElement => (
@@ -233,11 +240,16 @@ export function MarketplaceFilterBar({
 
       {/* Price Range Filter (in BDT ৳/kg, converted to poisha) */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs font-semibold text-stone-600">
+        <label
+          htmlFor={isMobile ? "mobile-filter-min-price" : "desktop-filter-min-price"}
+          className="text-xs font-semibold text-stone-600"
+        >
           {t("marketplace.priceRange")}
         </label>
         <div className="flex items-center gap-1.5">
           <input
+            id={isMobile ? "mobile-filter-min-price" : "desktop-filter-min-price"}
+            aria-label={t("marketplace.minPrice")}
             type="number"
             data-testid="filter-min-price-input"
             min={0}
@@ -258,6 +270,8 @@ export function MarketplaceFilterBar({
           />
           <span className="text-stone-400 text-xs">-</span>
           <input
+            id={isMobile ? "mobile-filter-max-price" : "desktop-filter-max-price"}
+            aria-label={t("marketplace.maxPrice")}
             type="number"
             data-testid="filter-max-price-input"
             min={0}
@@ -380,6 +394,11 @@ export function MarketplaceFilterBar({
       {mobileSheetOpen && (
         <div
           data-testid="mobile-filter-sheet"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setMobileSheetOpen(false);
+            }
+          }}
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-xs md:hidden"
         >
           <div
