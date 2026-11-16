@@ -4,7 +4,7 @@ export interface InventoryDeltas {
   availableKg: number;
   listedKg: number;
   soldKg: number;
-  sourceBucket?: "availableKg" | "listedKg";
+  sourceBucket?: "availableKg" | "listedKg" | "soldKg";
 }
 
 export function getInventoryDeltas(type: StockMovementType, quantityKg: number): InventoryDeltas {
@@ -18,5 +18,7 @@ export function getInventoryDeltas(type: StockMovementType, quantityKg: number):
       return { availableKg: quantityKg, listedKg: -quantityKg, soldKg: 0, sourceBucket: "listedKg" };
     case "SELL":
       return { availableKg: 0, listedKg: -quantityKg, soldKg: quantityKg, sourceBucket: "listedKg" };
+    case "RETURN":
+      return { availableKg: quantityKg, listedKg: 0, soldKg: -quantityKg, sourceBucket: "soldKg" };
   }
 }

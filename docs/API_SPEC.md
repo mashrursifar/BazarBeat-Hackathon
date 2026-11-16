@@ -87,21 +87,28 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 
 ## Orders
 
-| GET | /orders | A | Role-scoped list with filters |
-| GET | /orders/:id | A | Detail (participants only) |
-| POST | /orders/:id/confirm | F | Farmer confirms and sets handover info |
-| POST | /orders/:id/mark-paid | B | Simulated payment |
-| POST | /orders/:id/mark-delivered | F | |
-| POST | /orders/:id/complete | B | Buyer confirms receipt |
-| POST | /orders/:id/dispute | B | P1 |
-| POST | /orders/:id/cancel | A | Allowed only in states defined by the order state machine |
+| Method | Path | Role | Purpose & Contract |
+| --- | --- | --- | --- |
+| GET | /orders | A | Role-scoped list with query filters `?status&page=1&limit=20` (limit max 50). Returns `{ data: FarmerOrderCard[] \| BuyerOrderCard[], meta: { serverTime, page, limit, total, totalPages } }`. Counterparties masked if PENDING; revealed if CONFIRMED or later |
+| GET | /orders/:id | A | Order detail with audit timeline, available actions, dispute record, and counterparty. Returns `{ data: FarmerOrderDetail \| BuyerOrderDetail, meta: { serverTime } }` (participants only; 403 FORBIDDEN for non-participants) |
+| POST | /orders/:id/confirm | F | Farmer confirms order and schedules pickup/handover: payload `{ handoverAt: ISOString, note?: string (max 200), fulfilmentMethod?: PICKUP \| BUYER_ARRANGED }`. Enforces `handoverAt` between now and +72 hours ahead. Transitions PENDING → CONFIRMED |
+| POST | /orders/:id/mark-paid | B | Simulated payment: payload `{ method?: COD \| WALLET_SIM }` (default WALLET_SIM). Updates independent payment status to PAID |
+| POST | /orders/:id/mark-delivered | F | Farmer marks produce delivered/collected: optional `{ note?: string (max 200) }`. Transitions CONFIRMED → DELIVERED |
+| POST | /orders/:id/complete | B | Buyer confirms receipt of goods: optional `{ note?: string (max 200) }`. Transitions DELIVERED → COMPLETED |
+| POST | /orders/:id/dispute | B | Buyer raises quality/quantity dispute (P1): payload `{ reason: GRADE_MISMATCH \| WEIGHT_SHORTAGE \| DAMAGED_PRODUCE \| WRONG_CROP \| OTHER, note?: string (max 500) }`. Transitions DELIVERED → DISPUTED |
+| POST | /orders/:id/cancel | A | Allowed only in PENDING or CONFIRMED per order state machine: payload `{ reason: string, note?: string (max 200) }`. Transitions to CANCELLED; returns reserved sold stock to available via ledger RETURN movement |
 
-## Dashboards
+### Order Error Codes
+`ORDER_NOT_FOUND` 404 · `INVALID_ORDER_TRANSITION` 400 · `ORDER_ACTION_NOT_ALLOWED` 403 · `ORDER_ALREADY_PAID` 400 · `HANDOVER_TIME_INVALID` 400.
 
+## Dashboards & Sales / Earnings
+
+| Method | Path | Role | Purpose & Contract |
+| --- | --- | --- | --- |
 | GET | /dashboards/farmer | F | KPIs + series: sales trend, earnings by crop, win rate, active auctions |
 | GET | /dashboards/buyer | B | KPIs + series: spend trend, purchases by crop, avg price vs market, win rate |
-| GET | /earnings | F | Totals, per-crop, payout statuses |
-| GET | /sales | F | Paginated completed sales |
+| GET | /earnings | F | Farmer earnings summary: total earnings, total subtotal, platform fees, order counts, pending/paid payouts, average price premium percentage (`calculatePricePremium`), breakdowns `byCrop`, and `recentPayouts`. Returns `{ data: EarningsData, meta: { serverTime } }` |
+| GET | /sales | F | Paginated completed sales for farmer: `?cropId&page=1&limit=20` (max 50). Returns `{ data: SaleItem[], meta: { page, limit, total, totalPages, serverTime } }` with price premium per sale |
 
 ## Notifications
 

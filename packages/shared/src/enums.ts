@@ -51,6 +51,7 @@ export const StockMovementType = {
   RELEASE: "RELEASE",
   SELL: "SELL",
   ADJUST: "ADJUST",
+  RETURN: "RETURN",
 } as const;
 
 export type StockMovementType = (typeof StockMovementType)[keyof typeof StockMovementType];
@@ -111,7 +112,6 @@ export type MarketplaceSort = (typeof MarketplaceSort)[keyof typeof MarketplaceS
 export const OrderStatus = {
   PENDING: "PENDING",
   CONFIRMED: "CONFIRMED",
-  IN_TRANSIT: "IN_TRANSIT",
   DELIVERED: "DELIVERED",
   COMPLETED: "COMPLETED",
   CANCELLED: "CANCELLED",
@@ -134,6 +134,86 @@ export const PaymentMethod = {
 } as const;
 
 export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod];
+
+export const FulfilmentMethod = {
+  PICKUP: "PICKUP",
+  BUYER_ARRANGED: "BUYER_ARRANGED",
+} as const;
+
+export type FulfilmentMethod = (typeof FulfilmentMethod)[keyof typeof FulfilmentMethod];
+
+export const OrderAction = {
+  CONFIRM: "CONFIRM",
+  MARK_PAID: "MARK_PAID",
+  MARK_DELIVERED: "MARK_DELIVERED",
+  COMPLETE: "COMPLETE",
+  DISPUTE: "DISPUTE",
+  CANCEL: "CANCEL",
+} as const;
+
+export type OrderAction = (typeof OrderAction)[keyof typeof OrderAction];
+
+export const OrderCancelReason = {
+  BUYER_CHANGE_OF_MIND: "BUYER_CHANGE_OF_MIND",
+  BUYER_CANNOT_COLLECT: "BUYER_CANNOT_COLLECT",
+  BUYER_COMMUNICATION_FAILED: "BUYER_COMMUNICATION_FAILED",
+  FARMER_CROP_DAMAGED: "FARMER_CROP_DAMAGED",
+  FARMER_UNABLE_TO_FULFILL: "FARMER_UNABLE_TO_FULFILL",
+  FARMER_COMMUNICATION_FAILED: "FARMER_COMMUNICATION_FAILED",
+  CONFIRMATION_TIMEOUT: "CONFIRMATION_TIMEOUT",
+  MUTUAL_AGREEMENT: "MUTUAL_AGREEMENT",
+  OTHER: "OTHER",
+} as const;
+
+export type OrderCancelReason = (typeof OrderCancelReason)[keyof typeof OrderCancelReason];
+
+export const BUYER_CANCEL_REASONS = [
+  OrderCancelReason.BUYER_CHANGE_OF_MIND,
+  OrderCancelReason.BUYER_CANNOT_COLLECT,
+  OrderCancelReason.BUYER_COMMUNICATION_FAILED,
+  OrderCancelReason.MUTUAL_AGREEMENT,
+  OrderCancelReason.OTHER,
+] as const;
+
+export const FARMER_CANCEL_REASONS = [
+  OrderCancelReason.FARMER_CROP_DAMAGED,
+  OrderCancelReason.FARMER_UNABLE_TO_FULFILL,
+  OrderCancelReason.FARMER_COMMUNICATION_FAILED,
+  OrderCancelReason.MUTUAL_AGREEMENT,
+  OrderCancelReason.OTHER,
+] as const;
+
+export const SYSTEM_CANCEL_REASONS = [
+  OrderCancelReason.CONFIRMATION_TIMEOUT,
+] as const;
+
+export const OrderDisputeReason = {
+  GRADE_MISMATCH: "GRADE_MISMATCH",
+  WEIGHT_SHORTAGE: "WEIGHT_SHORTAGE",
+  DAMAGED_PRODUCE: "DAMAGED_PRODUCE",
+  WRONG_CROP: "WRONG_CROP",
+  OTHER: "OTHER",
+} as const;
+
+export type OrderDisputeReason = (typeof OrderDisputeReason)[keyof typeof OrderDisputeReason];
+
+export const ORDER_DISPUTE_REASONS = [
+  OrderDisputeReason.GRADE_MISMATCH,
+  OrderDisputeReason.WEIGHT_SHORTAGE,
+  OrderDisputeReason.DAMAGED_PRODUCE,
+  OrderDisputeReason.WRONG_CROP,
+  OrderDisputeReason.OTHER,
+] as const;
+
+export const OrderErrorCode = {
+  ORDER_NOT_FOUND: "ORDER_NOT_FOUND",
+  INVALID_ORDER_TRANSITION: "INVALID_ORDER_TRANSITION",
+  ORDER_ACTION_NOT_ALLOWED: "ORDER_ACTION_NOT_ALLOWED",
+  ORDER_ALREADY_PAID: "ORDER_ALREADY_PAID",
+  HANDOVER_TIME_INVALID: "HANDOVER_TIME_INVALID",
+} as const;
+
+export type OrderErrorCode = (typeof OrderErrorCode)[keyof typeof OrderErrorCode];
 
 export const AuctionCloseTrigger = {
   TIMER_EXPIRED: "TIMER_EXPIRED",

@@ -80,17 +80,17 @@ The seed uses upserts keyed by slug, so repeated runs update these catalog value
 | Field                                                                   | Type                                          | Notes                                                                                        |
 | ----------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | farmerId, cropId                                                        | refs                                          |                                                                                              |
-| type                                                                    | enum ADD \| LIST \| RELEASE \| SELL \| ADJUST |                                                                                              |
-| quantityKg                                                              | number                                        | Positive; type gives direction                                                               |
-| listingId? / orderId?                                                   | refs                                          | Traceability                                                                                 |
-| note                                                                    | string?                                       |                                                                                              |
-| operationId                                                             | string                                        | Unique idempotency key for transaction retries and fallback recovery                         |
-| status                                                                  | enum PENDING \| APPLIED                       | PENDING is an internal fallback intent; only APPLIED movements count toward inventory totals |
+| type                                                                    | enum ADD \| LIST \| RELEASE \| SELL \| ADJUST \| RETURN |                                                                                              |
+| quantityKg                                                              | number                                                  | Positive; type gives direction                                                               |
+| listingId? / orderId?                                                   | refs                                                    | Traceability                                                                                 |
+| note                                                                    | string?                                                 |                                                                                              |
+| operationId                                                             | string                                                  | Unique idempotency key for transaction retries and fallback recovery                         |
+| status                                                                  | enum PENDING \| APPLIED                                 | PENDING is an internal fallback intent; only APPLIED movements count toward inventory totals |
 | Inventory totals must always equal the sum of APPLIED ledger movements. |
 
 ### Stock movement effects
 
-Every movement quantity is positive; the movement type defines which bucket changes. `ADJUST` records unsold goods returned after a cancelled order, as permitted by AUCTION_RULES §11.
+Every movement quantity is positive; the movement type defines which bucket changes. `ADJUST` records manual stock adjustments, and `RETURN` records sold goods returned from sold back to available after a cancelled order, as permitted by AUCTION_RULES §11.
 
 | Type    | Available kg | Listed kg |   Sold kg | Meaning                                                    |
 | ------- | -----------: | --------: | --------: | ---------------------------------------------------------- |
@@ -98,6 +98,8 @@ Every movement quantity is positive; the movement type defines which bucket chan
 | LIST    |    −quantity | +quantity |         — | Stock reserved for a published listing                     |
 | RELEASE |    +quantity | −quantity |         — | Unsold listing stock returned when it closes               |
 | SELL    |            — | −quantity | +quantity | Listed stock completed as a sale                           |
+| ADJUST  |    ±quantity |         — |         — | Manual stock reconciliation                                |
+| RETURN  |    +quantity |         — | −quantity | Cancelled order stock returned from sold to available      |
 | ADJUST  |    +quantity |         — |         — | Unsold goods returned after an eligible order cancellation |
 
 ## Listing
@@ -210,12 +212,18 @@ Domain events are typed in-process events defined in `@bazarbeat/shared` and emi
 | pricePerKg, subtotal                                          | int poisha                                                                                 | Winning bid             |
 | platformFee                                                   | int poisha                                                                                 | From `PLATFORM_FEE_BPS` |
 | farmerNet                                                     | int poisha                                                                                 | subtotal − fee          |
-| status                                                        | enum PENDING \| CONFIRMED \| IN_TRANSIT \| DELIVERED \| COMPLETED \| CANCELLED \| DISPUTED | State machine           |
-| payment                                                       | {method COD \| WALLET_SIM, status UNPAID \| PAID \| REFUNDED, paidAt?}                     | Simulated               |
-| fulfilment                                                    | {method PICKUP \| BUYER_ARRANGED, note?, handoverAt?}                                      |                         |
-| dispute                                                       | {reason, raisedAt, resolution?}?                                                           | P1                      |
-| statusHistory                                                 | array of {status, at, byUserId}                                                            | Audit                   |
+| status                                                        | enum PENDING \| CONFIRMED \| DELIVERED \| COMPLETED \| CANCELLED \| DISPUTED | State machine (IN_TRANSIT removed; fulfilment is pickup/buyer-arranged) |
+| payment                                                       | {method COD \| WALLET_SIM, status UNPAID \| PAID \| REFUNDED, paidAt?}       | Simulated                                                               |
+| fulfilment                                                    | {method PICKUP \| BUYER_ARRANGED, note?, handoverAt?}                         | Handover time 0–72h ahead, note ≤ 200 chars                             |
+| dispute                                                       | {reason, note?, raisedAt, resolution?}?                                       | P1 dispute reasons (GRADE_MISMATCH, WEIGHT_SHORTAGE, etc.)              |
+| statusHistory                                                 | array of {status, at, byUserId, note?}                                        | Audit timeline                                                          |
 | Indexes: (farmerId, createdAt), (buyerId, createdAt), status. |
+
+### Order Participant Privacy and Handover
+
+- **Counterparty Privacy (API_SPEC / AUCTION_RULES §10):** While an order is `PENDING`, counterparty identities are masked (anonymized names/labels, division/district only, zero phone numbers or addresses). Full contact details (phone, full location) are revealed only after the order transitions to `CONFIRMED` to the two verified participants.
+- **Handover Rules:** Farmer sets `handoverAt` on confirmation: must be between current time and +72 hours ahead; optional pickup note up to 200 characters.
+- **Lifecycle Timers:** Unconfirmed orders auto-cancel after 12 hours (`ORDER_TIMING.AUTO_CANCEL_HOURS = 12`, demo: 1m). Delivered orders auto-complete after 24 hours (`ORDER_TIMING.AUTO_COMPLETE_HOURS = 24`, demo: 2m) if no dispute is raised.
 
 ## Notification
 

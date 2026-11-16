@@ -52,6 +52,7 @@ describe("catalog and inventory schemas", () => {
       createdAt: "2026-11-03T00:00:00.000Z",
     };
     expect(stockMovementResponseSchema.safeParse(movement).success).toBe(true);
+    expect(stockMovementResponseSchema.safeParse({ ...movement, type: "RETURN" }).success).toBe(true);
     expect(stockMovementResponseSchema.safeParse({ ...movement, type: "REMOVE" }).success).toBe(false);
     expect(paginationQuerySchema.parse({ page: "2" })).toEqual({ page: 2, limit: 20 });
     expect(paginationQuerySchema.safeParse({ limit: "51" }).success).toBe(false);

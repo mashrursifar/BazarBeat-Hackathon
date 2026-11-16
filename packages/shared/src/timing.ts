@@ -49,6 +49,14 @@ export const AUCTION_TIMING = {
    */
   ORDER_AUTO_CANCEL_HOURS: 12,
   ORDER_AUTO_CANCEL_MS: 12 * 60 * 60 * 1000, // 43,200,000 ms (12 hours)
+  DEMO_ORDER_AUTO_CANCEL_MS: 60 * 1000, // 60,000 ms (1 minute)
+
+  /**
+   * Auto-completion window for delivered orders (24 hours).
+   */
+  ORDER_AUTO_COMPLETE_HOURS: 24,
+  ORDER_AUTO_COMPLETE_MS: 24 * 60 * 60 * 1000, // 86,400,000 ms (24 hours)
+  DEMO_ORDER_AUTO_COMPLETE_MS: 2 * 60 * 1000, // 120,000 ms (2 minutes)
 
   /**
    * ARCHITECTURE §5: Heartbeat interval sent to keep SSE connections alive.
@@ -60,6 +68,43 @@ export const AUCTION_TIMING = {
    */
   MAX_CONCURRENT_STREAMS_PER_USER: 5,
 } as const;
+
+/**
+ * Order timing constants and presets.
+ * Sources: AUCTION_RULES §11, API_SPEC (Orders).
+ */
+export const ORDER_TIMING = {
+  AUTO_CANCEL_HOURS: 12,
+  AUTO_CANCEL_MS: 12 * 60 * 60 * 1000,
+  DEMO_AUTO_CANCEL_MS: 60 * 1000,
+
+  AUTO_COMPLETE_HOURS: 24,
+  AUTO_COMPLETE_MS: 24 * 60 * 60 * 1000,
+  DEMO_AUTO_COMPLETE_MS: 2 * 60 * 1000,
+} as const;
+
+/**
+ * Order handover rules and boundaries.
+ * Rules: Handover time from now up to 72 hours ahead; note up to 200 characters.
+ */
+export const ORDER_HANDOVER = {
+  MIN_HOURS_AHEAD: 0,
+  MAX_HOURS_AHEAD: 72,
+  MAX_HOURS_AHEAD_MS: 72 * 60 * 60 * 1000,
+  MAX_NOTE_LENGTH: 200,
+} as const;
+
+export function getOrderAutoCancelMs(isDemoMode: boolean): number {
+  return isDemoMode
+    ? ORDER_TIMING.DEMO_AUTO_CANCEL_MS
+    : ORDER_TIMING.AUTO_CANCEL_MS;
+}
+
+export function getOrderAutoCompleteMs(isDemoMode: boolean): number {
+  return isDemoMode
+    ? ORDER_TIMING.DEMO_AUTO_COMPLETE_MS
+    : ORDER_TIMING.AUTO_COMPLETE_MS;
+}
 
 export function getAntiSnipingTriggerWindowMs(isDemoMode: boolean): number {
   return isDemoMode

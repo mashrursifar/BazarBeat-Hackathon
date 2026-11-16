@@ -50,6 +50,7 @@ export const stockMovementTypeSchema = z.enum([
   StockMovementType.RELEASE,
   StockMovementType.SELL,
   StockMovementType.ADJUST,
+  StockMovementType.RETURN,
 ]);
 
 export const stockMovementResponseSchema = z.object({
