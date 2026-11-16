@@ -1,9 +1,21 @@
 import type { Page, Route } from "@playwright/test";
 import {
+  type BuyerOrderCard,
+  type BuyerOrderDetail,
+  type CounterpartyDto,
   CropGrade,
   type FarmerListing,
+  type FarmerOrderCard,
+  type FarmerOrderDetail,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
   type PublicUser,
+  type SaleItem,
+  type SalesTotals,
+  StockReturnDecision,
   UserRole,
+  getOrderActions,
 } from "@bazarbeat/shared";
 
 import {
@@ -45,6 +57,58 @@ export interface MockBid {
   bidderLabel?: string;
 }
 
+export interface MockOrder {
+  id: string;
+  listingId: string;
+  farmerId: string;
+  buyerId: string;
+  cropId: string;
+  quantityKg: number;
+  grade: CropGrade;
+  pricePerKg: number;
+  subtotal: number;
+  platformFee: number;
+  farmerNet: number;
+  status: OrderStatus;
+  payment: {
+    status: PaymentStatus;
+    method?: PaymentMethod;
+    paidAt?: string;
+    refundedAt?: string;
+  };
+  fulfilment?: {
+    method: "PICKUP";
+    note?: string;
+    handoverAt?: string;
+  };
+  dispute?: {
+    reason: string;
+    note?: string;
+    raisedAt: string;
+    resolution?: string;
+  };
+  statusHistory?: Array<{
+    status: OrderStatus;
+    at: string;
+    byUserId?: string;
+    note?: string;
+  }>;
+  confirmedAt?: string;
+  deliveredAt?: string;
+  completedAt?: string;
+  cancelledAt?: string;
+  cancelledBy?: string;
+  cancelReason?: string;
+  cancelNote?: string;
+  stockReturn?: {
+    decision: StockReturnDecision;
+    decidedAt: string;
+    note?: string;
+  };
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface MockState {
   authenticated: boolean;
   currentUser: PublicUser;
@@ -56,6 +120,7 @@ export interface MockState {
   }>;
   listings: FarmerListing[];
   bids: MockBid[];
+  orders: MockOrder[];
   registeredPages: Page[];
   dispatchSse: (listingId: string, eventName: string, payload: unknown) => Promise<void>;
 }
@@ -66,6 +131,7 @@ export interface SetupMockApiOptions {
   initialAvailableKg?: number;
   initialListings?: FarmerListing[];
   initialBids?: MockBid[];
+  initialOrders?: MockOrder[];
   sharedState?: MockState;
 }
 
@@ -324,6 +390,7 @@ export async function setupMockApi(
       ],
       listings: options?.initialListings ? [...options.initialListings] : seededListings,
       bids: options?.initialBids ? [...options.initialBids] : seededBids,
+      orders: options?.initialOrders ? [...options.initialOrders] : [],
       registeredPages: [page],
       dispatchSse: async (
         listingId: string,
@@ -1315,6 +1382,52 @@ export async function setupMockApi(
         if (targetStatus === "SOLD") {
           item.listedKg = Math.max(0, item.listedKg - listing.quantityKg);
           item.soldKg += listing.quantityKg;
+
+          // Create order if one does not already exist for this listing
+          let existingOrder = state.orders.find((o) => o.listingId === listing.id);
+          if (!existingOrder) {
+            const winningPrice = listing.currentBidPerKg ?? listing.floorPricePerKg;
+            const subtotal = winningPrice * listing.quantityKg;
+            const platformFee = Math.round((subtotal * 200) / 10000);
+            const farmerNet = subtotal - platformFee;
+
+            const winningBid = state.bids
+              .filter((b) => b.listingId === listing.id)
+              .sort((a, b) => b.amountPerKg - a.amountPerKg)[0];
+
+            const buyerId = winningBid?.buyerId ?? buyerUser.id;
+            const orderId = `507f191e810c19729de8f${String(state.orders.length + 1).padStart(3, "0")}`;
+
+            existingOrder = {
+              id: orderId,
+              listingId: listing.id,
+              farmerId: farmerUser.id,
+              buyerId,
+              cropId: listing.cropId,
+              quantityKg: listing.quantityKg,
+              grade: listing.aiAssessment?.grade ?? CropGrade.A,
+              pricePerKg: winningPrice,
+              subtotal,
+              platformFee,
+              farmerNet,
+              status: OrderStatus.PENDING,
+              payment: {
+                status: PaymentStatus.UNPAID,
+                method: PaymentMethod.COD,
+              },
+              statusHistory: [
+                {
+                  status: OrderStatus.PENDING,
+                  at: now.toISOString(),
+                  byUserId: farmerUser.id,
+                  note: "Auction closed sold",
+                },
+              ],
+              createdAt: now.toISOString(),
+              updatedAt: now.toISOString(),
+            };
+            state.orders.push(existingOrder);
+          }
         } else if (targetStatus === "EXPIRED_UNSOLD") {
           item.listedKg = Math.max(0, item.listedKg - listing.quantityKg);
           item.availableKg += listing.quantityKg;
@@ -1449,6 +1562,949 @@ export async function setupMockApi(
         body: JSON.stringify({
           data: listing,
           meta: { serverTime: new Date().toISOString() },
+        }),
+      });
+    }
+
+    // 21. Orders list (GET /api/v1/orders)
+    if (path === "/api/v1/orders" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+
+      const statusQuery = url.searchParams.get("status");
+      const groupQuery = url.searchParams.get("group");
+      const pageNum = parseInt(url.searchParams.get("page") || "1", 10) || 1;
+      const limitNum = parseInt(url.searchParams.get("limit") || "20", 10) || 20;
+
+      const isFarmer = pageUser.role === UserRole.FARMER;
+      const roleOrders = state.orders.filter((o) =>
+        isFarmer ? o.farmerId === pageUser.id : o.buyerId === pageUser.id,
+      );
+
+      // Status tab counts
+      const statusCounts = {
+        needs_action: roleOrders.filter((o) => o.status === OrderStatus.PENDING).length,
+        in_progress: roleOrders.filter((o) => o.status === OrderStatus.CONFIRMED).length,
+        delivered: roleOrders.filter((o) => o.status === OrderStatus.DELIVERED).length,
+        completed: roleOrders.filter((o) => o.status === OrderStatus.COMPLETED).length,
+        disputed: roleOrders.filter((o) => o.status === OrderStatus.DISPUTED).length,
+        cancelled: roleOrders.filter((o) => o.status === OrderStatus.CANCELLED).length,
+      };
+
+      let filtered = roleOrders;
+      if (statusQuery) {
+        filtered = filtered.filter((o) => o.status === statusQuery);
+      } else if (groupQuery === "cancelled") {
+        filtered = filtered.filter((o) => o.status === OrderStatus.CANCELLED);
+      }
+
+      const total = filtered.length;
+      const totalPages = Math.ceil(total / limitNum) || 1;
+      const paginated = filtered.slice((pageNum - 1) * limitNum, pageNum * limitNum);
+
+      const mappedCards = paginated.map((order) => {
+        const crop = crops.find((c) => c.id === order.cropId) ?? crops[0];
+        const isPending = order.status === OrderStatus.PENDING;
+
+        if (isFarmer) {
+          const buyerCounterparty: CounterpartyDto = isPending
+            ? {
+                id: order.buyerId,
+                name: "Buyer",
+                role: UserRole.BUYER,
+                isMasked: true,
+                division: buyerUser.division,
+                district: buyerUser.district,
+              }
+            : {
+                id: order.buyerId,
+                name: buyerUser.name,
+                role: UserRole.BUYER,
+                phone: buyerUser.phone,
+                isMasked: false,
+                organizationName: buyerUser.organization,
+                location: {
+                  division: buyerUser.division,
+                  district: buyerUser.district,
+                  upazila: buyerUser.upazila,
+                },
+              };
+
+          const card: FarmerOrderCard = {
+            id: order.id,
+            listingId: order.listingId,
+            cropId: order.cropId,
+            cropName: crop.nameEn,
+            cropNameBn: crop.nameBn,
+            imageUrl: crop.imageUrl,
+            grade: order.grade,
+            quantityKg: order.quantityKg,
+            pricePerKg: order.pricePerKg,
+            subtotal: order.subtotal,
+            platformFee: order.platformFee,
+            farmerNet: order.farmerNet,
+            status: order.status,
+            payment: order.payment,
+            fulfilment: order.fulfilment ?? { method: "PICKUP" },
+            buyer: buyerCounterparty,
+            autoCancelDeadline: isPending
+              ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+              : undefined,
+            deadline: isPending
+              ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+              : undefined,
+            stockReturn: order.stockReturn,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt,
+          };
+          return card;
+        } else {
+          const farmerCounterparty: CounterpartyDto = isPending
+            ? {
+                id: order.farmerId,
+                name: "Farmer",
+                role: UserRole.FARMER,
+                isMasked: true,
+                division: farmerUser.division,
+                district: farmerUser.district,
+              }
+            : {
+                id: order.farmerId,
+                name: farmerUser.name,
+                role: UserRole.FARMER,
+                phone: farmerUser.phone,
+                isMasked: false,
+                organizationName: farmerUser.organization,
+                location: {
+                  division: farmerUser.division,
+                  district: farmerUser.district,
+                  upazila: farmerUser.upazila,
+                },
+              };
+
+          const card: BuyerOrderCard = {
+            id: order.id,
+            listingId: order.listingId,
+            cropId: order.cropId,
+            cropName: crop.nameEn,
+            cropNameBn: crop.nameBn,
+            imageUrl: crop.imageUrl,
+            grade: order.grade,
+            quantityKg: order.quantityKg,
+            pricePerKg: order.pricePerKg,
+            subtotal: order.subtotal,
+            totalAmount: order.subtotal,
+            status: order.status,
+            payment: order.payment,
+            fulfilment: order.fulfilment ?? { method: "PICKUP" },
+            farmer: farmerCounterparty,
+            autoCancelDeadline: isPending
+              ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+              : undefined,
+            autoCompleteDeadline: order.status === OrderStatus.DELIVERED
+              ? new Date(new Date(order.deliveredAt ?? order.createdAt).getTime() + 120000).toISOString()
+              : undefined,
+            deadline: isPending
+              ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+              : undefined,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt,
+          };
+          return card;
+        }
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: mappedCards,
+          meta: {
+            page: pageNum,
+            limit: limitNum,
+            total,
+            totalPages,
+            serverTime: new Date().toISOString(),
+            statusCounts,
+            counts: statusCounts,
+          },
+        }),
+      });
+    }
+
+    // 22. Order Detail (GET /api/v1/orders/:id)
+    if (path.match(/\/api\/v1\/orders\/[^/]+$/) && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+
+      const orderId = path.split("/").pop()!;
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+
+      const isFarmer = pageUser.role === UserRole.FARMER;
+      // Negative authorization: participants only!
+      if (isFarmer && order.farmerId !== pageUser.id) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Access forbidden" } }),
+        });
+      }
+      if (!isFarmer && order.buyerId !== pageUser.id) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Access forbidden" } }),
+        });
+      }
+
+      const crop = crops.find((c) => c.id === order.cropId) ?? crops[0];
+      const listing = state.listings.find((l) => l.id === order.listingId);
+      const isPending = order.status === OrderStatus.PENDING;
+
+      const timeline = (order.statusHistory ?? []).map((h) => ({
+        status: h.status,
+        at: h.at,
+        byUserId: h.byUserId,
+        note: h.note,
+      }));
+
+      if (isFarmer) {
+        const buyerCounterparty: CounterpartyDto = isPending
+          ? {
+              id: order.buyerId,
+              name: "Buyer",
+              role: UserRole.BUYER,
+              isMasked: true,
+              division: buyerUser.division,
+              district: buyerUser.district,
+            }
+          : {
+              id: order.buyerId,
+              name: buyerUser.name,
+              role: UserRole.BUYER,
+              phone: buyerUser.phone,
+              isMasked: false,
+              organizationName: buyerUser.organization,
+              location: {
+                division: buyerUser.division,
+                district: buyerUser.district,
+                upazila: buyerUser.upazila,
+              },
+            };
+
+        const detail: FarmerOrderDetail = {
+          id: order.id,
+          listingId: order.listingId,
+          cropId: order.cropId,
+          cropName: crop.nameEn,
+          cropNameBn: crop.nameBn,
+          imageUrl: crop.imageUrl,
+          grade: order.grade,
+          quantityKg: order.quantityKg,
+          pricePerKg: order.pricePerKg,
+          subtotal: order.subtotal,
+          platformFee: order.platformFee,
+          farmerNet: order.farmerNet,
+          status: order.status,
+          payment: order.payment,
+          fulfilment: order.fulfilment ?? { method: "PICKUP" },
+          buyer: buyerCounterparty,
+          autoCancelDeadline: isPending
+            ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+            : undefined,
+          deadline: isPending
+            ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+            : undefined,
+          stockReturn: order.stockReturn,
+          timeline,
+          statusHistory: timeline,
+          availableActions: getOrderActions(UserRole.FARMER, {
+            status: order.status,
+            payment: order.payment,
+          }),
+          dispute: order.dispute,
+          listingSummary: listing
+            ? {
+                id: listing.id,
+                title: crop.nameEn,
+                imageUrl: listing.images?.[0]?.url,
+                division: listing.location?.division || "dhaka",
+                district: listing.location?.district || "dhaka",
+              }
+            : undefined,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+        };
+
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: detail, meta: { serverTime: new Date().toISOString() } }),
+        });
+      } else {
+        const farmerCounterparty: CounterpartyDto = isPending
+          ? {
+              id: order.farmerId,
+              name: "Farmer",
+              role: UserRole.FARMER,
+              isMasked: true,
+              division: farmerUser.division,
+              district: farmerUser.district,
+            }
+          : {
+              id: order.farmerId,
+              name: farmerUser.name,
+              role: UserRole.FARMER,
+              phone: farmerUser.phone,
+              isMasked: false,
+              organizationName: farmerUser.organization,
+              location: {
+                division: farmerUser.division,
+                district: farmerUser.district,
+                upazila: farmerUser.upazila,
+              },
+            };
+
+        const detail: BuyerOrderDetail = {
+          id: order.id,
+          listingId: order.listingId,
+          cropId: order.cropId,
+          cropName: crop.nameEn,
+          cropNameBn: crop.nameBn,
+          imageUrl: crop.imageUrl,
+          grade: order.grade,
+          quantityKg: order.quantityKg,
+          pricePerKg: order.pricePerKg,
+          subtotal: order.subtotal,
+          totalAmount: order.subtotal,
+          status: order.status,
+          payment: order.payment,
+          fulfilment: order.fulfilment ?? { method: "PICKUP" },
+          farmer: farmerCounterparty,
+          autoCancelDeadline: isPending
+            ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+            : undefined,
+          autoCompleteDeadline: order.status === OrderStatus.DELIVERED
+            ? new Date(new Date(order.deliveredAt ?? order.createdAt).getTime() + 120000).toISOString()
+            : undefined,
+          deadline: isPending
+            ? new Date(new Date(order.createdAt).getTime() + 60000).toISOString()
+            : undefined,
+          timeline,
+          statusHistory: timeline,
+          availableActions: getOrderActions(UserRole.BUYER, {
+            status: order.status,
+            payment: order.payment,
+          }),
+          dispute: order.dispute,
+          listingSummary: listing
+            ? {
+                id: listing.id,
+                title: crop.nameEn,
+                imageUrl: listing.images?.[0]?.url,
+                division: listing.location?.division || "dhaka",
+                district: listing.location?.district || "dhaka",
+              }
+            : undefined,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+        };
+
+        return route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ data: detail, meta: { serverTime: new Date().toISOString() } }),
+        });
+      }
+    }
+
+    // 23. Confirm Order (POST /api/v1/orders/:id/confirm)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/confirm$/) && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.FARMER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only farmers can confirm orders" } }),
+        });
+      }
+
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+      if (order.status !== OrderStatus.PENDING) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INVALID_TRANSITION", message: "Cannot confirm non-pending order" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const now = new Date();
+      order.status = OrderStatus.CONFIRMED;
+      order.confirmedAt = now.toISOString();
+      order.updatedAt = now.toISOString();
+      order.fulfilment = {
+        method: "PICKUP",
+        handoverAt: body.handoverAt,
+        note: body.note,
+      };
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: OrderStatus.CONFIRMED,
+        at: now.toISOString(),
+        byUserId: pageUser.id,
+        note: body.note,
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 24. Mark Order Paid (POST /api/v1/orders/:id/mark-paid)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/mark-paid$/) && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can pay for orders" } }),
+        });
+      }
+
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const now = new Date();
+      order.payment = {
+        status: PaymentStatus.PAID,
+        method: body.method ?? PaymentMethod.WALLET_SIM,
+        paidAt: now.toISOString(),
+      };
+      order.updatedAt = now.toISOString();
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 25. Mark Delivered (POST /api/v1/orders/:id/mark-delivered)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/mark-delivered$/) && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.FARMER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only farmers can mark delivered" } }),
+        });
+      }
+
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+      if (order.status !== OrderStatus.CONFIRMED) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INVALID_TRANSITION", message: "Cannot mark non-confirmed order delivered" } }),
+        });
+      }
+
+      const now = new Date();
+      order.status = OrderStatus.DELIVERED;
+      order.deliveredAt = now.toISOString();
+      order.updatedAt = now.toISOString();
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: OrderStatus.DELIVERED,
+        at: now.toISOString(),
+        byUserId: pageUser.id,
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 26. Complete Order (POST /api/v1/orders/:id/complete)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/complete$/) && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can complete orders" } }),
+        });
+      }
+
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+      if (order.status !== OrderStatus.DELIVERED) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INVALID_TRANSITION", message: "Cannot complete non-delivered order" } }),
+        });
+      }
+
+      const now = new Date();
+      order.status = OrderStatus.COMPLETED;
+      order.completedAt = now.toISOString();
+      order.updatedAt = now.toISOString();
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: OrderStatus.COMPLETED,
+        at: now.toISOString(),
+        byUserId: pageUser.id,
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 27. Cancel Order (POST /api/v1/orders/:id/cancel)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/cancel$/) && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+
+      const isFarmer = pageUser.role === UserRole.FARMER;
+      const allowed = isFarmer
+        ? [OrderStatus.PENDING, OrderStatus.CONFIRMED].includes(order.status)
+        : [OrderStatus.PENDING].includes(order.status);
+
+      if (!allowed) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INVALID_TRANSITION", message: "Cannot cancel order in current status" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const now = new Date();
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = now.toISOString();
+      order.cancelledBy = pageUser.id;
+      order.cancelReason = body.reason || "CANCELLED_BY_USER";
+      order.cancelNote = body.note;
+      order.updatedAt = now.toISOString();
+      if (order.payment.status === PaymentStatus.PAID) {
+        order.payment.status = PaymentStatus.REFUNDED;
+        order.payment.refundedAt = now.toISOString();
+      }
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: OrderStatus.CANCELLED,
+        at: now.toISOString(),
+        byUserId: pageUser.id,
+        note: body.reason,
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 28. Stock Return Decision (POST /api/v1/orders/:id/stock-return)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/stock-return$/) && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.FARMER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only farmers can decide stock return" } }),
+        });
+      }
+
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+      if (order.status !== OrderStatus.CANCELLED) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "INVALID_TRANSITION", message: "Order must be cancelled" } }),
+        });
+      }
+      if (order.stockReturn) {
+        return route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "CONFLICT", message: "Stock return already decided" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const decision = body.decision as StockReturnDecision;
+      const now = new Date();
+      order.stockReturn = {
+        decision,
+        decidedAt: now.toISOString(),
+        note: body.note,
+      };
+      order.updatedAt = now.toISOString();
+
+      if (
+        decision === StockReturnDecision.RETURNED ||
+        (decision as string) === "RETURNED" ||
+        (decision as string) === "RETURN_TO_STOCK"
+      ) {
+        const item = state.inventory.find((inv) => inv.crop.id === order.cropId);
+        if (item) {
+          item.availableKg += order.quantityKg;
+          item.soldKg = Math.max(0, item.soldKg - order.quantityKg);
+        }
+      }
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 29. Auto Cancel Order (POST /api/v1/orders/:id/auto-cancel)
+    if (path.match(/\/api\/v1\/orders\/[^/]+\/auto-cancel$/) && method === "POST") {
+      const parts = path.split("/");
+      const orderId = parts[parts.length - 2];
+      const order = state.orders.find((o) => o.id === orderId);
+      if (!order) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Order not found" } }),
+        });
+      }
+
+      const now = new Date();
+      order.status = OrderStatus.CANCELLED;
+      order.cancelledAt = now.toISOString();
+      order.cancelReason = "AUTO_CANCEL_EXPIRED";
+      order.updatedAt = now.toISOString();
+      order.statusHistory = order.statusHistory || [];
+      order.statusHistory.push({
+        status: OrderStatus.CANCELLED,
+        at: now.toISOString(),
+        note: "Auto-cancelled after deadline",
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ data: order, meta: { serverTime: now.toISOString() } }),
+      });
+    }
+
+    // 30. Farmer Sales (GET /api/v1/sales)
+    if (path === "/api/v1/sales" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.FARMER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only farmers can view sales" } }),
+        });
+      }
+
+      const completedOrders = state.orders.filter(
+        (o) => o.farmerId === pageUser.id && o.status === OrderStatus.COMPLETED,
+      );
+
+      const cropParam = url.searchParams.get("crop");
+      const divisionParam = url.searchParams.get("buyerDivision");
+
+      let filtered = completedOrders;
+      if (cropParam) {
+        filtered = filtered.filter((o) => {
+          const c = crops.find((cr) => cr.id === o.cropId);
+          return c?.slug === cropParam || o.cropId === cropParam;
+        });
+      }
+      if (divisionParam) {
+        filtered = filtered.filter(() => buyerUser.division.toLowerCase() === divisionParam.toLowerCase());
+      }
+
+      let totalQuantityKg = 0;
+      let totalSubtotal = 0;
+      let totalPlatformFee = 0;
+      let totalFarmerNet = 0;
+
+      for (const o of filtered) {
+        totalQuantityKg += o.quantityKg;
+        totalSubtotal += o.subtotal;
+        totalPlatformFee += o.platformFee;
+        totalFarmerNet += o.farmerNet;
+      }
+
+      const totals: SalesTotals = {
+        totalQuantityKg: Math.round(totalQuantityKg * 10) / 10,
+        totalSubtotal,
+        totalPlatformFee,
+        totalFarmerNet,
+        totalGross: totalSubtotal,
+        totalFees: totalPlatformFee,
+        totalNet: totalFarmerNet,
+        count: filtered.length,
+      };
+
+      const items: SaleItem[] = filtered.map((o) => {
+        const c = crops.find((cr) => cr.id === o.cropId) ?? crops[0];
+        return {
+          id: o.id,
+          orderId: o.id,
+          listingId: o.listingId,
+          cropId: o.cropId,
+          cropName: c.nameEn,
+          cropNameBn: c.nameBn,
+          imageUrl: c.imageUrl,
+          grade: o.grade,
+          quantityKg: o.quantityKg,
+          pricePerKg: o.pricePerKg,
+          subtotal: o.subtotal,
+          grossAmount: o.subtotal,
+          platformFee: o.platformFee,
+          farmerNet: o.farmerNet,
+          status: o.status,
+          buyerName: buyerUser.name,
+          buyerDivision: buyerUser.division,
+          soldAt: o.confirmedAt ?? o.createdAt,
+          completedAt: o.completedAt ?? o.createdAt,
+          paymentStatus: o.payment.status,
+          paymentMethod: o.payment.method,
+          pricePremiumPercent: 10,
+        };
+      });
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: items,
+          meta: {
+            page: 1,
+            limit: 20,
+            total: items.length,
+            totalPages: 1,
+            serverTime: new Date().toISOString(),
+            totals,
+          },
+        }),
+      });
+    }
+
+    // 31. Farmer Earnings (GET /api/v1/earnings)
+    if (path === "/api/v1/earnings" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.FARMER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only farmers can view earnings" } }),
+        });
+      }
+
+      const farmerOrders = state.orders.filter((o) => o.farmerId === pageUser.id);
+      const completed = farmerOrders.filter((o) => o.status === OrderStatus.COMPLETED);
+      const active = farmerOrders.filter((o) =>
+        [OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.DELIVERED].includes(o.status),
+      );
+
+      const settledNet = completed.reduce((sum, o) => sum + o.farmerNet, 0);
+      const expectedNet = active.reduce((sum, o) => sum + o.farmerNet, 0);
+      const gross = completed.reduce((sum, o) => sum + o.subtotal, 0);
+      const fees = completed.reduce((sum, o) => sum + o.platformFee, 0);
+
+      const byCrop = crops.map((crop) => {
+        const cropOrders = completed.filter((o) => o.cropId === crop.id);
+        const cropTotalNet = cropOrders.reduce((sum, o) => sum + o.farmerNet, 0);
+        const cropTotalKg = cropOrders.reduce((sum, o) => sum + o.quantityKg, 0);
+        const avgPrice =
+          cropTotalKg > 0
+            ? Math.round(cropOrders.reduce((sum, o) => sum + o.subtotal, 0) / cropTotalKg)
+            : 0;
+        return {
+          cropId: crop.id,
+          cropName: crop.nameEn,
+          cropNameBn: crop.nameBn,
+          totalKg: cropTotalKg,
+          totalEarnings: cropTotalNet,
+          averagePricePerKg: avgPrice,
+          orderCount: cropOrders.length,
+          averagePricePremiumPercent: cropOrders.length > 0 ? 10 : 0,
+          averagePremiumPercent: cropOrders.length > 0 ? 10 : 0,
+        };
+      });
+
+      const now = new Date();
+      const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+      const seriesItem = {
+        month: currentYearMonth,
+        year: now.getFullYear(),
+        monthIndex: now.getMonth() + 1,
+        gross,
+        fees,
+        net: settledNet,
+        totalKg: completed.reduce((sum, o) => sum + o.quantityKg, 0),
+        orderCount: completed.length,
+      };
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            summary: {
+              settledNet,
+              expectedNet,
+              activeNet: expectedNet,
+              disputedNet: 0,
+              disputedOrdersCount: 0,
+              gross,
+              fees,
+              totalEarnings: settledNet,
+              totalSubtotal: gross,
+              totalPlatformFees: fees,
+              pendingPayout: expectedNet,
+              paidPayout: settledNet,
+              averagePricePremiumPercent: 10,
+              averagePremiumPercent: 10,
+              completedOrdersCount: completed.length,
+              feeRateBps: 200,
+              feeRatePercent: 2.0,
+            },
+            byCrop,
+            last6MonthsSeries: [seriesItem],
+            monthlySeries: [seriesItem],
+            recentPayouts: [],
+            feeRate: { bps: 200, percent: 2.0 },
+          },
+          meta: { serverTime: now.toISOString() },
         }),
       });
     }

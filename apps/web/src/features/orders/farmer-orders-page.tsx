@@ -19,13 +19,14 @@ import { CancelOrderDialog } from "./components/cancel-order-dialog.js";
 import { ConfirmHandoverDialog } from "./components/confirm-handover-dialog.js";
 import { FarmerOrderCardComponent } from "./components/farmer-order-card.js";
 
-type TabKey = "needs_action" | "in_progress" | "delivered" | "completed" | "cancelled";
+type TabKey = "needs_action" | "in_progress" | "delivered" | "completed" | "disputed" | "cancelled";
 
 const TAB_STATUS_MAP: Record<TabKey, OrderStatus | string> = {
   needs_action: OrderStatus.PENDING,
   in_progress: OrderStatus.CONFIRMED,
   delivered: OrderStatus.DELIVERED,
   completed: OrderStatus.COMPLETED,
+  disputed: OrderStatus.DISPUTED,
   cancelled: OrderStatus.CANCELLED,
 };
 
@@ -112,7 +113,8 @@ export default function FarmerOrdersPage(): ReactElement {
     in_progress: counts[OrderStatus.CONFIRMED] ?? 0,
     delivered: counts[OrderStatus.DELIVERED] ?? 0,
     completed: counts[OrderStatus.COMPLETED] ?? 0,
-    cancelled: (counts[OrderStatus.CANCELLED] ?? 0) + (counts[OrderStatus.DISPUTED] ?? 0),
+    disputed: counts[OrderStatus.DISPUTED] ?? 0,
+    cancelled: counts[OrderStatus.CANCELLED] ?? 0,
   };
 
   const tabs: { key: TabKey; label: string; count: number }[] = [
@@ -120,6 +122,7 @@ export default function FarmerOrdersPage(): ReactElement {
     { key: "in_progress", label: t("orders.tabs.inProgress", "In progress"), count: tabCounts.in_progress },
     { key: "delivered", label: t("orders.tabs.delivered", "Delivered"), count: tabCounts.delivered },
     { key: "completed", label: t("orders.tabs.completed", "Completed"), count: tabCounts.completed },
+    { key: "disputed", label: t("orders.tabs.disputed", "In dispute"), count: tabCounts.disputed },
     { key: "cancelled", label: t("orders.tabs.cancelled", "Cancelled"), count: tabCounts.cancelled },
   ];
 

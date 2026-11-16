@@ -1,11 +1,12 @@
 import mongoose, { Types } from "mongoose";
 import { MongoMemoryReplSet } from "mongodb-memory-server";
-import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CropGrade,
   DomainEventName,
   FulfilmentMethod,
+  OrderDisputeReason,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -72,6 +73,9 @@ interface CreateOrderOptions {
   pricePerKg?: number;
   platformFee?: number;
   farmerNet?: number;
+  deliveredAt?: Date;
+  confirmedAt?: Date;
+  grade?: CropGrade;
 }
 
 async function createTestOrder(
@@ -90,7 +94,7 @@ async function createTestOrder(
     buyerId,
     cropId,
     quantityKg,
-    grade: CropGrade.A,
+    grade: options.grade ?? CropGrade.A,
     pricePerKg,
     subtotal,
     platformFee,
@@ -104,6 +108,8 @@ async function createTestOrder(
     fulfilment: {
       method: FulfilmentMethod.PICKUP,
     },
+    ...(options.deliveredAt ? { deliveredAt: options.deliveredAt } : {}),
+    ...(options.confirmedAt ? { confirmedAt: options.confirmedAt } : {}),
     statusHistory: [
       {
         status: options.status ?? OrderStatus.PENDING,
@@ -818,6 +824,184 @@ describe("OrderTransitionService (Task 6.3 - Transition Engine)", () => {
       } finally {
         (env as unknown as { PLATFORM_FEE_BPS: number }).PLATFORM_FEE_BPS = originalFeeBps;
       }
+    });
+  });
+
+  describe("Dispute Engine (Task 6.11)", () => {
+    it("buyer disputes DELIVERED order within 24h: moves to DISPUTED, preserves grade snapshot, emits domain event", async () => {
+      const deliveredAt = new Date("2026-11-16T10:00:00.000Z");
+      const order = await createTestOrder({
+        status: OrderStatus.DELIVERED,
+        deliveredAt,
+        grade: CropGrade.A,
+      });
+
+      // 10 hours later (within 24h)
+      testClock.setTime(new Date("2026-11-16T20:00:00.000Z"));
+
+      const eventSpy = vi.fn();
+      eventEmitter.on(DomainEventName.ORDER_DISPUTED, eventSpy);
+
+      const disputed = await service.dispute(
+        order._id.toString(),
+        { userId: buyerId, role: UserRole.BUYER },
+        {
+          reason: OrderDisputeReason.GRADE_LOWER_THAN_LISTED,
+          note: "Tomatoes have severe skin damage and rot",
+        },
+      );
+
+      expect(disputed.status).toBe(OrderStatus.DISPUTED);
+      expect(disputed.grade).toBe(CropGrade.A); // Grade snapshot is preserved
+      expect(disputed.dispute).toBeDefined();
+      expect(disputed.dispute?.reason).toBe("GRADE_LOWER_THAN_LISTED");
+      expect(disputed.dispute?.note).toBe("Tomatoes have severe skin damage and rot");
+      expect(disputed.dispute?.raisedAt).toBe(testClock.iso());
+
+      // DB check
+      const dbOrder = await Order.findById(order._id);
+      expect(dbOrder?.status).toBe(OrderStatus.DISPUTED);
+      expect(dbOrder?.grade).toBe(CropGrade.A);
+      expect(dbOrder?.dispute?.reason).toBe("GRADE_LOWER_THAN_LISTED");
+
+      // Verify statusHistory
+      const lastHistory = dbOrder?.statusHistory[dbOrder.statusHistory.length - 1];
+      expect(lastHistory?.status).toBe(OrderStatus.DISPUTED);
+      expect(lastHistory?.byUserId?.toString()).toBe(buyerId);
+      expect(lastHistory?.note).toContain("Tomatoes have severe skin damage and rot");
+
+      // Verify domain event
+      expect(eventSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          orderId: order._id.toString(),
+          disputedBy: buyerId,
+          reason: "GRADE_LOWER_THAN_LISTED",
+          note: "Tomatoes have severe skin damage and rot",
+          disputedAt: testClock.iso(),
+        }),
+      );
+    });
+
+    it("allows dispute at 23h59m boundary", async () => {
+      const deliveredAt = new Date("2026-11-16T10:00:00.000Z");
+      const order = await createTestOrder({
+        status: OrderStatus.DELIVERED,
+        deliveredAt,
+      });
+
+      // 23 hours and 59 minutes later
+      testClock.setTime(new Date(deliveredAt.getTime() + 23 * 60 * 60 * 1000 + 59 * 60 * 1000));
+
+      const disputed = await service.dispute(
+        order._id.toString(),
+        { userId: buyerId, role: UserRole.BUYER },
+        { reason: OrderDisputeReason.QUANTITY_SHORT, note: "Bag was light" },
+      );
+
+      expect(disputed.status).toBe(OrderStatus.DISPUTED);
+    });
+
+    it("rejects dispute at 24h01m past delivery window with DISPUTE_WINDOW_EXPIRED", async () => {
+      const deliveredAt = new Date("2026-11-16T10:00:00.000Z");
+      const order = await createTestOrder({
+        status: OrderStatus.DELIVERED,
+        deliveredAt,
+      });
+
+      // 24 hours and 1 minute later
+      testClock.setTime(new Date(deliveredAt.getTime() + 24 * 60 * 60 * 1000 + 60 * 1000));
+
+      await expect(
+        service.dispute(
+          order._id.toString(),
+          { userId: buyerId, role: UserRole.BUYER },
+          { reason: OrderDisputeReason.SPOILED, note: "Produce went bad" },
+        ),
+      ).rejects.toMatchObject({
+        code: "DISPUTE_WINDOW_EXPIRED",
+        statusCode: 409,
+      });
+    });
+
+    it("rejects dispute if actor is not the order's buyer (farmer or other user)", async () => {
+      const order = await createTestOrder({
+        status: OrderStatus.DELIVERED,
+        deliveredAt: testClock.now(),
+      });
+
+      // Farmer tries to dispute
+      await expect(
+        service.dispute(
+          order._id.toString(),
+          { userId: farmerId, role: UserRole.FARMER },
+          { reason: OrderDisputeReason.OTHER },
+        ),
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        statusCode: 403,
+      });
+
+      // Other buyer tries to dispute
+      await expect(
+        service.dispute(
+          order._id.toString(),
+          { userId: otherUserId, role: UserRole.BUYER },
+          { reason: OrderDisputeReason.OTHER },
+        ),
+      ).rejects.toMatchObject({
+        code: "FORBIDDEN",
+        statusCode: 403,
+      });
+    });
+
+    it("rejects dispute from non-DELIVERED statuses (PENDING, CONFIRMED, COMPLETED, CANCELLED)", async () => {
+      const pendingOrder = await createTestOrder({ status: OrderStatus.PENDING });
+      await expect(
+        service.dispute(
+          pendingOrder._id.toString(),
+          { userId: buyerId, role: UserRole.BUYER },
+          { reason: OrderDisputeReason.OTHER },
+        ),
+      ).rejects.toMatchObject({
+        code: "INVALID_TRANSITION",
+        statusCode: 409,
+      });
+
+      const confirmedOrder = await createTestOrder({ status: OrderStatus.CONFIRMED });
+      await expect(
+        service.dispute(
+          confirmedOrder._id.toString(),
+          { userId: buyerId, role: UserRole.BUYER },
+          { reason: OrderDisputeReason.OTHER },
+        ),
+      ).rejects.toMatchObject({
+        code: "INVALID_TRANSITION",
+        statusCode: 409,
+      });
+
+      const completedOrder = await createTestOrder({ status: OrderStatus.COMPLETED });
+      await expect(
+        service.dispute(
+          completedOrder._id.toString(),
+          { userId: buyerId, role: UserRole.BUYER },
+          { reason: OrderDisputeReason.OTHER },
+        ),
+      ).rejects.toMatchObject({
+        code: "INVALID_TRANSITION",
+        statusCode: 409,
+      });
+
+      const cancelledOrder = await createTestOrder({ status: OrderStatus.CANCELLED });
+      await expect(
+        service.dispute(
+          cancelledOrder._id.toString(),
+          { userId: buyerId, role: UserRole.BUYER },
+          { reason: OrderDisputeReason.OTHER },
+        ),
+      ).rejects.toMatchObject({
+        code: "INVALID_TRANSITION",
+        statusCode: 409,
+      });
     });
   });
 });

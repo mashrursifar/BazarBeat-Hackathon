@@ -94,6 +94,179 @@ export async function closeAuctionViaMock(
   );
 }
 
+/**
+ * Stable test helper for confirming an order via API.
+ */
+export async function confirmOrderViaApi(
+  page: Page,
+  orderId: string,
+  payload: { handoverAt: string; note?: string },
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/v1/orders/${id}/confirm`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    { id: orderId, body: payload },
+  );
+}
+
+/**
+ * Stable test helper for paying for an order via API.
+ */
+export async function payOrderViaApi(
+  page: Page,
+  orderId: string,
+  payload: { method?: string } = {},
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/v1/orders/${id}/mark-paid`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    { id: orderId, body: payload },
+  );
+}
+
+/**
+ * Stable test helper for marking an order delivered via API.
+ */
+export async function markOrderDeliveredViaApi(
+  page: Page,
+  orderId: string,
+  payload: { note?: string } = {},
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/v1/orders/${id}/mark-delivered`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    { id: orderId, body: payload },
+  );
+}
+
+/**
+ * Stable test helper for completing an order via API.
+ */
+export async function completeOrderViaApi(
+  page: Page,
+  orderId: string,
+  payload: { note?: string } = {},
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/v1/orders/${id}/complete`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    { id: orderId, body: payload },
+  );
+}
+
+/**
+ * Stable test helper for cancelling an order via API.
+ */
+export async function cancelOrderViaApi(
+  page: Page,
+  orderId: string,
+  payload: { reason: string; note?: string },
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/v1/orders/${id}/cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    { id: orderId, body: payload },
+  );
+}
+
+/**
+ * Stable test helper for deciding stock return on a cancelled order.
+ */
+export async function decideStockReturnViaApi(
+  page: Page,
+  orderId: string,
+  payload: { decision: string; note?: string },
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async ({ id, body }) => {
+      const response = await fetch(`/api/v1/orders/${id}/stock-return`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    { id: orderId, body: payload },
+  );
+}
+
+/**
+ * Stable test helper for triggering auto-cancel on an expired pending order.
+ */
+export async function autoCancelOrderViaApi(
+  page: Page,
+  orderId: string,
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async (id) => {
+      const response = await fetch(`/api/v1/orders/${id}/auto-cancel`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    orderId,
+  );
+}
+
 export {
   DEV_SEED_CREDENTIALS,
   SEED_BUYER_DEFINITIONS,

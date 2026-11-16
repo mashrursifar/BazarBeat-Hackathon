@@ -1,5 +1,6 @@
 import { z } from "zod";
 import {
+  BUYER_DISPUTE_REASONS,
   CropGrade,
   FulfilmentMethod,
   ORDER_DISPUTE_REASONS,
@@ -339,8 +340,8 @@ export type CompleteOrderRequest = z.infer<typeof completeOrderRequestSchema>;
 
 export const disputeOrderRequestSchema = z
   .object({
-    reason: z.enum(ORDER_DISPUTE_REASONS),
-    note: z.string().trim().max(500).optional(),
+    reason: z.enum(BUYER_DISPUTE_REASONS),
+    note: z.string().trim().max(200).optional(),
   })
   .strict();
 
@@ -544,6 +545,8 @@ export const earningsSummarySchema = z.object({
   expectedNet: z.number().int().nonnegative().optional(),
   activeNet: z.number().int().nonnegative().optional(),
   totalExpectedNet: z.number().int().nonnegative().optional(),
+  disputedNet: z.number().int().nonnegative().optional(),
+  disputedOrdersCount: z.number().int().nonnegative().optional(),
   feeRateBps: z.number().int().nonnegative().optional(),
   feeRatePercent: z.number().nonnegative().optional(),
   totalEarnings: z.number().int().nonnegative(),

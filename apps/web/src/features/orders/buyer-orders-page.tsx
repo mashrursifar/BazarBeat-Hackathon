@@ -21,13 +21,14 @@ import { BuyerOrderCardComponent } from "./components/buyer-order-card.js";
 import { CancelOrderDialog } from "./components/cancel-order-dialog.js";
 import { PayOrderDialog } from "./components/pay-order-dialog.js";
 
-type TabKey = "needs_action" | "in_progress" | "delivered" | "completed" | "cancelled";
+type TabKey = "needs_action" | "in_progress" | "delivered" | "completed" | "disputed" | "cancelled";
 
 const TAB_STATUS_MAP: Record<TabKey, OrderStatus | string> = {
   needs_action: OrderStatus.PENDING,
   in_progress: OrderStatus.CONFIRMED,
   delivered: OrderStatus.DELIVERED,
   completed: OrderStatus.COMPLETED,
+  disputed: OrderStatus.DISPUTED,
   cancelled: OrderStatus.CANCELLED,
 };
 
@@ -162,6 +163,7 @@ export default function BuyerOrdersPage(): ReactElement {
               ["in_progress", "inProgress", statusCounts[OrderStatus.CONFIRMED] ?? 0],
               ["delivered", "delivered", statusCounts[OrderStatus.DELIVERED] ?? 0],
               ["completed", "completed", statusCounts[OrderStatus.COMPLETED] ?? 0],
+              ["disputed", "disputed", statusCounts[OrderStatus.DISPUTED] ?? 0],
               ["cancelled", "cancelled", statusCounts[OrderStatus.CANCELLED] ?? 0],
             ] as const
           ).map(([key, labelKey, count]) => {

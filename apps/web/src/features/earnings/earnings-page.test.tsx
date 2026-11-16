@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   type EarningsData,
@@ -80,7 +80,7 @@ const fixedEarningsDataset: EarningsData = {
   },
 };
 
-function renderEarningsPage() {
+function renderEarningsPage(): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -235,5 +235,27 @@ describe("Task 6.10 — Web: Earnings Page", () => {
     await waitFor(() => {
       expect(screen.getByTestId("pitch-premium-card")).toBeInTheDocument();
     });
+  });
+
+  it("renders 'In dispute' separately when disputed orders exist", async () => {
+    fetchEarningsSpy.mockResolvedValueOnce({
+      ...fixedEarningsDataset,
+      summary: {
+        ...fixedEarningsDataset.summary,
+        disputedNet: 1470000, // ৳14,700.00
+        disputedOrdersCount: 2,
+      },
+    });
+
+    renderEarningsPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("kpi-in-dispute")).toBeInTheDocument();
+    });
+
+    const disputeCard = screen.getByTestId("kpi-in-dispute");
+    expect(disputeCard).toHaveTextContent("In Dispute");
+    expect(disputeCard).toHaveTextContent(formatPoisha(1470000));
+    expect(disputeCard).toHaveTextContent("2 orders");
   });
 });

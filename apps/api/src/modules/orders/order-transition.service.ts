@@ -1,6 +1,7 @@
 import { ObjectId } from "bson";
 import {
   type ConfirmOrderRequest,
+  type DisputeOrderRequest,
   DomainEventName,
   type MinimalOrder,
   OrderAction,
@@ -13,9 +14,12 @@ import {
   canPerformOrderAction,
   confirmOrderRequestSchema,
   decideStockReturnRequestSchema,
+  disputeOrderRequestSchema,
+  getOrderDisputeWindowMs,
   validateHandoverSchedule,
 } from "@bazarbeat/shared";
 
+import { env } from "../../config/env.js";
 import { getClock } from "../../shared/clock.js";
 import { getDomainEventEmitter } from "../../shared/domain-event-emitter.js";
 import { AppError } from "../../shared/errors.js";
@@ -544,11 +548,12 @@ export class OrderTransitionService {
       setFields["payment.refundedAt"] = now;
     }
 
-    // Atomic conditional update on the expected current status (PENDING or CONFIRMED)
+    // Atomic conditional update on the expected current status and payment status
     const expectedStatus = order.status;
     const filterConditions: Record<string, unknown> = {
       _id: order._id,
       status: expectedStatus,
+      "payment.status": order.payment.status,
     };
     if (!isSystem) {
       filterConditions.$or = [
@@ -678,6 +683,227 @@ export class OrderTransitionService {
     }
 
     return mapOrderToMinimalOrder(updated);
+  }
+
+  /**
+   * Buyer disputes a delivered order.
+   * Transitions: DELIVERED -> DISPUTED.
+   * Window: Within 24 hours of delivery.
+   * Keeps AI grade snapshot immutable.
+   */
+  public async dispute(
+    orderId: string,
+    actor: ActorContext,
+    request: DisputeOrderRequest,
+  ): Promise<MinimalOrder> {
+    const validatedRequest = disputeOrderRequestSchema.parse(request);
+    const order = await fetchOrderOrThrow(orderId);
+
+    // Ownership check: actor must be the order's buyer
+    if (actor.role !== UserRole.BUYER || order.buyerId.toString() !== actor.userId) {
+      throw new AppError(403, "FORBIDDEN", "Only the order buyer can dispute this order");
+    }
+
+    // Status check: only from DELIVERED
+    if (order.status !== OrderStatus.DELIVERED) {
+      throw new AppError(
+        409,
+        OrderErrorCode.INVALID_TRANSITION,
+        `Cannot dispute order in status '${order.status}'`,
+      );
+    }
+
+    const clock = getClock();
+    const now = clock.now();
+
+    // Check 24-hour delivery window
+    const disputeWindowMs = getOrderDisputeWindowMs(env.DEMO_MODE);
+    const deliveredAtTime = order.deliveredAt ? new Date(order.deliveredAt).getTime() : 0;
+    if (!order.deliveredAt || now.getTime() - deliveredAtTime > disputeWindowMs) {
+      throw new AppError(
+        409,
+        OrderErrorCode.DISPUTE_WINDOW_EXPIRED,
+        "Dispute window has expired (must be within 24 hours of delivery)",
+      );
+    }
+
+    // Atomic conditional update on DELIVERED status
+    const updated = (await Order.findOneAndUpdate(
+      {
+        _id: order._id,
+        buyerId: actor.userId,
+        status: OrderStatus.DELIVERED,
+      },
+      {
+        $set: {
+          status: OrderStatus.DISPUTED,
+          dispute: {
+            reason: validatedRequest.reason,
+            ...(validatedRequest.note ? { note: validatedRequest.note } : {}),
+            raisedAt: now,
+          },
+        },
+        $push: {
+          statusHistory: {
+            status: OrderStatus.DISPUTED,
+            at: now,
+            byUserId: new ObjectId(actor.userId),
+            ...(validatedRequest.note
+              ? { note: `${validatedRequest.reason}: ${validatedRequest.note}` }
+              : { note: validatedRequest.reason }),
+          },
+        },
+      },
+      { new: true },
+    )) as unknown as RawOrderDoc | null;
+
+    if (!updated) {
+      const current = await fetchOrderOrThrow(orderId);
+      throw new AppError(
+        409,
+        OrderErrorCode.INVALID_TRANSITION,
+        `Order is no longer in DELIVERED status (current: '${current.status}')`,
+      );
+    }
+
+    // Emit order.disputed domain event
+    getDomainEventEmitter().emit(DomainEventName.ORDER_DISPUTED, {
+      orderId: updated._id.toString(),
+      listingId: updated.listingId.toString(),
+      farmerId: updated.farmerId.toString(),
+      buyerId: updated.buyerId.toString(),
+      disputedBy: actor.userId,
+      reason: validatedRequest.reason,
+      ...(validatedRequest.note ? { note: validatedRequest.note } : {}),
+      disputedAt: now.toISOString(),
+    });
+
+    return mapOrderToMinimalOrder(updated);
+  }
+
+  /**
+   * Dev-only resolution of a DISPUTED order (complete or cancel).
+   * Transitions: DISPUTED -> COMPLETED | CANCELLED.
+   */
+  public async resolveDispute(
+    orderId: string,
+    resolution: {
+      action: "COMPLETE" | "CANCEL";
+      note?: string;
+      resolvedBy?: string;
+    },
+  ): Promise<MinimalOrder> {
+    const order = await fetchOrderOrThrow(orderId);
+
+    if (order.status !== OrderStatus.DISPUTED) {
+      throw new AppError(
+        409,
+        OrderErrorCode.INVALID_TRANSITION,
+        `Cannot resolve dispute on order in status '${order.status}' (must be DISPUTED)`,
+      );
+    }
+
+    const clock = getClock();
+    const now = clock.now();
+    const resolutionNote = resolution.note?.trim() || `Dispute resolved as ${resolution.action}`;
+
+    if (resolution.action === "COMPLETE") {
+      const updated = (await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          status: OrderStatus.DISPUTED,
+        },
+        {
+          $set: {
+            status: OrderStatus.COMPLETED,
+            completedAt: now,
+            "dispute.resolution": resolutionNote,
+          },
+          $push: {
+            statusHistory: {
+              status: OrderStatus.COMPLETED,
+              at: now,
+              note: `Resolved by ${resolution.resolvedBy ?? "dev"}: ${resolutionNote}`,
+            },
+          },
+        },
+        { new: true },
+      )) as unknown as RawOrderDoc | null;
+
+      if (!updated) {
+        throw new AppError(409, OrderErrorCode.INVALID_TRANSITION, "Order is no longer DISPUTED");
+      }
+
+      getDomainEventEmitter().emit(DomainEventName.ORDER_COMPLETED, {
+        orderId: updated._id.toString(),
+        listingId: updated.listingId.toString(),
+        farmerId: updated.farmerId.toString(),
+        buyerId: updated.buyerId.toString(),
+        completedAt: now.toISOString(),
+        note: resolutionNote,
+      });
+
+      return mapOrderToMinimalOrder(updated);
+    } else if (resolution.action === "CANCEL") {
+      const isWalletPaid =
+        order.payment.status === PaymentStatus.PAID &&
+        order.payment.method === PaymentMethod.WALLET_SIM;
+
+      const setFields: Record<string, unknown> = {
+        status: OrderStatus.CANCELLED,
+        cancelledAt: now,
+        cancelReason: "DISPUTE_RESOLVED_CANCELLED",
+        cancelNote: resolutionNote,
+        "dispute.resolution": resolutionNote,
+      };
+
+      if (isWalletPaid) {
+        setFields["payment.status"] = PaymentStatus.REFUNDED;
+        setFields["payment.refundedAt"] = now;
+      }
+
+      const updated = (await Order.findOneAndUpdate(
+        {
+          _id: order._id,
+          status: OrderStatus.DISPUTED,
+        },
+        {
+          $set: setFields,
+          $push: {
+            statusHistory: {
+              status: OrderStatus.CANCELLED,
+              at: now,
+              note: `Resolved by ${resolution.resolvedBy ?? "dev"}: ${resolutionNote}`,
+            },
+          },
+        },
+        { new: true },
+      )) as unknown as RawOrderDoc | null;
+
+      if (!updated) {
+        throw new AppError(409, OrderErrorCode.INVALID_TRANSITION, "Order is no longer DISPUTED");
+      }
+
+      getDomainEventEmitter().emit(DomainEventName.ORDER_CANCELLED, {
+        orderId: updated._id.toString(),
+        listingId: updated.listingId.toString(),
+        farmerId: updated.farmerId.toString(),
+        buyerId: updated.buyerId.toString(),
+        cancelledBy: resolution.resolvedBy ?? "DEV_SCRIPT",
+        reason: "DISPUTE_RESOLVED_CANCELLED",
+        note: resolutionNote,
+        cancelledAt: now.toISOString(),
+        refunded: isWalletPaid,
+      });
+
+      return mapOrderToMinimalOrder(updated);
+    } else {
+      throw new AppError(
+        400,
+        "VALIDATION_ERROR",
+        `Invalid resolution action: ${(resolution as { action: string }).action}`,
+      );
+    }
   }
 }
 

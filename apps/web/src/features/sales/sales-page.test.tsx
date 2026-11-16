@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from "vitest";
+import { type MockInstance, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   CropGrade,
@@ -115,7 +115,7 @@ const mockSalesResponse: SalesResponse = {
   },
 };
 
-function renderSalesPage(initialUrl = "/farmer/sales") {
+function renderSalesPage(initialUrl = "/farmer/sales"): ReturnType<typeof render> {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -135,11 +135,10 @@ function renderSalesPage(initialUrl = "/farmer/sales") {
 
 describe("Task 6.9 — Web: Sales Page", () => {
   let fetchSalesSpy: MockInstance;
-  let getCropsSpy: MockInstance;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    getCropsSpy = vi.spyOn(listingApi, "getCrops").mockResolvedValue(mockCrops);
+    vi.spyOn(listingApi, "getCrops").mockResolvedValue(mockCrops);
     fetchSalesSpy = vi.spyOn(salesApi, "fetchSales").mockResolvedValue(mockSalesResponse);
   });
 

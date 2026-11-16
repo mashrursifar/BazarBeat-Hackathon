@@ -366,4 +366,92 @@ describe("BuyerOrderDetailPage Component", () => {
       expect(btn).toBeVisible();
     }
   });
+
+  it("shows 'Report a problem' button on DELIVERED order and submits dispute", async () => {
+    const user = userEvent.setup();
+    const deliveredOrder: BuyerOrderDetail = {
+      ...sampleConfirmedDetail,
+      status: OrderStatus.DELIVERED,
+      availableActions: [OrderAction.COMPLETE, OrderAction.DISPUTE],
+    };
+
+    vi.spyOn(ordersApi, "fetchOrderDetail").mockResolvedValue({
+      data: deliveredOrder,
+      meta: { serverTime: new Date().toISOString() },
+    });
+
+    const disputeSpy = vi.spyOn(ordersApi, "disputeOrder").mockResolvedValue({
+      data: {
+        ...deliveredOrder,
+        status: OrderStatus.DISPUTED,
+      },
+      meta: { serverTime: new Date().toISOString() },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/buyer/orders/${deliveredOrder.id}`]}>
+          <Routes>
+            <Route path="/buyer/orders/:id" element={<BuyerOrderDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const reportBtn = await screen.findByTestId("detail-action-report-problem");
+    expect(reportBtn).toBeInTheDocument();
+    await user.click(reportBtn);
+
+    const dialog = screen.getByTestId("report-problem-dialog");
+    expect(dialog).toBeInTheDocument();
+
+    await user.selectOptions(screen.getByTestId("dispute-reason-select"), "GRADE_LOWER_THAN_LISTED");
+    await user.type(screen.getByTestId("dispute-note-input"), "Tomatoes are overripe");
+
+    await user.click(screen.getByTestId("dispute-submit-button"));
+
+    await waitFor(() => {
+      expect(disputeSpy).toHaveBeenCalledWith(deliveredOrder.id, {
+        reason: "GRADE_LOWER_THAN_LISTED",
+        note: "Tomatoes are overripe",
+      });
+    });
+  });
+
+  it("renders visible disputed banner and no countdowns on DISPUTED order", async () => {
+    const disputedOrder: BuyerOrderDetail = {
+      ...sampleConfirmedDetail,
+      status: OrderStatus.DISPUTED,
+      dispute: {
+        reason: "GRADE_LOWER_THAN_LISTED",
+        note: "Produce quality lower than grade A",
+        raisedAt: "2026-11-16T14:00:00.000Z",
+      },
+      availableActions: [],
+    };
+
+    vi.spyOn(ordersApi, "fetchOrderDetail").mockResolvedValue({
+      data: disputedOrder,
+      meta: { serverTime: new Date().toISOString() },
+    });
+
+    render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[`/buyer/orders/${disputedOrder.id}`]}>
+          <Routes>
+            <Route path="/buyer/orders/:id" element={<BuyerOrderDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+
+    const banner = await screen.findByTestId("order-disputed-banner");
+    expect(banner).toBeInTheDocument();
+    expect(banner).toHaveTextContent("Order In Dispute");
+    expect(banner).toHaveTextContent("Produce quality lower than grade A");
+
+    // Countdown timers must NOT appear for disputed orders
+    expect(screen.queryByTestId("auto-complete-countdown")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("auto-cancel-countdown")).not.toBeInTheDocument();
+  });
 });

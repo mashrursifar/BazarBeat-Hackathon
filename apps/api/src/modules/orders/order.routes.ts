@@ -5,6 +5,7 @@ import {
   completeOrderRequestSchema,
   confirmOrderRequestSchema,
   decideStockReturnRequestSchema,
+  disputeOrderRequestSchema,
   markDeliveredRequestSchema,
   markPaidRequestSchema,
   orderListQuerySchema,
@@ -19,6 +20,7 @@ import {
   completeOrderController,
   confirmOrderController,
   decideStockReturnController,
+  disputeOrderController,
   getOrderByIdController,
   listOrdersController,
   markOrderDeliveredController,
@@ -68,6 +70,15 @@ ordersRouter.post(
   requireCsrfProtection,
   validateBody(completeOrderRequestSchema),
   completeOrderController,
+);
+
+ordersRouter.post(
+  "/:id/dispute",
+  requireAuthentication,
+  requireRole(UserRole.BUYER),
+  requireCsrfProtection,
+  validateBody(disputeOrderRequestSchema),
+  disputeOrderController,
 );
 
 ordersRouter.post(

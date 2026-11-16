@@ -4,6 +4,7 @@ import {
   type CompleteOrderRequest,
   type ConfirmOrderRequest,
   type DecideStockReturnRequest,
+  type DisputeOrderRequest,
   type MarkDeliveredRequest,
   type MarkPaidRequest,
   type OrderListQuery,
@@ -96,6 +97,21 @@ export const completeOrderController: RequestHandler = async (request, response)
       role: response.locals.currentUser.role,
     },
     request.body as CompleteOrderRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+};
+
+export const disputeOrderController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.dispute(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as DisputeOrderRequest,
   );
   response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
 };

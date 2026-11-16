@@ -326,6 +326,7 @@ export class SalesEarningsService {
               OrderStatus.PENDING,
               OrderStatus.CONFIRMED,
               OrderStatus.DELIVERED,
+              OrderStatus.DISPUTED,
             ],
           },
         },
@@ -359,6 +360,8 @@ export class SalesEarningsService {
     let pendingPayout = 0;
 
     let expectedNet = 0;
+    let disputedNet = 0;
+    let disputedOrdersCount = 0;
 
     const completedPriceItems: PricePremiumItem[] = [];
     const cropCompletedMap = new Map<
@@ -425,6 +428,9 @@ export class SalesEarningsService {
             expectedPricePerKg: expectedPrice,
           });
         }
+      } else if (order.status === OrderStatus.DISPUTED) {
+        disputedNet += order.farmerNet;
+        disputedOrdersCount += 1;
       } else {
         // Active orders awaiting completion (PENDING, CONFIRMED, DELIVERED)
         expectedNet += order.farmerNet;
@@ -544,6 +550,8 @@ export class SalesEarningsService {
         expectedNet,
         activeNet: expectedNet,
         totalExpectedNet: settledNet + expectedNet,
+        disputedNet,
+        disputedOrdersCount,
         feeRateBps,
         feeRatePercent,
         totalEarnings: settledNet,

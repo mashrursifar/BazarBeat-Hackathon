@@ -23,11 +23,13 @@ import { Button } from "../../components/ui/button.js";
 import {
   cancelOrder,
   completeOrder,
+  disputeOrder,
   fetchOrderDetail,
   markOrderPaid,
 } from "./api/orders-api.js";
 import { CancelOrderDialog } from "./components/cancel-order-dialog.js";
 import { PayOrderDialog } from "./components/pay-order-dialog.js";
+import { ReportProblemDialog } from "./components/report-problem-dialog.js";
 
 export default function BuyerOrderDetailPage(): ReactElement {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +39,7 @@ export default function BuyerOrderDetailPage(): ReactElement {
 
   const [isPayOpen, setIsPayOpen] = useState(false);
   const [isCancelOpen, setIsCancelOpen] = useState(false);
+  const [isDisputeOpen, setIsDisputeOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const orderQuery = useQuery({
@@ -61,6 +64,20 @@ export default function BuyerOrderDetailPage(): ReactElement {
   const completeMutation = useMutation({
     mutationFn: () => completeOrder(id!),
     onSuccess: () => {
+      setActionError(null);
+      void queryClient.invalidateQueries({ queryKey: ["buyer-order-detail", id] });
+      void queryClient.invalidateQueries({ queryKey: ["buyer-orders"] });
+    },
+    onError: (err: Error) => {
+      setActionError(t(`errors.${err.message}`, err.message));
+    },
+  });
+
+  const disputeMutation = useMutation({
+    mutationFn: (payload: { reason: string; note?: string }) =>
+      disputeOrder(id!, payload),
+    onSuccess: () => {
+      setIsDisputeOpen(false);
       setActionError(null);
       void queryClient.invalidateQueries({ queryKey: ["buyer-order-detail", id] });
       void queryClient.invalidateQueries({ queryKey: ["buyer-orders"] });
@@ -124,6 +141,7 @@ export default function BuyerOrderDetailPage(): ReactElement {
   const canPay = actions.includes(OrderAction.MARK_PAID);
   const canCancel = actions.includes(OrderAction.CANCEL);
   const canComplete = actions.includes(OrderAction.COMPLETE);
+  const canDispute = actions.includes(OrderAction.DISPUTE);
 
   const cancelDeadline = order.autoCancelDeadline ?? order.deadline;
   const completeDeadline = order.autoCompleteDeadline ?? order.deadline;
@@ -208,6 +226,46 @@ export default function BuyerOrderDetailPage(): ReactElement {
               )}
             </span>
             <CountdownTimer endsAt={completeDeadline} size="sm" />
+          </div>
+        )}
+
+        {/* Visible disputed state banner for DISPUTED */}
+        {order.status === OrderStatus.DISPUTED && (
+          <div
+            data-testid="order-disputed-banner"
+            className="mt-4 rounded-lg border border-orange-300 bg-orange-50 p-4 text-xs sm:text-sm text-orange-950"
+          >
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-orange-900">
+                {t("orders.dispute.inDisputeTitle", "Order In Dispute")}
+              </span>
+            </div>
+            <p className="mt-1 text-xs text-orange-800">
+              {t(
+                "orders.dispute.inDisputeBuyerNotice",
+                "You have reported a problem with this delivery. The order is paused and will not auto-complete pending resolution.",
+              )}
+            </p>
+            {order.dispute && (
+              <div className="mt-2 rounded bg-white/80 p-2.5 text-xs text-stone-800 space-y-1">
+                <div>
+                  <span className="font-medium text-stone-600">
+                    {t("orders.dispute.reasonLabel", "Reason")}:{" "}
+                  </span>
+                  <span className="font-semibold">
+                    {t(`orders.dispute.reasons.${order.dispute.reason}`, order.dispute.reason)}
+                  </span>
+                </div>
+                {order.dispute.note && (
+                  <div>
+                    <span className="font-medium text-stone-600">
+                      {t("orders.dispute.noteLabel", "Note")}:{" "}
+                    </span>
+                    <span>{order.dispute.note}</span>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -359,7 +417,7 @@ export default function BuyerOrderDetailPage(): ReactElement {
           </div>
 
           {/* Available Actions Card */}
-          {(canComplete || canCancel) && (
+          {(canComplete || canCancel || canDispute) && (
             <div className="rounded-xl border border-stone-200 bg-white p-5 shadow-sm space-y-3">
               <h2 className="text-sm font-bold text-stone-900">
                 {t("orders.availableActions", "Actions")}
@@ -376,6 +434,18 @@ export default function BuyerOrderDetailPage(): ReactElement {
                   {completeMutation.isPending
                     ? t("orders.actions.confirmingReceipt", "Confirming receipt…")
                     : t("orders.actions.confirmReceipt", "Confirm receipt")}
+                </Button>
+              )}
+
+              {canDispute && (
+                <Button
+                  type="button"
+                  data-testid="detail-action-report-problem"
+                  onClick={() => setIsDisputeOpen(true)}
+                  disabled={disputeMutation.isPending}
+                  className="w-full border border-orange-300 bg-orange-50 text-orange-800 hover:bg-orange-100 text-xs font-semibold"
+                >
+                  {t("orders.actions.reportProblem", "Report a problem")}
                 </Button>
               )}
 
@@ -405,6 +475,18 @@ export default function BuyerOrderDetailPage(): ReactElement {
           await payMutation.mutateAsync(method);
         }}
         onClose={() => setIsPayOpen(false)}
+      />
+
+      {/* Report Problem Dialog */}
+      <ReportProblemDialog
+        isOpen={isDisputeOpen}
+        orderId={order.id}
+        isPending={disputeMutation.isPending}
+        error={disputeMutation.error?.message}
+        onSubmit={async (payload) => {
+          await disputeMutation.mutateAsync(payload);
+        }}
+        onClose={() => setIsDisputeOpen(false)}
       />
 
       {/* Cancel Order Dialog */}

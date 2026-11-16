@@ -114,6 +114,10 @@ Playwright's first run may require `npx playwright install` to install its brows
   3. Auction sold completion with post-close inventory reconciliation (listed decreases, sold increases).
   4. Auction unsold completion with relist dialog workflow and immediate re-activation in the live grid.
   5. Cancel with no bids releasing inventory, and cancellation blocked with HTTP 400 `HAS_BIDS` once bids exist.
+- **Journey 4 (Orders, Handover, Payment, Delivery & Sales/Earnings):**
+  Auction closing sold, order lifecycle across farmer and buyer, contact privacy masking before confirmation and reveal afterwards, handover scheduling (0-72h ahead), simulated wallet payment, delivery, buyer receipt confirmation, and sales/earnings dashboard reflection (`e2e/journey-4-orders-sales.spec.ts`).
+- **Journey 5 (Unsold Relisting, Order Cancel with Stock Return, Timers & Role Isolation):**
+  Auction closing unsold with relist prompt and inventory restoration, order cancellation flow with stock-return prompt (restoring available inventory), auto-cancel timer transition of unconfirmed orders, and mutual role isolation preventing role hijacking (`e2e/journey-5-unsold-and-lifecycle.spec.ts`).
 
 ## Manually testing an auction
 

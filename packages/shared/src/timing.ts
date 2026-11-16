@@ -81,6 +81,10 @@ export const ORDER_TIMING = {
   AUTO_COMPLETE_HOURS: 24,
   AUTO_COMPLETE_MS: 24 * 60 * 60 * 1000,
   DEMO_AUTO_COMPLETE_MS: 2 * 60 * 1000,
+
+  DISPUTE_WINDOW_HOURS: 24,
+  DISPUTE_WINDOW_MS: 24 * 60 * 60 * 1000,
+  DEMO_DISPUTE_WINDOW_MS: 2 * 60 * 1000,
 } as const;
 
 /**
@@ -104,6 +108,12 @@ export function getOrderAutoCompleteMs(isDemoMode: boolean): number {
   return isDemoMode
     ? ORDER_TIMING.DEMO_AUTO_COMPLETE_MS
     : ORDER_TIMING.AUTO_COMPLETE_MS;
+}
+
+export function getOrderDisputeWindowMs(isDemoMode: boolean): number {
+  return isDemoMode
+    ? ORDER_TIMING.DEMO_DISPUTE_WINDOW_MS
+    : ORDER_TIMING.DISPUTE_WINDOW_MS;
 }
 
 export function getAntiSnipingTriggerWindowMs(isDemoMode: boolean): number {

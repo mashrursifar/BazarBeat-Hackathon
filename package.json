@@ -18,7 +18,8 @@
     "seed": "npm run seed -w @bazarbeat/api",
     "seed:dev-listings": "npm run seed:dev-listings -w @bazarbeat/api",
     "seed:demo": "npm run seed:demo -w @bazarbeat/api",
-    "dev:bid": "npm run dev:bid -w @bazarbeat/api --"
+    "dev:bid": "npm run dev:bid -w @bazarbeat/api --",
+    "resolve-dispute": "npm run resolve-dispute -w @bazarbeat/api --"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

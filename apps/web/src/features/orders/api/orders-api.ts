@@ -118,6 +118,16 @@ export async function completeOrder(
   });
 }
 
+export async function disputeOrder(
+  id: string,
+  payload: { reason: string; note?: string },
+): Promise<OrderDetailResult<BuyerOrderDetail>> {
+  return request<OrderDetailResult<BuyerOrderDetail>>(`/orders/${id}/dispute`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
 export async function cancelOrder<T = FarmerOrderDetail | BuyerOrderDetail>(
   id: string,
   payload: { reason: string; note?: string },

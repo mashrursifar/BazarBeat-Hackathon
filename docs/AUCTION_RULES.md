@@ -69,7 +69,12 @@ PENDING ──farmer confirms──> CONFIRMED ──mark delivered──> DELIV
    │                           │                               │
    └──cancel (either)──> CANCELLED      └──cancel (before delivery)──> CANCELLED     └──dispute──> DISPUTED
 ```
-Payment status is independent: UNPAID → PAID (simulated) or COD settled on delivery. Auto-cancel unconfirmed orders after 12 hours (configurable); cancellation after a buyer wins counts against buyer reliability (stored as a counter for later use). Cancelling a sold order returns stock as an ADJUST entry only if the farmer confirms the goods are still unsold.
+- **Lifecycle & Transitions:** PENDING orders require farmer confirmation with a valid handover schedule (`handoverAt` between now and +72 hours ahead). Confirmed orders are marked delivered by the farmer, then completed by the buyer upon receipt. Buyers can raise a dispute (`DELIVERED → DISPUTED`) within 24 hours of delivery. Either party may cancel while in PENDING or CONFIRMED (prior to delivery).
+- **Payment Independence:** Payment status (`UNPAID → PAID`) is independent of delivery status. Supports simulated in-app wallet (`WALLET_SIM`) or cash-on-delivery (`COD`) settled upon delivery.
+- **Counterparty Privacy:** Sensitive contact details (phone number, detailed address) are strictly masked during `PENDING`. Only after farmer confirmation are contact details revealed to the verified counterparty.
+- **Lifecycle Timers:** Unconfirmed `PENDING` orders auto-cancel after 12 hours (scaled to 1 minute in demo mode: `DEMO_ORDER_AUTO_CANCEL_MS = 60_000`). Unreviewed `DELIVERED` orders auto-complete after 24 hours (scaled to 2 minutes in demo mode: `DEMO_ORDER_AUTO_COMPLETE_MS = 120_000`) if no dispute is raised.
+- **Stock Return on Cancellation:** Cancelling an order presents the farmer with a one-time stock return prompt. Choosing `RETURNED` restores the lot quantity to available inventory with a `RETURN` ledger movement; choosing `DISCARDED` retains current inventory if produce was damaged or sold locally elsewhere.
+- **Role Isolation:** Strict role-based access control guarantees farmers cannot act as buyers (or bid on their own listings), and buyers cannot perform farmer actions (confirmation, marking delivered, stock return).
 
 ## 12. Edge cases that must have tests
 - Two simultaneous valid bids: exactly one wins the ordering; the other is rejected with BID_TOO_LOW.

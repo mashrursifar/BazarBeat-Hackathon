@@ -7,6 +7,7 @@ import {
   getAntiSnipingTriggerWindowMs,
   getOrderAutoCancelMs,
   getOrderAutoCompleteMs,
+  getOrderDisputeWindowMs,
   getSchedulerIntervalMs,
 } from "./timing.js";
 
@@ -56,6 +57,13 @@ describe("Auction timing constants and helpers", () => {
 
     expect(getOrderAutoCompleteMs(false)).toBe(24 * 60 * 60 * 1000);
     expect(getOrderAutoCompleteMs(true)).toBe(120 * 1000);
+
+    expect(ORDER_TIMING.DISPUTE_WINDOW_HOURS).toBe(24);
+    expect(ORDER_TIMING.DISPUTE_WINDOW_MS).toBe(24 * 60 * 60 * 1000);
+    expect(ORDER_TIMING.DEMO_DISPUTE_WINDOW_MS).toBe(120 * 1000);
+
+    expect(getOrderDisputeWindowMs(false)).toBe(24 * 60 * 60 * 1000);
+    expect(getOrderDisputeWindowMs(true)).toBe(120 * 1000);
   });
 });
 

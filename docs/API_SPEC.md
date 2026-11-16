@@ -95,7 +95,7 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 | POST | /orders/:id/mark-paid | B | Simulated payment: payload `{ method?: COD \| WALLET_SIM }` (default WALLET_SIM). Updates independent payment status to PAID |
 | POST | /orders/:id/mark-delivered | F | Farmer marks produce delivered/collected: optional `{ note?: string (max 200) }`. Transitions CONFIRMED → DELIVERED |
 | POST | /orders/:id/complete | B | Buyer confirms receipt of goods: optional `{ note?: string (max 200) }`. Transitions DELIVERED → COMPLETED |
-| POST | /orders/:id/dispute | B | Buyer raises quality/quantity dispute (P1): payload `{ reason: GRADE_MISMATCH \| WEIGHT_SHORTAGE \| DAMAGED_PRODUCE \| WRONG_CROP \| OTHER, note?: string (max 500) }`. Transitions DELIVERED → DISPUTED |
+| POST | /orders/:id/dispute | B | Buyer raises quality/quantity dispute within 24h of delivery (P1, Task 6.11): payload `{ reason: GRADE_LOWER_THAN_LISTED \| QUANTITY_SHORT \| SPOILED \| OTHER, note?: string (max 200) }`. Preserves immutable AI grade snapshot and halts auto-complete timer. Transitions DELIVERED → DISPUTED |
 | POST | /orders/:id/cancel | A | Allowed only in PENDING or CONFIRMED per order state machine: payload `{ reason: string, note?: string (max 200) }`. Transitions to CANCELLED; simulates wallet refund if paid by wallet |
 | POST | /orders/:id/stock-return | F | Farmer decides stock return for cancelled order lot (once only): payload `{ decision: RETURNED \| DISCARDED, note?: string (max 200) }`. When RETURNED, applies ledger RETURN movement |
 

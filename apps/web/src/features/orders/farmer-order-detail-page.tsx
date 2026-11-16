@@ -167,6 +167,46 @@ export default function FarmerOrderDetailPage(): ReactElement {
         </div>
       )}
 
+      {/* Visible disputed state banner for DISPUTED */}
+      {order.status === OrderStatus.DISPUTED && (
+        <div
+          data-testid="order-disputed-banner"
+          className="mt-4 rounded-lg border border-orange-300 bg-orange-50 p-4 text-xs sm:text-sm text-orange-950"
+        >
+          <div className="flex items-center gap-2">
+            <span className="font-bold text-orange-900">
+              {t("orders.dispute.inDisputeTitle", "Order In Dispute")}
+            </span>
+          </div>
+          <p className="mt-1 text-xs text-orange-800">
+            {t(
+              "orders.dispute.inDisputeFarmerNotice",
+              "The buyer has reported an issue with this order. Payout is on hold pending resolution.",
+            )}
+          </p>
+          {order.dispute && (
+            <div className="mt-2 rounded bg-white/80 p-2.5 text-xs text-stone-800 space-y-1">
+              <div>
+                <span className="font-medium text-stone-600">
+                  {t("orders.dispute.reasonLabel", "Reason")}:{" "}
+                </span>
+                <span className="font-semibold">
+                  {t(`orders.dispute.reasons.${order.dispute.reason}`, order.dispute.reason)}
+                </span>
+              </div>
+              {order.dispute.note && (
+                <div>
+                  <span className="font-medium text-stone-600">
+                    {t("orders.dispute.noteLabel", "Note")}:{" "}
+                  </span>
+                  <span>{order.dispute.note}</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Auto-cancel countdown for PENDING */}
       {order.status === OrderStatus.PENDING && cancelDeadline && (
         <div

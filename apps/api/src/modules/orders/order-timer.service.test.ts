@@ -235,6 +235,28 @@ describe("Task 6.5 — Order Timers in the Scheduler (P0)", () => {
       expect(updated?.status).toBe(OrderStatus.DELIVERED);
       expect(updated?.dispute?.reason).toBe(OrderDisputeReason.GRADE_MISMATCH);
     });
+
+    it("does NOT auto-complete an order in DISPUTED status past 24h", async () => {
+      const order = await seedTestOrder(OrderStatus.DISPUTED, {
+        confirmedAt: testClock.now(),
+        deliveredAt: testClock.now(),
+        dispute: {
+          reason: OrderDisputeReason.GRADE_LOWER_THAN_LISTED,
+          note: "Lower grade delivered",
+          raisedAt: testClock.now(),
+        },
+      });
+
+      // Advance clock past 24 hours
+      testClock.advanceBy(ORDER_TIMING.AUTO_COMPLETE_MS + 1000);
+
+      const summary = await completeDueDeliveredOrders({ clock: testClock, isDemoMode: false });
+      expect(summary.found).toBe(0);
+      expect(summary.processed).toBe(0);
+
+      const updated = await Order.findById(order._id);
+      expect(updated?.status).toBe(OrderStatus.DISPUTED);
+    });
   });
 
   describe("Idempotence & Double Runs", () => {

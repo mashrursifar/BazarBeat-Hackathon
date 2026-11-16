@@ -51,12 +51,15 @@ export default function EarningsPage(): ReactElement {
 
   const settledNet = summary?.settledNet ?? summary?.totalEarnings ?? 0;
   const expectedNet = summary?.expectedNet ?? summary?.activeNet ?? 0;
+  const disputedNet = summary?.disputedNet ?? 0;
+  const disputedCount = summary?.disputedOrdersCount ?? 0;
   const gross = summary?.gross ?? summary?.totalSubtotal ?? 0;
   const fees = summary?.fees ?? summary?.totalPlatformFees ?? 0;
   const avgPremium = summary?.averagePricePremiumPercent ?? summary?.averagePremiumPercent ?? 0;
   const completedCount = summary?.completedOrdersCount ?? 0;
 
-  const isCompletelyEmpty = completedCount === 0 && settledNet === 0 && expectedNet === 0;
+  const isCompletelyEmpty =
+    completedCount === 0 && settledNet === 0 && expectedNet === 0 && disputedNet === 0;
 
   return (
     <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8" data-testid="earnings-page">
@@ -141,8 +144,8 @@ export default function EarningsPage(): ReactElement {
             </div>
           </div>
 
-          {/* 4 KPI Cards */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4" data-testid="earnings-kpi-cards">
+          {/* 5 KPI Cards (including In dispute shown separately) */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5" data-testid="earnings-kpi-cards">
             {/* Card 1: Settled Net (Simulated) */}
             <div
               className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-5 shadow-sm"
@@ -180,7 +183,39 @@ export default function EarningsPage(): ReactElement {
               </p>
             </div>
 
-            {/* Card 3: Gross Sales */}
+            {/* Card 3: In Dispute (Shown separately) */}
+            <div
+              className={`rounded-lg border p-5 shadow-sm ${
+                disputedNet > 0
+                  ? "border-orange-300 bg-orange-50/60"
+                  : "border-stone-200 bg-white"
+              }`}
+              data-testid="kpi-in-dispute"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-orange-900">
+                  {t("earnings.disputedNet", "In Dispute")}
+                </span>
+                {disputedCount > 0 && (
+                  <span className="rounded bg-orange-100 px-1.5 py-0.5 text-[10px] font-semibold text-orange-800">
+                    {disputedCount} {isBangla ? "টি" : "orders"}
+                  </span>
+                )}
+              </div>
+              <p
+                className={`mt-2 text-2xl sm:text-3xl font-extrabold ${
+                  disputedNet > 0 ? "text-orange-700" : "text-stone-700"
+                }`}
+                data-testid="kpi-in-dispute-value"
+              >
+                {formatPoisha(disputedNet)}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("earnings.disputedNetSubtitle", "Held pending dispute resolution")}
+              </p>
+            </div>
+
+            {/* Card 4: Gross Sales */}
             <div
               className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
               data-testid="kpi-gross-sales"
@@ -196,7 +231,7 @@ export default function EarningsPage(): ReactElement {
               </p>
             </div>
 
-            {/* Card 4: Platform Fees */}
+            {/* Card 5: Platform Fees */}
             <div
               className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm"
               data-testid="kpi-platform-fees"

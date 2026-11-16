@@ -11,7 +11,8 @@
     "seed": "tsx src/seed/seed-crops.ts",
     "seed:dev-listings": "tsx src/seed/seed-dev-listings.ts",
     "seed:demo": "node -e \"process.stdout.write('Demo seed task is not configured in Phase 0.')\"",
-    "dev:bid": "tsx scripts/dev-bid.ts"
+    "dev:bid": "tsx scripts/dev-bid.ts",
+    "resolve-dispute": "tsx scripts/resolve-dispute.ts"
   },
   "dependencies": {
     "@bazarbeat/shared": "*",

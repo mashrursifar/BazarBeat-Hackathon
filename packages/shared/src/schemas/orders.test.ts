@@ -304,11 +304,22 @@ describe("Action request schemas", () => {
   it("validates disputeOrderRequestSchema", () => {
     expect(
       disputeOrderRequestSchema.safeParse({
-        reason: OrderDisputeReason.WEIGHT_SHORTAGE,
+        reason: OrderDisputeReason.QUANTITY_SHORT,
         note: "Scale showed 45kg instead of 50kg",
       }).success
     ).toBe(true);
+    expect(
+      disputeOrderRequestSchema.safeParse({
+        reason: OrderDisputeReason.GRADE_LOWER_THAN_LISTED,
+      }).success
+    ).toBe(true);
     expect(disputeOrderRequestSchema.safeParse({ reason: "NOT_A_REASON" }).success).toBe(false);
+    expect(
+      disputeOrderRequestSchema.safeParse({
+        reason: OrderDisputeReason.QUANTITY_SHORT,
+        note: "a".repeat(201),
+      }).success
+    ).toBe(false);
   });
 
   it("validates cancelOrderRequestSchema", () => {

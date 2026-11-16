@@ -9,6 +9,7 @@ import {
   orderConfirmedEventPayloadSchema,
   orderCreatedEventPayloadSchema,
   orderDeliveredEventPayloadSchema,
+  orderDisputedEventPayloadSchema,
   paymentPaidEventPayloadSchema,
 } from "./events.js";
 
@@ -86,6 +87,7 @@ describe("Domain event schemas", () => {
     expect(DomainEventName.ORDER_DELIVERED).toBe("order.delivered");
     expect(DomainEventName.ORDER_COMPLETED).toBe("order.completed");
     expect(DomainEventName.ORDER_CANCELLED).toBe("order.cancelled");
+    expect(DomainEventName.ORDER_DISPUTED).toBe("order.disputed");
     expect(DomainEventName.PAYMENT_PAID).toBe("payment.paid");
   });
 
@@ -152,6 +154,20 @@ describe("Domain event schemas", () => {
       paidAt: "2026-11-16T12:30:00.000Z",
     };
     expect(paymentPaidEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it("validates order.disputed payload", () => {
+    const payload = {
+      orderId: "order-1",
+      listingId: "listing-1",
+      farmerId: "farmer-1",
+      buyerId: "buyer-1",
+      disputedBy: "buyer-1",
+      reason: "GRADE_LOWER_THAN_LISTED",
+      note: "Lots of blemishes",
+      disputedAt: "2026-11-16T14:00:00.000Z",
+    };
+    expect(orderDisputedEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
 });
 

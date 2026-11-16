@@ -133,6 +133,23 @@ export const orderCancelledEventPayloadSchema = z.object({
 export type OrderCancelledEventPayload = z.infer<typeof orderCancelledEventPayloadSchema>;
 
 /**
+ * Payload for the 'order.disputed' domain event.
+ * Emitted when a buyer raises a dispute on a DELIVERED order within the dispute window.
+ */
+export const orderDisputedEventPayloadSchema = z.object({
+  orderId: z.string(),
+  listingId: z.string(),
+  farmerId: z.string(),
+  buyerId: z.string(),
+  disputedBy: z.string(),
+  reason: z.string(),
+  note: z.string().optional(),
+  disputedAt: z.string().datetime(),
+});
+
+export type OrderDisputedEventPayload = z.infer<typeof orderDisputedEventPayloadSchema>;
+
+/**
  * Payload for the 'payment.paid' domain event.
  * Emitted when an order payment becomes PAID (wallet sim or COD upon delivery).
  */
@@ -160,6 +177,7 @@ export interface DomainEventPayloadMap {
   [DomainEventName.ORDER_DELIVERED]: OrderDeliveredEventPayload;
   [DomainEventName.ORDER_COMPLETED]: OrderCompletedEventPayload;
   [DomainEventName.ORDER_CANCELLED]: OrderCancelledEventPayload;
+  [DomainEventName.ORDER_DISPUTED]: OrderDisputedEventPayload;
   [DomainEventName.PAYMENT_PAID]: PaymentPaidEventPayload;
 }
 

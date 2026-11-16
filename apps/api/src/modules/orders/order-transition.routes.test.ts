@@ -351,5 +351,95 @@ describe("Order HTTP Routes (/api/v1/orders)", () => {
       const inventory = await InventoryItem.findOne({ farmerId, cropId }).lean();
       expect(inventory).toMatchObject({ availableKg: 50, listedKg: 0, soldKg: 0 });
     });
+
+    it("handles POST /api/v1/orders/:id/dispute: validates role, status, CSRF, delivery window, and updates order", async () => {
+      const deliveredOrder = await Order.create({
+        listingId: new Types.ObjectId(),
+        farmerId,
+        buyerId,
+        cropId,
+        quantityKg: 100,
+        grade: CropGrade.A,
+        pricePerKg: 3000,
+        subtotal: 300000,
+        platformFee: 6000,
+        farmerNet: 294000,
+        status: OrderStatus.DELIVERED,
+        deliveredAt: testClock.now(),
+        payment: { status: PaymentStatus.PAID, method: PaymentMethod.WALLET_SIM },
+      });
+
+      // 1. Unauthenticated -> 401
+      const unauthRes = await request(app)
+        .post(`/api/v1/orders/${deliveredOrder._id}/dispute`)
+        .set("X-CSRF-Protection", "1")
+        .send({ reason: "GRADE_LOWER_THAN_LISTED" });
+      expect(unauthRes.status).toBe(401);
+
+      // 2. Wrong role (Farmer) -> 403
+      const wrongRoleRes = await request(app)
+        .post(`/api/v1/orders/${deliveredOrder._id}/dispute`)
+        .set("Cookie", withAuthCookie("farmer"))
+        .set("X-CSRF-Protection", "1")
+        .send({ reason: "GRADE_LOWER_THAN_LISTED" });
+      expect(wrongRoleRes.status).toBe(403);
+
+      // 3. Missing CSRF -> 403
+      const noCsrfRes = await request(app)
+        .post(`/api/v1/orders/${deliveredOrder._id}/dispute`)
+        .set("Cookie", withAuthCookie("buyer"))
+        .send({ reason: "GRADE_LOWER_THAN_LISTED" });
+      expect(noCsrfRes.status).toBe(403);
+
+      // 4. Invalid note (>200 chars) -> 400
+      const invalidNoteRes = await request(app)
+        .post(`/api/v1/orders/${deliveredOrder._id}/dispute`)
+        .set("Cookie", withAuthCookie("buyer"))
+        .set("X-CSRF-Protection", "1")
+        .send({ reason: "GRADE_LOWER_THAN_LISTED", note: "x".repeat(201) });
+      expect(invalidNoteRes.status).toBe(400);
+
+      // 5. Valid buyer dispute -> 200
+      const validRes = await request(app)
+        .post(`/api/v1/orders/${deliveredOrder._id}/dispute`)
+        .set("Cookie", withAuthCookie("buyer"))
+        .set("X-CSRF-Protection", "1")
+        .send({
+          reason: "GRADE_LOWER_THAN_LISTED",
+          note: "Significant rot and blemishes, below listed Grade A",
+        });
+
+      expect(validRes.status).toBe(200);
+      expect(validRes.body.data.status).toBe(OrderStatus.DISPUTED);
+      expect(validRes.body.data.grade).toBe(CropGrade.A);
+      expect(validRes.body.data.dispute.reason).toBe("GRADE_LOWER_THAN_LISTED");
+      expect(validRes.body.data.dispute.note).toBe("Significant rot and blemishes, below listed Grade A");
+
+      // 6. Dispute past 24 hours of delivery -> 409 DISPUTE_WINDOW_EXPIRED
+      const oldDeliveredOrder = await Order.create({
+        listingId: new Types.ObjectId(),
+        farmerId,
+        buyerId,
+        cropId,
+        quantityKg: 60,
+        grade: CropGrade.B,
+        pricePerKg: 2000,
+        subtotal: 120000,
+        platformFee: 2400,
+        farmerNet: 117600,
+        status: OrderStatus.DELIVERED,
+        deliveredAt: new Date(testClock.timestamp() - 25 * 60 * 60 * 1000), // 25 hours ago
+        payment: { status: PaymentStatus.PAID, method: PaymentMethod.WALLET_SIM },
+      });
+
+      const expiredRes = await request(app)
+        .post(`/api/v1/orders/${oldDeliveredOrder._id}/dispute`)
+        .set("Cookie", withAuthCookie("buyer"))
+        .set("X-CSRF-Protection", "1")
+        .send({ reason: "SPOILED" });
+
+      expect(expiredRes.status).toBe(409);
+      expect(expiredRes.body.error.code).toBe("DISPUTE_WINDOW_EXPIRED");
+    });
   });
 });

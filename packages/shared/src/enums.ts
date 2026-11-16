@@ -188,21 +188,35 @@ export const SYSTEM_CANCEL_REASONS = [
 ] as const;
 
 export const OrderDisputeReason = {
+  GRADE_LOWER_THAN_LISTED: "GRADE_LOWER_THAN_LISTED",
+  QUANTITY_SHORT: "QUANTITY_SHORT",
+  SPOILED: "SPOILED",
+  OTHER: "OTHER",
+  // Backward compatibility aliases
   GRADE_MISMATCH: "GRADE_MISMATCH",
   WEIGHT_SHORTAGE: "WEIGHT_SHORTAGE",
   DAMAGED_PRODUCE: "DAMAGED_PRODUCE",
   WRONG_CROP: "WRONG_CROP",
-  OTHER: "OTHER",
 } as const;
 
 export type OrderDisputeReason = (typeof OrderDisputeReason)[keyof typeof OrderDisputeReason];
 
+export const BUYER_DISPUTE_REASONS = [
+  OrderDisputeReason.GRADE_LOWER_THAN_LISTED,
+  OrderDisputeReason.QUANTITY_SHORT,
+  OrderDisputeReason.SPOILED,
+  OrderDisputeReason.OTHER,
+] as const;
+
 export const ORDER_DISPUTE_REASONS = [
+  OrderDisputeReason.GRADE_LOWER_THAN_LISTED,
+  OrderDisputeReason.QUANTITY_SHORT,
+  OrderDisputeReason.SPOILED,
+  OrderDisputeReason.OTHER,
   OrderDisputeReason.GRADE_MISMATCH,
   OrderDisputeReason.WEIGHT_SHORTAGE,
   OrderDisputeReason.DAMAGED_PRODUCE,
   OrderDisputeReason.WRONG_CROP,
-  OrderDisputeReason.OTHER,
 ] as const;
 
 export const OrderErrorCode = {
@@ -212,6 +226,7 @@ export const OrderErrorCode = {
   ORDER_ACTION_NOT_ALLOWED: "ORDER_ACTION_NOT_ALLOWED",
   ORDER_ALREADY_PAID: "ORDER_ALREADY_PAID",
   HANDOVER_TIME_INVALID: "HANDOVER_TIME_INVALID",
+  DISPUTE_WINDOW_EXPIRED: "DISPUTE_WINDOW_EXPIRED",
 } as const;
 
 export type OrderErrorCode = (typeof OrderErrorCode)[keyof typeof OrderErrorCode];
@@ -241,6 +256,7 @@ export const DomainEventName = {
   ORDER_DELIVERED: "order.delivered",
   ORDER_COMPLETED: "order.completed",
   ORDER_CANCELLED: "order.cancelled",
+  ORDER_DISPUTED: "order.disputed",
   PAYMENT_PAID: "payment.paid",
 } as const;
 

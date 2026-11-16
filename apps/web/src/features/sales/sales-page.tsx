@@ -9,7 +9,7 @@ import {
   formatPoisha,
 } from "@bazarbeat/shared";
 
-import { DataTable, EmptyState, ErrorState, StatCard } from "../../components/shared/data-states.js";
+import { DataTable, EmptyState, ErrorState } from "../../components/shared/data-states.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { getCrops } from "../listings/api/listing-api.js";
 import { fetchSales } from "./api/sales-api.js";
