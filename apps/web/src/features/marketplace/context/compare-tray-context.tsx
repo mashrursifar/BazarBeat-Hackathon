@@ -56,6 +56,11 @@ function loadInitialItems(): BuyerListingCard[] {
 }
 
 export function CompareTrayProvider({ children }: { children: ReactNode }): ReactElement {
+  const outer = useContext(CompareTrayContext);
+  if (outer) {
+    return <>{children}</>;
+  }
+
   const [items, setItems] = useState<BuyerListingCard[]>(loadInitialItems);
 
   // Sync to sessionStorage

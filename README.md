@@ -81,7 +81,18 @@ npm run dev
 
 The web app runs at <http://localhost:5173> and the API at <http://localhost:4000>. Check API and MongoDB status at <http://localhost:4000/api/v1/health>.
 
-Seed fixtures are not part of Phase 0. `npm run seed` and `npm run seed:demo` are present as workspace script placeholders and report that no seed data is configured yet.
+### Seed data and demo listings
+
+To populate crops and realistic dev listings:
+```sh
+npm run seed              # Seeds the 5 crops catalog
+npm run seed:dev-listings # Seeds 25 listings (5 per crop), 8 farmers across 8 divisions, 5 buyers, inventory reservations and bids
+```
+
+Demo user accounts created by the seeder:
+- **Demo Farmer:** `01700000001` / `farmerpassword123` (Rahim Uddin, Dhaka / Savar)
+- **Demo Buyer:** `01712345678` / `buyerpassword123` (Demo Buyer — Karim Traders, Dhaka / Dhanmondi)
+- **Demo Buyer 2:** `01800000002` / `buyerpassword123` (Hafiz Enterprises, Chattogram / Kotwali)
 
 ### Quality checks
 
@@ -95,6 +106,8 @@ npm run test:e2e
 Playwright's first run may require `npx playwright install` to install its browser. The E2E web server starts automatically. End-to-end specs in `e2e/` test:
 - **Journey 1:** Farmer publishing a live auction with AI quality grading and price guidance (`e2e/journey-1-farmer-publishes.spec.ts`).
 - **Journey 1 (Part 2):** Floor warnings and inventory stock deduction check (`e2e/journey-1-floor-warnings-stock.spec.ts`).
+- **Journey 2:** Buyer marketplace filtering, compare tray with cross-crop rejection, side-by-side compare with highlight badges, too-low bid validation with minimum-bid button, binding confirmation dialog, and buyer route isolation (`e2e/journey-2-buyer-bids-and-compares.spec.ts`).
+- **Journey 3:** Multi-context live bidding where a buyer's bid updates the farmer's Crop Bidding screen without reload, and a second buyer outbids the first buyer triggering a live "You were outbid" banner (`e2e/journey-3-live-bidding-multi-context.spec.ts`).
 - **Phase 4 E2E (Auction Engine & Bidding):**
   1. Live bidding updates without page reload over real-time SSE stream (`e2e/journey-phase-4-auction-bidding.spec.ts`).
   2. Late bids within anti-sniping threshold triggering the visual "Extended" timer state.

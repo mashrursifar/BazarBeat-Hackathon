@@ -229,8 +229,7 @@ export function BidPanel({
   const isNotBidding = listing.myStatus === BuyerListingStatus.NONE;
 
   // Validation rules for submit button
-  const isValidBidAmount =
-    Boolean(parsedPoisha) && (parsedPoisha as number) >= minimumRequiredPerKg;
+  const isValidBidAmount = Boolean(parsedPoisha);
   const canSubmitBid = isActive && isValidBidAmount && !isWinning;
 
   return (

@@ -4,6 +4,7 @@ export interface PlaceBidOptions {
   listingId: string;
   amountPerKg: number;
   isLateBid?: boolean;
+  buyerUser?: "buyer-1" | "buyer-2";
 }
 
 export interface ApiResponse<T = unknown> {
@@ -21,30 +22,20 @@ export async function placeBidViaApi(
   options: PlaceBidOptions,
 ): Promise<ApiResponse> {
   return await page.evaluate(
-    async ({ listingId, amountPerKg, isLateBid }) => {
+    async ({ listingId, amountPerKg, isLateBid, buyerUser }) => {
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+        "X-CSRF-Protection": "1",
+      };
+      if (buyerUser) {
+        headers["X-Mock-Buyer"] = buyerUser;
+      }
       const response = await fetch(`/api/v1/listings/${listingId}/bids`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-CSRF-Protection": "1",
-        },
+        headers,
         body: JSON.stringify({ amountPerKg, isLateBid }),
       });
       const data = await response.json().catch(() => null);
-
-      // Dispatch SSE events to any open MockEventSource listeners
-      const win = window as unknown as {
-        __dispatchMockSse?: (id: string, ev: string, payload: unknown) => void;
-      };
-      if (response.ok && win.__dispatchMockSse && data?.data) {
-        if (data.data.extended) {
-          win.__dispatchMockSse(listingId, "auction.extended", data.data.extended);
-        }
-        if (data.data.patch) {
-          win.__dispatchMockSse(listingId, "bid.placed", data.data.patch);
-        }
-      }
-
       return { status: response.status, body: data };
     },
     options,
@@ -97,14 +88,6 @@ export async function closeAuctionViaMock(
         body: JSON.stringify({ status }),
       });
       const data = await response.json().catch(() => null);
-
-      const win = window as unknown as {
-        __dispatchMockSse?: (id: string, ev: string, payload: unknown) => void;
-      };
-      if (response.ok && win.__dispatchMockSse && data?.data?.patch) {
-        win.__dispatchMockSse(listingId, "auction.closed", data.data.patch);
-      }
-
       return { status: response.status, body: data };
     },
     options,

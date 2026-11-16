@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --fileParallelism=false",
     "seed": "tsx src/seed/seed-crops.ts",
     "seed:dev-listings": "tsx src/seed/seed-dev-listings.ts",
     "seed:demo": "node -e \"process.stdout.write('Demo seed task is not configured in Phase 0.')\"",

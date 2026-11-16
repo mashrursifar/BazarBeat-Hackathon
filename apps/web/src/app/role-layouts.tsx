@@ -5,6 +5,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { LanguageSwitcher } from "../components/language-switcher.js";
 import { useAuth } from "../features/auth/auth-context.js";
+import { CompareTrayProvider } from "../features/marketplace/context/compare-tray-context.js";
 
 type NavItem = { path: string; key: string; section?: string };
 const FARMER_NAV: readonly NavItem[] = [
@@ -45,7 +46,11 @@ export function FarmerLayout(): ReactElement {
 }
 
 export function BuyerLayout(): ReactElement {
-  return <RoleLayout role={UserRole.BUYER} />;
+  return (
+    <CompareTrayProvider>
+      <RoleLayout role={UserRole.BUYER} />
+    </CompareTrayProvider>
+  );
 }
 
 function RoleLayout({ role }: { role: UserRoleType }): ReactElement {

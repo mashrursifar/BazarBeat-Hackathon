@@ -48,6 +48,7 @@ export function BuyerListingDetailPage(): ReactElement {
         t("realtime.newBidPlaced", { amount: `${formatPoisha(patch.amountPerKg)}/kg` }),
       );
       void refetchBids();
+      void refetch();
     },
     onAuctionExtended: () => {
       setLiveAnnouncement(t("realtime.auctionExtended"));

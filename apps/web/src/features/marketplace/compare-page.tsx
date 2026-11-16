@@ -9,7 +9,7 @@ import {
   formatPoisha,
 } from "@bazarbeat/shared";
 
-import { useCompareTray } from "./context/compare-tray-context.js";
+import { CompareTrayProvider, useCompareTray } from "./context/compare-tray-context.js";
 import { getCompareListings } from "./api/marketplace-api.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { PriceTag } from "../../components/shared/price-tag.js";
@@ -17,7 +17,7 @@ import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { ErrorState } from "../../components/shared/data-states.js";
 import { cn } from "../../lib/utils.js";
 
-export function ComparePage(): ReactElement {
+function ComparePageContent(): ReactElement {
   const { t, i18n } = useTranslation();
   const isBangla = i18n.language === "bn";
   const [searchParams, setSearchParams] = useSearchParams();
@@ -832,6 +832,14 @@ export function ComparePage(): ReactElement {
         </table>
       </div>
     </main>
+  );
+}
+
+export function ComparePage(): ReactElement {
+  return (
+    <CompareTrayProvider>
+      <ComparePageContent />
+    </CompareTrayProvider>
   );
 }
 

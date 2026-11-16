@@ -235,8 +235,17 @@ Dashboard statistics are computed from Orders/Bids/Listings via aggregation quer
 
 ## Seed data requirements
 
-- Crop catalog (5 crops)
-- 12 farmers across at least 6 divisions, 8 buyers, one demo farmer and one demo buyer with documented credentials
-- 60 days of MarketPrice history per crop per division
-- 20+ listings in mixed states (active, sold, unsold) with bids and orders so every dashboard has data
-- Demo mode creates a few auctions that end within minutes
+- Crop catalog (5 crops: Onion, Green Chilli, Bitter Gourd, Eggplant, Potato) seeded via `npm run seed`.
+- **Development & Demo Listings Seeder** (`npm run seed:dev-listings` via `apps/api/src/seed/dev-listings.ts`):
+  - 8 farmers spanning all 8 administrative divisions of Bangladesh (>= 6 divisions required).
+  - 5 buyers with distinct locations and organizations.
+  - Demo credentials:
+    - Demo Farmer: `01700000001` / `farmerpassword123` (Rahim Uddin, Savar, Dhaka)
+    - Demo Buyer: `01712345678` / `buyerpassword123` (Demo Buyer — Karim Traders, Dhanmondi, Dhaka)
+    - Demo Buyer 2: `01800000002` / `buyerpassword123` (Hafiz Enterprises, Kotwali, Chattogram)
+  - 25 published listings (exactly 5 per crop across all 5 crops: 2 Grade A, 2 Grade B, 1 Grade C each).
+  - Mixed states: ending soon (< 1h), medium duration (3h, 6h, 12h), long duration (24h).
+  - Seeded bids on select listings to simulate active auctions, winning states, and price competition.
+  - Full inventory ledger reconciliation: adds harvest stock, executes `reserveStockForListing` (`LIST` movements), and verifies that available + listed = harvest stock with zero discrepancy.
+- 60 days of MarketPrice history per crop per division.
+- Demo mode creates a few auctions that end within minutes.

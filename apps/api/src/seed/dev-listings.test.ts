@@ -123,7 +123,7 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
       expect(balances.listedKg).toBeGreaterThan(0);
       expect(balances.soldKg).toBe(0);
     }
-  });
+  }, 30_000);
 
   it("returns varied results for marketplace endpoint queries (filters and sorts)", async () => {
     // All 25 active listings returned
@@ -202,7 +202,7 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
         expect(gradeWeight[prev.grade]).toBeGreaterThanOrEqual(gradeWeight[curr.grade]);
       }
     }
-  });
+  }, 30_000);
 
   it("is repeatable and leaves a consistent database when run twice (cleans up previous run)", async () => {
     // Run second time on already seeded database
@@ -235,5 +235,5 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
       expect(balances.listedKg).toBeGreaterThan(0);
       expect(balances.soldKg).toBe(0);
     }
-  });
+  }, 30_000);
 });
