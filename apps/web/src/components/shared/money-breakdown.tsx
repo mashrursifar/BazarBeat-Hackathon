@@ -39,6 +39,7 @@ export function MoneyBreakdown({
   return (
     <div
       data-slot="money-breakdown"
+      data-testid="money-breakdown"
       className={cn("rounded-lg border border-stone-200 bg-stone-50/50 p-4 text-sm", className)}
     >
       <dl className="space-y-2">

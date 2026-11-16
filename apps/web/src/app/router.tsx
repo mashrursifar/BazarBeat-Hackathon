@@ -20,6 +20,11 @@ const ComparePage = lazy(() => import("../features/marketplace/compare-page.js")
 const MyBidsPage = lazy(() => import("../features/bids/my-bids-page.js"));
 const FarmerOrdersPage = lazy(() => import("../features/orders/farmer-orders-page.js"));
 const FarmerOrderDetailPage = lazy(() => import("../features/orders/farmer-order-detail-page.js"));
+const BuyerOrdersPage = lazy(() => import("../features/orders/buyer-orders-page.js"));
+const BuyerOrderDetailPage = lazy(() => import("../features/orders/buyer-order-detail-page.js"));
+const SalesPage = lazy(() => import("../features/sales/sales-page.js"));
+const EarningsPage = lazy(() => import("../features/earnings/earnings-page.js"));
+
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
   ["crop-bidding", "cropBidding"], ["inventory", "inventory"], ["orders", "orders"],
@@ -51,15 +56,22 @@ function HomePage(): ReactElement {
   );
 }
 
-function page(path: string, pageKey: string): { path: string; element: ReactElement } {
+function farmerPage(path: string, pageKey: string): { path: string; element: ReactElement } {
   if (path === "inventory") return { path, element: <InventoryPage /> };
   if (path === "new-listing") return { path, element: <NewListingPage /> };
   if (path === "products") return { path, element: <MyListingsPage /> };
   if (path === "crop-bidding") return { path, element: <CropBiddingPage /> };
+  if (path === "orders") return { path, element: <FarmerOrdersPage /> };
+  if (path === "sales") return { path, element: <SalesPage /> };
+  if (path === "earnings") return { path, element: <EarningsPage /> };
+  return { path, element: <PlaceholderPage pageKey={pageKey} /> };
+}
+
+function buyerPage(path: string, pageKey: string): { path: string; element: ReactElement } {
   if (path === "marketplace") return { path, element: <MarketplacePage /> };
   if (path === "compare") return { path, element: <ComparePage /> };
   if (path === "my-bids") return { path, element: <MyBidsPage /> };
-  if (path === "orders") return { path, element: <FarmerOrdersPage /> };
+  if (path === "orders") return { path, element: <BuyerOrdersPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 
@@ -78,7 +90,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="dashboard" replace /> },
           { path: "bidding", element: <Navigate to="/farmer/crop-bidding" replace /> },
           { path: "orders/:id", element: <FarmerOrderDetailPage /> },
-          ...FARMER_PAGES.map(([path, pageKey]) => page(path, pageKey)),
+          ...FARMER_PAGES.map(([path, pageKey]) => farmerPage(path, pageKey)),
         ],
       },
       {
@@ -88,7 +100,8 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="dashboard" replace /> },
           { path: "listings/:id", element: <BuyerListingDetailPage /> },
           { path: "marketplace/:id", element: <BuyerListingDetailPage /> },
-          ...BUYER_PAGES.map(([path, pageKey]) => page(path, pageKey)),
+          { path: "orders/:id", element: <BuyerOrderDetailPage /> },
+          ...BUYER_PAGES.map(([path, pageKey]) => buyerPage(path, pageKey)),
         ],
       },
     ],

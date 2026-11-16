@@ -1,6 +1,10 @@
 import { type FormEvent, type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { FARMER_CANCEL_REASONS } from "@bazarbeat/shared";
+import {
+  BUYER_CANCEL_REASONS,
+  FARMER_CANCEL_REASONS,
+  UserRole,
+} from "@bazarbeat/shared";
 
 import { Button } from "../../../components/ui/button.js";
 import { Select } from "../../../components/ui/select.js";
@@ -8,6 +12,7 @@ import { Select } from "../../../components/ui/select.js";
 export interface CancelOrderDialogProps {
   isOpen: boolean;
   orderId?: string;
+  role?: UserRole;
   isPending: boolean;
   error?: string | null;
   onCancel: (payload: { reason: string; note?: string }) => Promise<void> | void;
@@ -16,6 +21,7 @@ export interface CancelOrderDialogProps {
 
 export function CancelOrderDialog({
   isOpen,
+  role = UserRole.FARMER,
   isPending,
   error,
   onCancel,
@@ -23,7 +29,10 @@ export function CancelOrderDialog({
 }: CancelOrderDialogProps): ReactElement | null {
   const { t } = useTranslation();
 
-  const [reason, setReason] = useState<string>(FARMER_CANCEL_REASONS[0]);
+  const isBuyer = role === UserRole.BUYER;
+  const reasonsList = isBuyer ? BUYER_CANCEL_REASONS : FARMER_CANCEL_REASONS;
+
+  const [reason, setReason] = useState<string>(reasonsList[0]);
   const [note, setNote] = useState<string>("");
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -71,6 +80,22 @@ export function CancelOrderDialog({
           )}
         </p>
 
+        {/* Visible note for buyers that cancelling after winning is recorded */}
+        {isBuyer && (
+          <div
+            data-testid="buyer-cancel-reliability-warning"
+            className="mt-3 flex items-start gap-2 rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900"
+          >
+            <span className="font-bold text-amber-800" aria-hidden="true">⚠️</span>
+            <p>
+              {t(
+                "orders.cancel.buyerReliabilityWarning",
+                "Note: Cancelling an order after winning the auction is recorded on your profile and affects your buyer reliability score.",
+              )}
+            </p>
+          </div>
+        )}
+
         {(validationError || error) && (
           <div
             role="alert"
@@ -92,7 +117,7 @@ export function CancelOrderDialog({
               className="mt-1"
               required
             >
-              {FARMER_CANCEL_REASONS.map((r: string) => (
+              {reasonsList.map((r: string) => (
                 <option key={r} value={r}>
                   {t(`orders.cancelReason.${r}`, r)}
                 </option>
