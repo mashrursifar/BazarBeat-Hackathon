@@ -129,6 +129,7 @@ listingSchema.index({ status: 1, cropId: 1, "location.division": 1, "location.di
 listingSchema.index({ status: 1, "aiAssessment.grade": 1, endsAt: 1 });
 listingSchema.index({ status: 1, createdAt: -1 });
 listingSchema.index({ farmerId: 1, status: 1 });
+listingSchema.index({ farmerId: 1, status: 1, endsAt: 1 });
 
 export type ListingRecord = InferSchemaType<typeof listingSchema>;
 export const Listing = mongoose.models.Listing

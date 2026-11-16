@@ -127,7 +127,7 @@ Every movement quantity is positive; the movement type defines which bucket chan
 | closedAt                                                                                                                                   | Date?                                                       |                                                                  |
 | relistedFromId?                                                                                                                            | ref Listing                                                 | Originating unsold listing for relisted lots (gap 5)             |
 | relistedToListingId?                                                                                                                       | ref Listing                                                 | Relisted lot destination, enforces one relist per unsold listing (internal DB persistence only; excluded from public/farmer API responses) |
-| Indexes: (status, endsAt) for the closer; (status, cropId, location.division), (status, cropId, location.division, location.district), (status, aiAssessment.grade, endsAt), and (status, createdAt) for marketplace; (farmerId, status). `currentBidderId` and `relistedToListingId` remain internal to the database to preserve bidder anonymity and strict schema boundaries. |
+| Indexes: (status, endsAt) for the closer; (status, cropId, location.division), (status, cropId, location.division, location.district), (status, aiAssessment.grade, endsAt), and (status, createdAt) for marketplace; (farmerId, status), (farmerId, status, endsAt) for farmer dashboard endingSoon and active listing queries. `currentBidderId` and `relistedToListingId` remain internal to the database to preserve bidder anonymity and strict schema boundaries. |
 
 ### aiAssessment (embedded)
 
@@ -220,7 +220,7 @@ Domain events are typed in-process events defined in `@bazarbeat/shared` and emi
 | cancelledBy?                                                  | ref User                                                                      | Cancelling participant ID                                               |
 | cancelReason?, cancelNote?                                    | string?                                                                       | Cancellation audit details                                              |
 | stockReturn?                                                  | {decision RETURNED \| DISCARDED, decidedAt, note?}                            | Farmer stock return decision after cancellation (only once)             |
-| Indexes: (farmerId, createdAt), (buyerId, createdAt), status. |
+| Indexes: (farmerId, createdAt), (farmerId, status, createdAt desc) for farmer dashboard order aggregations and pending orders, (buyerId, createdAt), status. |
 
 ### Order Participant Privacy and Handover
 

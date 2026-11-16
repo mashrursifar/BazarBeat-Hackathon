@@ -147,6 +147,14 @@ export const farmerEndingSoonAuctionSchema = z.object({
 });
 export type FarmerEndingSoonAuction = z.infer<typeof farmerEndingSoonAuctionSchema>;
 
+export const farmerRightNowSchema = z.object({
+  activeAuctions: z.number().int().nonnegative(),
+  ordersNeedingAction: z.number().int().nonnegative(),
+  nearestDeadline: z.string().nullable().optional(),
+  kgListed: z.number().nonnegative(),
+});
+export type FarmerRightNow = z.infer<typeof farmerRightNowSchema>;
+
 export const farmerDashboardKpiSetSchema = z.object({
   totalSales: kpiMetricSchema, // integer poisha
   earnings: kpiMetricSchema, // integer poisha
@@ -154,14 +162,20 @@ export const farmerDashboardKpiSetSchema = z.object({
   pendingOrders: kpiMetricSchema, // count
   winRate: kpiMetricSchema, // percentage (0..100)
   topCrop: farmerTopCropSchema.nullable().optional(),
+  orders: kpiMetricSchema.optional(), // count of orders in period
+  pricePremium: kpiMetricSchema.optional(), // average price premium % vs AI estimate
+  kgListed: z.number().nonnegative().optional(),
+  nearestDeadline: z.string().nullable().optional(),
 });
 export type FarmerDashboardKpiSet = z.infer<typeof farmerDashboardKpiSetSchema>;
 
 export const farmerDashboardDataSchema = z.object({
   kpis: farmerDashboardKpiSetSchema,
+  rightNow: farmerRightNowSchema.optional(),
   salesTrend: z.array(farmerSalesTrendBucketSchema),
   earningsByCrop: z.array(farmerEarningsByCropSchema),
   endingSoonAuctions: z.array(farmerEndingSoonAuctionSchema).optional(),
+  endingSoon: z.array(farmerEndingSoonAuctionSchema).optional(),
 });
 export type FarmerDashboardData = z.infer<typeof farmerDashboardDataSchema>;
 
