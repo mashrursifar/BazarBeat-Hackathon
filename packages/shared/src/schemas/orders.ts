@@ -65,6 +65,7 @@ export type OrderPayment = z.infer<typeof orderPaymentSchema>;
 export const stockReturnDecisionSchema = z.enum([
   StockReturnDecision.RETURNED,
   StockReturnDecision.DISCARDED,
+  StockReturnDecision.DECLINED,
 ]);
 
 export type StockReturnDecisionType = z.infer<typeof stockReturnDecisionSchema>;
@@ -241,6 +242,9 @@ export const farmerOrderCardSchema = z.object({
   payment: orderPaymentSchema,
   fulfilment: orderFulfilmentSchema,
   buyer: counterpartySchema,
+  autoCancelDeadline: z.string().datetime().optional(),
+  autoCompleteDeadline: z.string().datetime().optional(),
+  deadline: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),
 });
@@ -263,6 +267,9 @@ export const buyerOrderCardSchema = z.object({
   payment: orderPaymentSchema,
   fulfilment: orderFulfilmentSchema,
   farmer: counterpartySchema,
+  autoCancelDeadline: z.string().datetime().optional(),
+  autoCompleteDeadline: z.string().datetime().optional(),
+  deadline: z.string().datetime().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime().optional(),
 });
@@ -274,6 +281,7 @@ export type BuyerOrderCard = z.infer<typeof buyerOrderCardSchema>;
  */
 export const farmerOrderDetailSchema = farmerOrderCardSchema.extend({
   timeline: z.array(orderTimelineEntrySchema),
+  statusHistory: z.array(orderTimelineEntrySchema).optional(),
   availableActions: z.array(orderActionSchema),
   dispute: orderDisputeSchema.optional(),
   listingSummary: listingSummaryInOrderSchema.optional(),
@@ -283,6 +291,7 @@ export type FarmerOrderDetail = z.infer<typeof farmerOrderDetailSchema>;
 
 export const buyerOrderDetailSchema = buyerOrderCardSchema.extend({
   timeline: z.array(orderTimelineEntrySchema),
+  statusHistory: z.array(orderTimelineEntrySchema).optional(),
   availableActions: z.array(orderActionSchema),
   dispute: orderDisputeSchema.optional(),
   listingSummary: listingSummaryInOrderSchema.optional(),
@@ -345,13 +354,69 @@ export const cancelOrderRequestSchema = z
 
 export type CancelOrderRequest = z.infer<typeof cancelOrderRequestSchema>;
 
+export const orderStatusGroupSchema = z.enum([
+  "active",
+  "completed",
+  "cancelled",
+  "disputed",
+  "ACTIVE",
+  "COMPLETED",
+  "CANCELLED",
+  "DISPUTED",
+]);
+
+export type OrderStatusGroup = z.infer<typeof orderStatusGroupSchema>;
+
 export const orderListQuerySchema = z.object({
   status: orderStatusSchema.optional(),
+  statusGroup: orderStatusGroupSchema.optional(),
+  group: orderStatusGroupSchema.optional(),
+  cropId: databaseIdSchema.optional(),
+  crop: z.string().trim().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(50).default(20),
 });
 
 export type OrderListQuery = z.infer<typeof orderListQuerySchema>;
+
+export const orderStatusCountsSchema = z.record(
+  z.string(),
+  z.number().int().nonnegative(),
+);
+
+export type OrderStatusCounts = z.infer<typeof orderStatusCountsSchema>;
+
+export const orderListMetaSchema = z.object({
+  page: z.number().int().positive(),
+  limit: z.number().int().positive(),
+  total: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+  serverTime: z.string().datetime(),
+  statusCounts: orderStatusCountsSchema.optional(),
+  counts: orderStatusCountsSchema.optional(),
+});
+
+export type OrderListMeta = z.infer<typeof orderListMetaSchema>;
+
+export const farmerOrderListResponseSchema = z.object({
+  data: z.array(farmerOrderCardSchema),
+  meta: orderListMetaSchema,
+});
+
+export type FarmerOrderListResponse = z.infer<typeof farmerOrderListResponseSchema>;
+
+export const buyerOrderListResponseSchema = z.object({
+  data: z.array(buyerOrderCardSchema),
+  meta: orderListMetaSchema,
+});
+
+export type BuyerOrderListResponse = z.infer<typeof buyerOrderListResponseSchema>;
 
 /**
  * Sales item and response schemas (GET /sales).

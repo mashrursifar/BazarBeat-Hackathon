@@ -31,7 +31,8 @@ type RawOrderDoc = OrderRecord & {
 
 export interface ActorContext {
   userId: string;
-  role: UserRole;
+  role: UserRole | "SYSTEM";
+  isSystem?: boolean;
 }
 
 /**
@@ -388,22 +389,16 @@ export class OrderTransitionService {
     request?: { note?: string },
   ): Promise<MinimalOrder> {
     const order = await fetchOrderOrThrow(orderId);
+    const isSystem =
+      actor.isSystem === true || actor.userId === "SYSTEM" || (actor.role as string) === "SYSTEM";
 
-    // Ownership check: actor must be the order's buyer
-    if (actor.role !== UserRole.BUYER || order.buyerId.toString() !== actor.userId) {
+    // Ownership check: actor must be the order's buyer unless SYSTEM
+    if (!isSystem && (actor.role !== UserRole.BUYER || order.buyerId.toString() !== actor.userId)) {
       throw new AppError(403, "FORBIDDEN", "Only the order buyer can complete this order");
     }
 
     // Guard against illegal state transition
-    if (
-      !canPerformOrderAction(actor.role, OrderAction.COMPLETE, {
-        status: order.status as OrderStatus,
-        payment: {
-          status: order.payment.status as PaymentStatus,
-          method: order.payment.method as PaymentMethod | undefined,
-        },
-      })
-    ) {
+    if (order.status !== OrderStatus.DELIVERED) {
       throw new AppError(
         409,
         OrderErrorCode.INVALID_TRANSITION,
@@ -411,16 +406,30 @@ export class OrderTransitionService {
       );
     }
 
+    if (isSystem && order.dispute) {
+      throw new AppError(
+        409,
+        OrderErrorCode.INVALID_TRANSITION,
+        "Cannot auto-complete order with active dispute",
+      );
+    }
+
     const clock = getClock();
     const now = clock.now();
 
-    // Atomic conditional update on DELIVERED status
+    // Atomic conditional update on DELIVERED status (and no dispute if system)
+    const filterConditions: Record<string, unknown> = {
+      _id: order._id,
+      status: OrderStatus.DELIVERED,
+    };
+    if (!isSystem) {
+      filterConditions.buyerId = actor.userId;
+    } else {
+      filterConditions.dispute = { $exists: false };
+    }
+
     const updated = (await Order.findOneAndUpdate(
-      {
-        _id: order._id,
-        buyerId: actor.userId,
-        status: OrderStatus.DELIVERED,
-      },
+      filterConditions,
       {
         $set: {
           status: OrderStatus.COMPLETED,
@@ -430,8 +439,8 @@ export class OrderTransitionService {
           statusHistory: {
             status: OrderStatus.COMPLETED,
             at: now,
-            byUserId: new ObjectId(actor.userId),
-            ...(request?.note ? { note: request.note } : {}),
+            ...(isSystem ? {} : { byUserId: new ObjectId(actor.userId) }),
+            ...(request?.note ? { note: request.note } : isSystem ? { note: "Auto-completed by system" } : {}),
           },
         },
       },
@@ -454,7 +463,7 @@ export class OrderTransitionService {
       farmerId: updated.farmerId.toString(),
       buyerId: updated.buyerId.toString(),
       completedAt: now.toISOString(),
-      ...(request?.note ? { note: request.note } : {}),
+      ...(request?.note ? { note: request.note } : isSystem ? { note: "Auto-completed by system" } : {}),
     });
 
     return mapOrderToMinimalOrder(updated);
@@ -475,30 +484,43 @@ export class OrderTransitionService {
     }
 
     const order = await fetchOrderOrThrow(orderId);
+    const isSystem =
+      actor.isSystem === true || actor.userId === "SYSTEM" || (actor.role as string) === "SYSTEM";
 
-    // Ownership check: actor must be farmer or buyer on this order
-    const isFarmer = actor.role === UserRole.FARMER && order.farmerId.toString() === actor.userId;
-    const isBuyer = actor.role === UserRole.BUYER && order.buyerId.toString() === actor.userId;
+    if (!isSystem) {
+      // Ownership check: actor must be farmer or buyer on this order
+      const isFarmer = actor.role === UserRole.FARMER && order.farmerId.toString() === actor.userId;
+      const isBuyer = actor.role === UserRole.BUYER && order.buyerId.toString() === actor.userId;
 
-    if (!isFarmer && !isBuyer) {
-      throw new AppError(403, "FORBIDDEN", "Only order participants can cancel this order");
-    }
+      if (!isFarmer && !isBuyer) {
+        throw new AppError(403, "FORBIDDEN", "Only order participants can cancel this order");
+      }
 
-    // Guard against illegal state transition
-    if (
-      !canPerformOrderAction(actor.role, OrderAction.CANCEL, {
-        status: order.status as OrderStatus,
-        payment: {
-          status: order.payment.status as PaymentStatus,
-          method: order.payment.method as PaymentMethod | undefined,
-        },
-      })
-    ) {
-      throw new AppError(
-        409,
-        OrderErrorCode.INVALID_TRANSITION,
-        `Cannot cancel order in status '${order.status}'`,
-      );
+      // Guard against illegal state transition
+      if (
+        !canPerformOrderAction(actor.role as UserRole, OrderAction.CANCEL, {
+          status: order.status as OrderStatus,
+          payment: {
+            status: order.payment.status as PaymentStatus,
+            method: order.payment.method as PaymentMethod | undefined,
+          },
+        })
+      ) {
+        throw new AppError(
+          409,
+          OrderErrorCode.INVALID_TRANSITION,
+          `Cannot cancel order in status '${order.status}'`,
+        );
+      }
+    } else {
+      // System auto-cancellation is permitted ONLY on PENDING orders past deadline
+      if (order.status !== OrderStatus.PENDING) {
+        throw new AppError(
+          409,
+          OrderErrorCode.INVALID_TRANSITION,
+          `Cannot auto-cancel order in status '${order.status}'`,
+        );
+      }
     }
 
     const clock = getClock();
@@ -512,7 +534,7 @@ export class OrderTransitionService {
     const setFields: Record<string, unknown> = {
       status: OrderStatus.CANCELLED,
       cancelledAt: now,
-      cancelledBy: new ObjectId(actor.userId),
+      ...(isSystem ? {} : { cancelledBy: new ObjectId(actor.userId) }),
       cancelReason: request.reason.trim(),
       ...(request.note ? { cancelNote: request.note.trim() } : {}),
     };
@@ -524,22 +546,26 @@ export class OrderTransitionService {
 
     // Atomic conditional update on the expected current status (PENDING or CONFIRMED)
     const expectedStatus = order.status;
+    const filterConditions: Record<string, unknown> = {
+      _id: order._id,
+      status: expectedStatus,
+    };
+    if (!isSystem) {
+      filterConditions.$or = [
+        { farmerId: actor.userId },
+        { buyerId: actor.userId },
+      ];
+    }
+
     const updated = (await Order.findOneAndUpdate(
-      {
-        _id: order._id,
-        status: expectedStatus,
-        $or: [
-          { farmerId: actor.userId },
-          { buyerId: actor.userId },
-        ],
-      },
+      filterConditions,
       {
         $set: setFields,
         $push: {
           statusHistory: {
             status: OrderStatus.CANCELLED,
             at: now,
-            byUserId: new ObjectId(actor.userId),
+            ...(isSystem ? {} : { byUserId: new ObjectId(actor.userId) }),
             note: `${request.reason.trim()}${request.note ? `: ${request.note.trim()}` : ""}`,
           },
         },

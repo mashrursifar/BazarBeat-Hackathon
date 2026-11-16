@@ -7,10 +7,12 @@ import {
   decideStockReturnRequestSchema,
   markDeliveredRequestSchema,
   markPaidRequestSchema,
+  orderListQuerySchema,
 } from "@bazarbeat/shared";
 
 import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { validateBody } from "../../shared/validate-body.js";
+import { validateQuery } from "../../shared/validate-query.js";
 import { requireAuthentication, requireRole } from "../auth/auth.middleware.js";
 import {
   cancelOrderController,
@@ -18,11 +20,19 @@ import {
   confirmOrderController,
   decideStockReturnController,
   getOrderByIdController,
+  listOrdersController,
   markOrderDeliveredController,
   markOrderPaidController,
 } from "./order.controller.js";
 
 export const ordersRouter = Router();
+
+ordersRouter.get(
+  "/",
+  requireAuthentication,
+  validateQuery(orderListQuerySchema),
+  listOrdersController,
+);
 
 ordersRouter.post(
   "/:id/confirm",

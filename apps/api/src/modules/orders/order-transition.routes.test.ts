@@ -211,16 +211,17 @@ describe("Order HTTP Routes (/api/v1/orders)", () => {
       expect(buyerReturn.status).toBe(403);
     });
 
-    it("enforces ownership: non-participant gets 403 on viewing or cancelling", async () => {
+    it("enforces ownership: non-participant gets 404 on viewing and 403 on cancelling", async () => {
       const order = await seedTestOrder();
 
-      // Other farmer cannot view
+      // Other farmer cannot view (404 NOT_FOUND to prevent leaking order existence per gap 7)
       const viewRes = await request(app)
         .get(`/api/v1/orders/${order._id}`)
         .set("Cookie", withAuthCookie("otherFarmer"));
-      expect(viewRes.status).toBe(403);
+      expect(viewRes.status).toBe(404);
+      expect(viewRes.body.error?.code).toBe("ORDER_NOT_FOUND");
 
-      // Other buyer cannot cancel
+      // Other buyer cannot cancel (403 FORBIDDEN)
       const cancelRes = await request(app)
         .post(`/api/v1/orders/${order._id}/cancel`)
         .set("Cookie", withAuthCookie("otherBuyer"))

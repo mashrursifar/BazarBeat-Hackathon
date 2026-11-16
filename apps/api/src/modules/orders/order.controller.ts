@@ -6,165 +6,126 @@ import {
   type DecideStockReturnRequest,
   type MarkDeliveredRequest,
   type MarkPaidRequest,
-  type MinimalOrder,
-  OrderErrorCode,
+  type OrderListQuery,
 } from "@bazarbeat/shared";
 
 import { getClock } from "../../shared/clock.js";
-import { AppError } from "../../shared/errors.js";
-import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
-import { mapOrderToMinimalOrder } from "./order.mapper.js";
-import { Order } from "./order.model.js";
 import { getOrderTransitionService } from "./order-transition.service.js";
+import { getOrderService } from "./order.service.js";
 
-export const confirmOrderController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  ConfirmOrderRequest,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  const clock = getClock();
-  const service = getOrderTransitionService();
-  const order = await service.confirm(
-    request.params.id,
+export const listOrdersController: RequestHandler = async (request, response): Promise<void> => {
+  const service = getOrderService();
+  const query = (response.locals.validatedQuery ?? request.query) as OrderListQuery;
+  const result = await service.listOrders(
     {
       userId: response.locals.currentUser.id,
       role: response.locals.currentUser.role,
     },
-    request.body,
+    query,
   );
-  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+  response.status(200).json(result);
 };
 
-export const markOrderPaidController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  MarkPaidRequest,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
+export const getOrderByIdController: RequestHandler = async (request, response): Promise<void> => {
   const clock = getClock();
-  const service = getOrderTransitionService();
-  const order = await service.markPaid(
-    request.params.id,
-    {
-      userId: response.locals.currentUser.id,
-      role: response.locals.currentUser.role,
-    },
-    request.body,
-  );
-  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
-};
-
-export const markOrderDeliveredController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  MarkDeliveredRequest,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  const clock = getClock();
-  const service = getOrderTransitionService();
-  const order = await service.markDelivered(
-    request.params.id,
-    {
-      userId: response.locals.currentUser.id,
-      role: response.locals.currentUser.role,
-    },
-    request.body,
-  );
-  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
-};
-
-export const completeOrderController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  CompleteOrderRequest,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  const clock = getClock();
-  const service = getOrderTransitionService();
-  const order = await service.complete(
-    request.params.id,
-    {
-      userId: response.locals.currentUser.id,
-      role: response.locals.currentUser.role,
-    },
-    request.body,
-  );
-  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
-};
-
-export const cancelOrderController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  CancelOrderRequest,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  const clock = getClock();
-  const service = getOrderTransitionService();
-  const order = await service.cancel(
-    request.params.id,
-    {
-      userId: response.locals.currentUser.id,
-      role: response.locals.currentUser.role,
-    },
-    request.body,
-  );
-  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
-};
-
-export const decideStockReturnController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  DecideStockReturnRequest,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  const clock = getClock();
-  const service = getOrderTransitionService();
-  const order = await service.decideStockReturn(
-    request.params.id,
-    {
-      userId: response.locals.currentUser.id,
-      role: response.locals.currentUser.role,
-    },
-    request.body,
-  );
-  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
-};
-
-export const getOrderByIdController: RequestHandler<
-  { id: string },
-  { data: MinimalOrder; meta: { serverTime: string } },
-  unknown,
-  unknown,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  const clock = getClock();
-  const { id } = request.params;
-  if (!/^[\da-f]{24}$/i.test(id)) {
-    throw new AppError(400, "VALIDATION_ERROR", "Invalid order ID");
-  }
-
-  const order = await Order.findById(id);
-  if (!order) {
-    throw new AppError(404, OrderErrorCode.ORDER_NOT_FOUND, "Order not found");
-  }
-
-  const currentUserId = response.locals.currentUser.id;
-  const isParticipant =
-    order.farmerId.toString() === currentUserId || order.buyerId.toString() === currentUserId;
-
-  if (!isParticipant) {
-    throw new AppError(403, "FORBIDDEN", "Only order participants can view this order");
-  }
-
+  const service = getOrderService();
+  const id = request.params.id as string;
+  const detail = await service.getOrderById(id, {
+    userId: response.locals.currentUser.id,
+    role: response.locals.currentUser.role,
+  });
   response.status(200).json({
-    data: mapOrderToMinimalOrder(order as unknown as Parameters<typeof mapOrderToMinimalOrder>[0]),
+    data: detail,
     meta: { serverTime: clock.iso() },
   });
+};
+
+export const confirmOrderController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.confirm(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as ConfirmOrderRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+};
+
+export const markOrderPaidController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.markPaid(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as MarkPaidRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+};
+
+export const markOrderDeliveredController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.markDelivered(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as MarkDeliveredRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+};
+
+export const completeOrderController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.complete(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as CompleteOrderRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+};
+
+export const cancelOrderController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.cancel(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as CancelOrderRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
+};
+
+export const decideStockReturnController: RequestHandler = async (request, response): Promise<void> => {
+  const clock = getClock();
+  const service = getOrderTransitionService();
+  const id = request.params.id as string;
+  const order = await service.decideStockReturn(
+    id,
+    {
+      userId: response.locals.currentUser.id,
+      role: response.locals.currentUser.role,
+    },
+    request.body as DecideStockReturnRequest,
+  );
+  response.status(200).json({ data: order, meta: { serverTime: clock.iso() } });
 };

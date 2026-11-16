@@ -219,6 +219,7 @@ export type OrderErrorCode = (typeof OrderErrorCode)[keyof typeof OrderErrorCode
 export const StockReturnDecision = {
   RETURNED: "RETURNED",
   DISCARDED: "DISCARDED",
+  DECLINED: "DECLINED",
 } as const;
 
 export type StockReturnDecision = (typeof StockReturnDecision)[keyof typeof StockReturnDecision];

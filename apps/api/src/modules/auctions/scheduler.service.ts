@@ -3,9 +3,20 @@ import { AuctionCloseTrigger, ListingStatus, getSchedulerIntervalMs } from "@baz
 import { env } from "../../config/env.js";
 import { type Clock, getClock } from "../../shared/clock.js";
 import { logger } from "../../shared/logger.js";
+import {
+  cancelDuePendingOrders,
+  completeDueDeliveredOrders,
+  runOrderTimerJobs,
+} from "../orders/order-timer.service.js";
 import { Listing } from "../listings/listing.model.js";
 import * as closingService from "./closing.service.js";
 import { type CloseAuctionOptions, type CloseAuctionResult } from "./closing.service.js";
+
+export {
+  cancelDuePendingOrders,
+  completeDueDeliveredOrders,
+  runOrderTimerJobs,
+};
 
 /**
  * Minimal Clock implementation wrapping a fixed Date instance.
@@ -179,8 +190,12 @@ export async function closeDueListings(
 export async function runStartupCatchUp(
   options?: CloseDueListingsOptions,
 ): Promise<CloseDueListingsSummary> {
-  logger.info("Running startup catch-up to close expired auctions while server was offline");
+  logger.info("Running startup catch-up to close expired auctions and orders while server was offline");
   const summary = await closeDueListings(options);
+  await runOrderTimerJobs({
+    clock: options?.clock,
+    isDemoMode: env.DEMO_MODE,
+  });
   logger.info(
     {
       found: summary.found,
@@ -194,7 +209,7 @@ export async function runStartupCatchUp(
 }
 
 /**
- * AuctionScheduler handles periodic ticks to close expired listings.
+ * AuctionScheduler handles periodic ticks to close expired listings and run order timers.
  * Includes a guard that skips a tick if the previous tick is still running.
  */
 export class AuctionScheduler {
@@ -229,6 +244,7 @@ export class AuctionScheduler {
 
   /**
    * Executes a single scheduler tick with concurrency guard.
+   * Closes due listings and runs order lifecycle timers.
    * If a previous tick is still running, skips this tick and logs a warning.
    */
   public async tick(): Promise<CloseDueListingsSummary | null> {
@@ -239,11 +255,19 @@ export class AuctionScheduler {
 
     this.isTickRunning = true;
     try {
-      return await closeDueListings({
+      const summary = await closeDueListings({
         clock: this.clock,
         platformFeeBps: this.platformFeeBps,
         closeAuctionFn: this.closeAuctionFn,
       });
+
+      // Task 6.5: Run order timers in the scheduler
+      await runOrderTimerJobs({
+        clock: this.clock,
+        isDemoMode: env.DEMO_MODE,
+      });
+
+      return summary;
     } finally {
       this.isTickRunning = false;
     }
