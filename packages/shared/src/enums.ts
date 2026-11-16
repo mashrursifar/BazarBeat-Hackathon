@@ -208,12 +208,20 @@ export const ORDER_DISPUTE_REASONS = [
 export const OrderErrorCode = {
   ORDER_NOT_FOUND: "ORDER_NOT_FOUND",
   INVALID_ORDER_TRANSITION: "INVALID_ORDER_TRANSITION",
+  INVALID_TRANSITION: "INVALID_TRANSITION",
   ORDER_ACTION_NOT_ALLOWED: "ORDER_ACTION_NOT_ALLOWED",
   ORDER_ALREADY_PAID: "ORDER_ALREADY_PAID",
   HANDOVER_TIME_INVALID: "HANDOVER_TIME_INVALID",
 } as const;
 
 export type OrderErrorCode = (typeof OrderErrorCode)[keyof typeof OrderErrorCode];
+
+export const StockReturnDecision = {
+  RETURNED: "RETURNED",
+  DISCARDED: "DISCARDED",
+} as const;
+
+export type StockReturnDecision = (typeof StockReturnDecision)[keyof typeof StockReturnDecision];
 
 export const AuctionCloseTrigger = {
   TIMER_EXPIRED: "TIMER_EXPIRED",
@@ -228,6 +236,11 @@ export const DomainEventName = {
   AUCTION_EXTENDED: "auction.extended",
   AUCTION_CLOSED: "auction.closed",
   ORDER_CREATED: "order.created",
+  ORDER_CONFIRMED: "order.confirmed",
+  ORDER_DELIVERED: "order.delivered",
+  ORDER_COMPLETED: "order.completed",
+  ORDER_CANCELLED: "order.cancelled",
+  PAYMENT_PAID: "payment.paid",
 } as const;
 
 export type DomainEventName = (typeof DomainEventName)[keyof typeof DomainEventName];

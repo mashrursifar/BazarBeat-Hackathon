@@ -96,7 +96,8 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 | POST | /orders/:id/mark-delivered | F | Farmer marks produce delivered/collected: optional `{ note?: string (max 200) }`. Transitions CONFIRMED → DELIVERED |
 | POST | /orders/:id/complete | B | Buyer confirms receipt of goods: optional `{ note?: string (max 200) }`. Transitions DELIVERED → COMPLETED |
 | POST | /orders/:id/dispute | B | Buyer raises quality/quantity dispute (P1): payload `{ reason: GRADE_MISMATCH \| WEIGHT_SHORTAGE \| DAMAGED_PRODUCE \| WRONG_CROP \| OTHER, note?: string (max 500) }`. Transitions DELIVERED → DISPUTED |
-| POST | /orders/:id/cancel | A | Allowed only in PENDING or CONFIRMED per order state machine: payload `{ reason: string, note?: string (max 200) }`. Transitions to CANCELLED; returns reserved sold stock to available via ledger RETURN movement |
+| POST | /orders/:id/cancel | A | Allowed only in PENDING or CONFIRMED per order state machine: payload `{ reason: string, note?: string (max 200) }`. Transitions to CANCELLED; simulates wallet refund if paid by wallet |
+| POST | /orders/:id/stock-return | F | Farmer decides stock return for cancelled order lot (once only): payload `{ decision: RETURNED \| DISCARDED, note?: string (max 200) }`. When RETURNED, applies ledger RETURN movement |
 
 ### Order Error Codes
 `ORDER_NOT_FOUND` 404 · `INVALID_ORDER_TRANSITION` 400 · `ORDER_ACTION_NOT_ALLOWED` 403 · `ORDER_ALREADY_PAID` 400 · `HANDOVER_TIME_INVALID` 400.

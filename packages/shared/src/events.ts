@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { DomainEventName, ListingStatus } from "./enums.js";
+import { DomainEventName, ListingStatus, PaymentMethod } from "./enums.js";
 
 /**
  * Payload for the 'bid.placed' domain event.
@@ -69,6 +69,86 @@ export const orderCreatedEventPayloadSchema = z.object({
 export type OrderCreatedEventPayload = z.infer<typeof orderCreatedEventPayloadSchema>;
 
 /**
+ * Payload for the 'order.confirmed' domain event.
+ * Emitted when a farmer confirms an order with handover details.
+ */
+export const orderConfirmedEventPayloadSchema = z.object({
+  orderId: z.string(),
+  listingId: z.string(),
+  farmerId: z.string(),
+  buyerId: z.string(),
+  confirmedAt: z.string().datetime(),
+  handoverAt: z.string().datetime().optional(),
+  note: z.string().optional(),
+});
+
+export type OrderConfirmedEventPayload = z.infer<typeof orderConfirmedEventPayloadSchema>;
+
+/**
+ * Payload for the 'order.delivered' domain event.
+ * Emitted when farmer marks an order as delivered/handed over.
+ */
+export const orderDeliveredEventPayloadSchema = z.object({
+  orderId: z.string(),
+  listingId: z.string(),
+  farmerId: z.string(),
+  buyerId: z.string(),
+  deliveredAt: z.string().datetime(),
+  note: z.string().optional(),
+});
+
+export type OrderDeliveredEventPayload = z.infer<typeof orderDeliveredEventPayloadSchema>;
+
+/**
+ * Payload for the 'order.completed' domain event.
+ * Emitted when buyer marks an order completed.
+ */
+export const orderCompletedEventPayloadSchema = z.object({
+  orderId: z.string(),
+  listingId: z.string(),
+  farmerId: z.string(),
+  buyerId: z.string(),
+  completedAt: z.string().datetime(),
+  note: z.string().optional(),
+});
+
+export type OrderCompletedEventPayload = z.infer<typeof orderCompletedEventPayloadSchema>;
+
+/**
+ * Payload for the 'order.cancelled' domain event.
+ * Emitted when an order in PENDING or CONFIRMED is cancelled.
+ */
+export const orderCancelledEventPayloadSchema = z.object({
+  orderId: z.string(),
+  listingId: z.string(),
+  farmerId: z.string(),
+  buyerId: z.string(),
+  cancelledBy: z.string(),
+  reason: z.string(),
+  note: z.string().optional(),
+  cancelledAt: z.string().datetime(),
+  refunded: z.boolean().optional(),
+});
+
+export type OrderCancelledEventPayload = z.infer<typeof orderCancelledEventPayloadSchema>;
+
+/**
+ * Payload for the 'payment.paid' domain event.
+ * Emitted when an order payment becomes PAID (wallet sim or COD upon delivery).
+ */
+export const paymentPaidEventPayloadSchema = z.object({
+  orderId: z.string(),
+  listingId: z.string(),
+  buyerId: z.string(),
+  farmerId: z.string(),
+  amount: z.number().int().positive(),
+  method: z.enum([PaymentMethod.COD, PaymentMethod.WALLET_SIM]),
+  paidAt: z.string().datetime(),
+});
+
+export type PaymentPaidEventPayload = z.infer<typeof paymentPaidEventPayloadSchema>;
+
+/**
  * Type-safe mapping between DomainEventName and its respective payload type.
  */
 export interface DomainEventPayloadMap {
@@ -76,6 +156,11 @@ export interface DomainEventPayloadMap {
   [DomainEventName.AUCTION_EXTENDED]: AuctionExtendedEventPayload;
   [DomainEventName.AUCTION_CLOSED]: AuctionClosedEventPayload;
   [DomainEventName.ORDER_CREATED]: OrderCreatedEventPayload;
+  [DomainEventName.ORDER_CONFIRMED]: OrderConfirmedEventPayload;
+  [DomainEventName.ORDER_DELIVERED]: OrderDeliveredEventPayload;
+  [DomainEventName.ORDER_COMPLETED]: OrderCompletedEventPayload;
+  [DomainEventName.ORDER_CANCELLED]: OrderCancelledEventPayload;
+  [DomainEventName.PAYMENT_PAID]: PaymentPaidEventPayload;
 }
 
 /**

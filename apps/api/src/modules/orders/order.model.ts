@@ -1,5 +1,13 @@
 import mongoose, { type InferSchemaType } from "mongoose";
-import { CropGrade, OrderStatus, PaymentMethod, PaymentStatus } from "@bazarbeat/shared";
+import {
+  CropGrade,
+  FulfilmentMethod,
+  ORDER_DISPUTE_REASONS,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  StockReturnDecision,
+} from "@bazarbeat/shared";
 
 const orderPaymentSchema = new mongoose.Schema(
   {
@@ -15,6 +23,93 @@ const orderPaymentSchema = new mongoose.Schema(
     },
     paidAt: {
       type: Date,
+    },
+    refundedAt: {
+      type: Date,
+    },
+  },
+  { _id: false },
+);
+
+const orderFulfilmentSchema = new mongoose.Schema(
+  {
+    method: {
+      type: String,
+      enum: Object.values(FulfilmentMethod),
+      default: FulfilmentMethod.PICKUP,
+      required: true,
+    },
+    note: {
+      type: String,
+      maxlength: 200,
+    },
+    handoverAt: {
+      type: Date,
+    },
+  },
+  { _id: false },
+);
+
+const orderDisputeSchema = new mongoose.Schema(
+  {
+    reason: {
+      type: String,
+      enum: ORDER_DISPUTE_REASONS,
+      required: true,
+    },
+    note: {
+      type: String,
+      maxlength: 500,
+    },
+    raisedAt: {
+      type: Date,
+      required: true,
+    },
+    resolution: {
+      type: String,
+      maxlength: 500,
+    },
+  },
+  { _id: false },
+);
+
+const orderTimelineEntrySchema = new mongoose.Schema(
+  {
+    status: {
+      type: String,
+      enum: Object.values(OrderStatus),
+      required: true,
+    },
+    at: {
+      type: Date,
+      required: true,
+    },
+    byUserId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    note: {
+      type: String,
+      maxlength: 200,
+    },
+  },
+  { _id: false },
+);
+
+const orderStockReturnSchema = new mongoose.Schema(
+  {
+    decision: {
+      type: String,
+      enum: Object.values(StockReturnDecision),
+      required: true,
+    },
+    decidedAt: {
+      type: Date,
+      required: true,
+    },
+    note: {
+      type: String,
+      maxlength: 200,
     },
   },
   { _id: false },
@@ -107,6 +202,45 @@ const orderSchema = new mongoose.Schema(
       type: orderPaymentSchema,
       default: (): { status: string } => ({ status: PaymentStatus.UNPAID }),
       required: true,
+    },
+    fulfilment: {
+      type: orderFulfilmentSchema,
+      default: (): { method: string } => ({ method: FulfilmentMethod.PICKUP }),
+      required: true,
+    },
+    dispute: {
+      type: orderDisputeSchema,
+    },
+    statusHistory: {
+      type: [orderTimelineEntrySchema],
+      default: (): [] => [],
+    },
+    confirmedAt: {
+      type: Date,
+    },
+    deliveredAt: {
+      type: Date,
+    },
+    completedAt: {
+      type: Date,
+    },
+    cancelledAt: {
+      type: Date,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    cancelReason: {
+      type: String,
+      maxlength: 100,
+    },
+    cancelNote: {
+      type: String,
+      maxlength: 200,
+    },
+    stockReturn: {
+      type: orderStockReturnSchema,
     },
   },
   {

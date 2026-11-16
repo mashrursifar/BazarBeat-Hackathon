@@ -1,10 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { DomainEventName, ListingStatus } from "./enums.js";
+import { DomainEventName, ListingStatus, PaymentMethod } from "./enums.js";
 import {
   auctionClosedEventPayloadSchema,
   auctionExtendedEventPayloadSchema,
   bidPlacedEventPayloadSchema,
+  orderCancelledEventPayloadSchema,
+  orderCompletedEventPayloadSchema,
+  orderConfirmedEventPayloadSchema,
   orderCreatedEventPayloadSchema,
+  orderDeliveredEventPayloadSchema,
+  paymentPaidEventPayloadSchema,
 } from "./events.js";
 
 describe("Domain event schemas", () => {
@@ -77,6 +82,76 @@ describe("Domain event schemas", () => {
     expect(DomainEventName.AUCTION_EXTENDED).toBe("auction.extended");
     expect(DomainEventName.AUCTION_CLOSED).toBe("auction.closed");
     expect(DomainEventName.ORDER_CREATED).toBe("order.created");
+    expect(DomainEventName.ORDER_CONFIRMED).toBe("order.confirmed");
+    expect(DomainEventName.ORDER_DELIVERED).toBe("order.delivered");
+    expect(DomainEventName.ORDER_COMPLETED).toBe("order.completed");
+    expect(DomainEventName.ORDER_CANCELLED).toBe("order.cancelled");
+    expect(DomainEventName.PAYMENT_PAID).toBe("payment.paid");
+  });
+
+  it("validates order.confirmed payload", () => {
+    const payload = {
+      orderId: "order-1",
+      listingId: "listing-1",
+      farmerId: "farmer-1",
+      buyerId: "buyer-1",
+      confirmedAt: "2026-11-16T12:00:00.000Z",
+      handoverAt: "2026-11-17T10:00:00.000Z",
+      note: "Pickup at depot",
+    };
+    expect(orderConfirmedEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it("validates order.delivered payload", () => {
+    const payload = {
+      orderId: "order-1",
+      listingId: "listing-1",
+      farmerId: "farmer-1",
+      buyerId: "buyer-1",
+      deliveredAt: "2026-11-17T11:00:00.000Z",
+      note: "Handed over 50kg produce",
+    };
+    expect(orderDeliveredEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it("validates order.completed payload", () => {
+    const payload = {
+      orderId: "order-1",
+      listingId: "listing-1",
+      farmerId: "farmer-1",
+      buyerId: "buyer-1",
+      completedAt: "2026-11-17T12:00:00.000Z",
+      note: "Confirmed quality and receipt",
+    };
+    expect(orderCompletedEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it("validates order.cancelled payload", () => {
+    const payload = {
+      orderId: "order-1",
+      listingId: "listing-1",
+      farmerId: "farmer-1",
+      buyerId: "buyer-1",
+      cancelledBy: "buyer-1",
+      reason: "BUYER_CANNOT_COLLECT",
+      note: "Transport issue",
+      cancelledAt: "2026-11-16T13:00:00.000Z",
+      refunded: true,
+    };
+    expect(orderCancelledEventPayloadSchema.safeParse(payload).success).toBe(true);
+  });
+
+  it("validates payment.paid payload", () => {
+    const payload = {
+      orderId: "order-1",
+      listingId: "listing-1",
+      buyerId: "buyer-1",
+      farmerId: "farmer-1",
+      amount: 400000,
+      method: PaymentMethod.WALLET_SIM,
+      paidAt: "2026-11-16T12:30:00.000Z",
+    };
+    expect(paymentPaidEventPayloadSchema.safeParse(payload).success).toBe(true);
   });
 });
 

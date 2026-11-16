@@ -54,6 +54,9 @@ function validateMovement(command: MovementCommand): void {
   }
   ensureObjectId(command.farmerId);
   ensureObjectId(command.cropId);
+  if (command.type === "RETURN" && !command.orderId) {
+    throw new AppError(400, "VALIDATION_ERROR", "RETURN movement must reference an order ID");
+  }
   if (command.listingId !== undefined) ensureObjectId(command.listingId);
   if (command.orderId !== undefined) ensureObjectId(command.orderId);
   if (command.note !== undefined && command.note.length > 200) {
@@ -302,4 +305,9 @@ export async function markStockSold(input: MovementInput & { orderId: string }):
 /** Adds confirmed returned unsold goods back to available stock as an ADJUST movement. */
 export async function adjustStock(input: MovementInput): Promise<void> {
   await applyMovement({ ...input, type: "ADJUST" });
+}
+
+/** Returns sold stock back to available stock after an eligible order cancellation. */
+export async function returnStock(input: MovementInput & { orderId: string }): Promise<void> {
+  await applyMovement({ ...input, type: "RETURN" });
 }

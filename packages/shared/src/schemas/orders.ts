@@ -7,6 +7,7 @@ import {
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
+  StockReturnDecision,
   UserRole,
 } from "../enums.js";
 import { databaseIdSchema, inventoryQuantityKgSchema } from "./catalog-inventory.js";
@@ -56,9 +57,34 @@ export const orderPaymentSchema = z.object({
   status: paymentStatusSchema,
   method: paymentMethodSchema.optional(),
   paidAt: z.string().datetime().optional(),
+  refundedAt: z.string().datetime().optional(),
 });
 
 export type OrderPayment = z.infer<typeof orderPaymentSchema>;
+
+export const stockReturnDecisionSchema = z.enum([
+  StockReturnDecision.RETURNED,
+  StockReturnDecision.DISCARDED,
+]);
+
+export type StockReturnDecisionType = z.infer<typeof stockReturnDecisionSchema>;
+
+export const orderStockReturnSchema = z.object({
+  decision: stockReturnDecisionSchema,
+  decidedAt: z.string().datetime(),
+  note: z.string().trim().max(200).optional(),
+});
+
+export type OrderStockReturn = z.infer<typeof orderStockReturnSchema>;
+
+export const decideStockReturnRequestSchema = z
+  .object({
+    decision: stockReturnDecisionSchema,
+    note: z.string().trim().max(200).optional(),
+  })
+  .strict();
+
+export type DecideStockReturnRequest = z.infer<typeof decideStockReturnRequestSchema>;
 
 /**
  * Fulfilment details for pickup/handover.
@@ -164,6 +190,14 @@ export const minimalOrderSchema = z
     fulfilment: orderFulfilmentSchema.optional(),
     dispute: orderDisputeSchema.optional(),
     statusHistory: z.array(orderTimelineEntrySchema).optional(),
+    confirmedAt: z.string().datetime().optional(),
+    deliveredAt: z.string().datetime().optional(),
+    completedAt: z.string().datetime().optional(),
+    cancelledAt: z.string().datetime().optional(),
+    cancelledBy: databaseIdSchema.optional(),
+    cancelReason: z.string().optional(),
+    cancelNote: z.string().optional(),
+    stockReturn: orderStockReturnSchema.optional(),
     createdAt: z.string().datetime(),
     updatedAt: z.string().datetime().optional(),
   })

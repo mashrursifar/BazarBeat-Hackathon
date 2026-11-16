@@ -1,0 +1,84 @@
+import { Router } from "express";
+import {
+  UserRole,
+  cancelOrderRequestSchema,
+  completeOrderRequestSchema,
+  confirmOrderRequestSchema,
+  decideStockReturnRequestSchema,
+  markDeliveredRequestSchema,
+  markPaidRequestSchema,
+} from "@bazarbeat/shared";
+
+import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
+import { validateBody } from "../../shared/validate-body.js";
+import { requireAuthentication, requireRole } from "../auth/auth.middleware.js";
+import {
+  cancelOrderController,
+  completeOrderController,
+  confirmOrderController,
+  decideStockReturnController,
+  getOrderByIdController,
+  markOrderDeliveredController,
+  markOrderPaidController,
+} from "./order.controller.js";
+
+export const ordersRouter = Router();
+
+ordersRouter.post(
+  "/:id/confirm",
+  requireAuthentication,
+  requireRole(UserRole.FARMER),
+  requireCsrfProtection,
+  validateBody(confirmOrderRequestSchema),
+  confirmOrderController,
+);
+
+ordersRouter.post(
+  "/:id/mark-paid",
+  requireAuthentication,
+  requireRole(UserRole.BUYER),
+  requireCsrfProtection,
+  validateBody(markPaidRequestSchema),
+  markOrderPaidController,
+);
+
+ordersRouter.post(
+  "/:id/mark-delivered",
+  requireAuthentication,
+  requireRole(UserRole.FARMER),
+  requireCsrfProtection,
+  validateBody(markDeliveredRequestSchema),
+  markOrderDeliveredController,
+);
+
+ordersRouter.post(
+  "/:id/complete",
+  requireAuthentication,
+  requireRole(UserRole.BUYER),
+  requireCsrfProtection,
+  validateBody(completeOrderRequestSchema),
+  completeOrderController,
+);
+
+ordersRouter.post(
+  "/:id/cancel",
+  requireAuthentication,
+  requireCsrfProtection,
+  validateBody(cancelOrderRequestSchema),
+  cancelOrderController,
+);
+
+ordersRouter.post(
+  "/:id/stock-return",
+  requireAuthentication,
+  requireRole(UserRole.FARMER),
+  requireCsrfProtection,
+  validateBody(decideStockReturnRequestSchema),
+  decideStockReturnController,
+);
+
+ordersRouter.get(
+  "/:id",
+  requireAuthentication,
+  getOrderByIdController,
+);

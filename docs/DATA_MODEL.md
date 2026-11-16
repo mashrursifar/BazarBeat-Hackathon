@@ -100,7 +100,6 @@ Every movement quantity is positive; the movement type defines which bucket chan
 | SELL    |            — | −quantity | +quantity | Listed stock completed as a sale                           |
 | ADJUST  |    ±quantity |         — |         — | Manual stock reconciliation                                |
 | RETURN  |    +quantity |         — | −quantity | Cancelled order stock returned from sold to available      |
-| ADJUST  |    +quantity |         — |         — | Unsold goods returned after an eligible order cancellation |
 
 ## Listing
 
@@ -213,10 +212,14 @@ Domain events are typed in-process events defined in `@bazarbeat/shared` and emi
 | platformFee                                                   | int poisha                                                                                 | From `PLATFORM_FEE_BPS` |
 | farmerNet                                                     | int poisha                                                                                 | subtotal − fee          |
 | status                                                        | enum PENDING \| CONFIRMED \| DELIVERED \| COMPLETED \| CANCELLED \| DISPUTED | State machine (IN_TRANSIT removed; fulfilment is pickup/buyer-arranged) |
-| payment                                                       | {method COD \| WALLET_SIM, status UNPAID \| PAID \| REFUNDED, paidAt?}       | Simulated                                                               |
+| payment                                                       | {method COD \| WALLET_SIM, status UNPAID \| PAID \| REFUNDED, paidAt?, refundedAt?}       | Simulated                                                               |
 | fulfilment                                                    | {method PICKUP \| BUYER_ARRANGED, note?, handoverAt?}                         | Handover time 0–72h ahead, note ≤ 200 chars                             |
 | dispute                                                       | {reason, note?, raisedAt, resolution?}?                                       | P1 dispute reasons (GRADE_MISMATCH, WEIGHT_SHORTAGE, etc.)              |
 | statusHistory                                                 | array of {status, at, byUserId, note?}                                        | Audit timeline                                                          |
+| confirmedAt?, deliveredAt?, completedAt?, cancelledAt?         | Date?                                                                         | Transition timestamps                                                   |
+| cancelledBy?                                                  | ref User                                                                      | Cancelling participant ID                                               |
+| cancelReason?, cancelNote?                                    | string?                                                                       | Cancellation audit details                                              |
+| stockReturn?                                                  | {decision RETURNED \| DISCARDED, decidedAt, note?}                            | Farmer stock return decision after cancellation (only once)             |
 | Indexes: (farmerId, createdAt), (buyerId, createdAt), status. |
 
 ### Order Participant Privacy and Handover
