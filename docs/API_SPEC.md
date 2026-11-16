@@ -29,8 +29,9 @@ State-changing requests require the `X-CSRF-Protection: 1` header.
 ## Catalog and market data
 
 | GET | /crops | P | Active crops with id, slug, English/Bangla names, unit, lot limits, shelf life, grade guide, minimum increment (integer poisha/kg), and image URL |
-| GET | /market-prices?cropId&division&range | A | Price history and trend |
-| GET | /market-prices/national-summary | B | Avg listing price per crop per division |
+| GET | /market-prices | A | Price history and trend: query `?cropId&division&range=7d|30d|90d|1y|all` (default `30d`). Returns `{ data: MarketHistoryData, meta: { serverTime, cropId, division, range } }` with `currentAvgPricePerKg`, `minPricePerKg`, `maxPricePerKg`, `trend` (`UP`, `DOWN`, `FLAT`), `changePercent`, and chronologically filled `series` |
+| GET | /market-prices/summary | A | Market summary across crops: query `?cropId&division`. Returns `{ data: { items: MarketSummaryItem[] }, meta: { serverTime, totalCrops } }` with benchmark prices, 7d change %, and active listing counts |
+| GET | /market-prices/national-summary | B | Avg listing and completed sale prices per crop per division: query `?cropId`. Returns `{ data: { divisions: NationalSummaryDivisionItem[] }, meta: { serverTime, totalDivisions } }` |
 
 ## AI
 
@@ -106,8 +107,8 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 
 | Method | Path | Role | Purpose & Contract |
 | --- | --- | --- | --- |
-| GET | /dashboards/farmer | F | KPIs + series: sales trend, earnings by crop, win rate, active auctions |
-| GET | /dashboards/buyer | B | KPIs + series: spend trend, purchases by crop, avg price vs market, win rate |
+| GET | /dashboards/farmer | F | Farmer dashboard analytics: query `?range=7d|30d|90d|1y|all` (default `30d`). Returns `{ data: FarmerDashboardData, meta: { serverTime, range, granularity, timezone: "Asia/Dhaka" } }`. KPI metrics (`totalSales`, `earnings`, `activeAuctions`, `pendingOrders`, `winRate`) carry `{ value, previous?, changePercent? }` where `changePercent` is null if `previous === 0`. Returns `salesTrend` filled with zero buckets, `earningsByCrop`, `topCrop`, and `endingSoonAuctions` |
+| GET | /dashboards/buyer | B | Buyer dashboard analytics: query `?range=7d|30d|90d|1y|all` (default `30d`). Returns `{ data: BuyerDashboardData, meta: { serverTime, range, granularity, timezone: "Asia/Dhaka" } }`. KPI metrics (`totalSpend`, `activeBids`, `winRate`, `avgPriceVsMarket`, `pendingOrders`) carry `{ value, previous?, changePercent? }` where `changePercent` is null if `previous === 0`. Returns `spendTrend` filled with zero buckets, `purchasesByCrop`, and `activeBidsList` |
 | GET | /earnings | F | Farmer earnings summary: gross, fees, settled net (excluding CANCELLED/DISPUTED), expected net, per-crop breakdown with average premium, last 6 months series grouped in Asia/Dhaka time, average premium versus AI expected price overall, and current fee rate (200 bps / 2.0%). Returns `{ data: EarningsSummary, meta: { serverTime } }` |
 | GET | /sales | F | Paginated completed sales for farmer: `?cropId&crop&from&to&startDate&endDate&buyerDivision&division&page=1&limit=20` (max 50). Returns `{ data: SaleItem[], meta: { page, limit, total, totalPages, serverTime, totals: { totalQuantityKg, totalSubtotal, totalPlatformFee, totalFarmerNet } } }` with price premium per sale |
 
