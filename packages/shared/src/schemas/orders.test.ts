@@ -358,6 +358,9 @@ describe("Sales and Earnings schemas", () => {
       paymentStatus: PaymentStatus.PAID,
       paymentMethod: PaymentMethod.WALLET_SIM,
       buyerName: "Karim Traders",
+      buyerRegion: "Dhaka",
+      buyerDivision: "Dhaka",
+      date: "2026-11-16T10:00:00.000Z",
       soldAt: "2026-11-15T10:00:00.000Z",
       completedAt: "2026-11-16T10:00:00.000Z",
     };
@@ -371,15 +374,29 @@ describe("Sales and Earnings schemas", () => {
         total: 1,
         totalPages: 1,
         serverTime: "2026-11-16T12:00:00.000Z",
+        totals: {
+          totalQuantityKg: 20.0,
+          totalSubtotal: 300000,
+          totalPlatformFee: 6000,
+          totalFarmerNet: 294000,
+        },
       },
     };
     expect(salesResponseSchema.safeParse(salesResponse).success).toBe(true);
-    expect(salesQuerySchema.parse({ page: "1", limit: "10" })).toEqual({ page: 1, limit: 10 });
+    expect(salesQuerySchema.parse({ page: "1", limit: "10", buyerDivision: "Dhaka" })).toEqual({
+      page: 1,
+      limit: 10,
+      buyerDivision: "Dhaka",
+    });
   });
 
   it("validates earningsDataSchema and earningsResponseSchema", () => {
     const earningsData = {
       summary: {
+        gross: 600000,
+        fees: 12000,
+        settledNet: 588000,
+        expectedNet: 0,
         totalEarnings: 588000,
         totalSubtotal: 600000,
         totalPlatformFees: 12000,
@@ -387,6 +404,8 @@ describe("Sales and Earnings schemas", () => {
         pendingPayout: 0,
         paidPayout: 588000,
         averagePricePremiumPercent: 8.5,
+        feeRateBps: 200,
+        feeRatePercent: 2.0,
       },
       byCrop: [
         {
@@ -397,6 +416,7 @@ describe("Sales and Earnings schemas", () => {
           totalEarnings: 588000,
           averagePricePerKg: 15000,
           orderCount: 2,
+          averagePremiumPercent: 8.5,
         },
       ],
       recentPayouts: [
@@ -409,6 +429,22 @@ describe("Sales and Earnings schemas", () => {
           date: "2026-11-16T10:00:00.000Z",
         },
       ],
+      monthlySeries: [
+        {
+          month: "2026-11",
+          year: 2026,
+          monthIndex: 11,
+          gross: 600000,
+          fees: 12000,
+          net: 588000,
+          orderCount: 2,
+          totalKg: 40.0,
+        },
+      ],
+      feeRate: {
+        bps: 200,
+        percent: 2.0,
+      },
     };
     expect(earningsCropSummarySchema.safeParse(earningsData.byCrop[0]).success).toBe(true);
     expect(earningsRecentPayoutSchema.safeParse(earningsData.recentPayouts[0]).success).toBe(true);

@@ -223,6 +223,15 @@ export function mapOrderToFarmerOrderCard(
       UserRole.BUYER,
       order.buyerId.toString(),
     ),
+    ...(order.stockReturn
+      ? {
+          stockReturn: {
+            decision: order.stockReturn.decision as NonNullable<FarmerOrderCard["stockReturn"]>["decision"],
+            decidedAt: toIsoString(order.stockReturn.decidedAt)!,
+            ...(order.stockReturn.note ? { note: order.stockReturn.note } : {}),
+          },
+        }
+      : {}),
     ...deadlines,
     createdAt: toIsoString(order.createdAt)!,
     ...(order.updatedAt ? { updatedAt: toIsoString(order.updatedAt) } : {}),

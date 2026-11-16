@@ -108,8 +108,8 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 | --- | --- | --- | --- |
 | GET | /dashboards/farmer | F | KPIs + series: sales trend, earnings by crop, win rate, active auctions |
 | GET | /dashboards/buyer | B | KPIs + series: spend trend, purchases by crop, avg price vs market, win rate |
-| GET | /earnings | F | Farmer earnings summary: total earnings, total subtotal, platform fees, order counts, pending/paid payouts, average price premium percentage (`calculatePricePremium`), breakdowns `byCrop`, and `recentPayouts`. Returns `{ data: EarningsData, meta: { serverTime } }` |
-| GET | /sales | F | Paginated completed sales for farmer: `?cropId&page=1&limit=20` (max 50). Returns `{ data: SaleItem[], meta: { page, limit, total, totalPages, serverTime } }` with price premium per sale |
+| GET | /earnings | F | Farmer earnings summary: gross, fees, settled net (excluding CANCELLED/DISPUTED), expected net, per-crop breakdown with average premium, last 6 months series grouped in Asia/Dhaka time, average premium versus AI expected price overall, and current fee rate (200 bps / 2.0%). Returns `{ data: EarningsSummary, meta: { serverTime } }` |
+| GET | /sales | F | Paginated completed sales for farmer: `?cropId&crop&from&to&startDate&endDate&buyerDivision&division&page=1&limit=20` (max 50). Returns `{ data: SaleItem[], meta: { page, limit, total, totalPages, serverTime, totals: { totalQuantityKg, totalSubtotal, totalPlatformFee, totalFarmerNet } } }` with price premium per sale |
 
 ## Notifications
 

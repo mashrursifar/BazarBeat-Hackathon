@@ -242,6 +242,7 @@ export const farmerOrderCardSchema = z.object({
   payment: orderPaymentSchema,
   fulfilment: orderFulfilmentSchema,
   buyer: counterpartySchema,
+  stockReturn: orderStockReturnSchema.optional(),
   autoCancelDeadline: z.string().datetime().optional(),
   autoCompleteDeadline: z.string().datetime().optional(),
   deadline: z.string().datetime().optional(),
@@ -439,6 +440,9 @@ export const saleItemSchema = z.object({
   paymentStatus: paymentStatusSchema,
   paymentMethod: paymentMethodSchema.optional(),
   buyerName: z.string(),
+  buyerRegion: z.string().optional(),
+  buyerDivision: z.string().optional(),
+  date: z.string().datetime().optional(),
   soldAt: z.string().datetime(),
   completedAt: z.string().datetime().optional(),
 });
@@ -447,11 +451,33 @@ export type SaleItem = z.infer<typeof saleItemSchema>;
 
 export const salesQuerySchema = z.object({
   cropId: databaseIdSchema.optional(),
+  crop: z.string().trim().optional(),
+  from: z.string().optional(),
+  to: z.string().optional(),
+  startDate: z.string().optional(),
+  endDate: z.string().optional(),
+  dateFrom: z.string().optional(),
+  dateTo: z.string().optional(),
+  buyerDivision: z.string().optional(),
+  division: z.string().optional(),
   page: z.coerce.number().int().positive().default(1),
   limit: z.coerce.number().int().positive().max(50).default(20),
 });
 
 export type SalesQuery = z.infer<typeof salesQuerySchema>;
+
+export const salesTotalsSchema = z.object({
+  totalQuantityKg: z.number().nonnegative(),
+  totalSubtotal: z.number().int().nonnegative(),
+  totalPlatformFee: z.number().int().nonnegative(),
+  totalFarmerNet: z.number().int().nonnegative(),
+  totalGross: z.number().int().nonnegative().optional(),
+  totalFees: z.number().int().nonnegative().optional(),
+  totalNet: z.number().int().nonnegative().optional(),
+  count: z.number().int().nonnegative().optional(),
+});
+
+export type SalesTotals = z.infer<typeof salesTotalsSchema>;
 
 export const salesResponseSchema = z.object({
   data: z.array(saleItemSchema),
@@ -461,10 +487,27 @@ export const salesResponseSchema = z.object({
     total: z.number().int().nonnegative(),
     totalPages: z.number().int().nonnegative(),
     serverTime: z.string().datetime(),
+    totals: salesTotalsSchema.optional(),
   }),
 });
 
 export type SalesResponse = z.infer<typeof salesResponseSchema>;
+
+/**
+ * Monthly series item for earnings aggregation (Asia/Dhaka time).
+ */
+export const earningsMonthlySeriesItemSchema = z.object({
+  month: z.string(), // e.g. "2026-06"
+  year: z.number().int(),
+  monthIndex: z.number().int().min(1).max(12),
+  gross: z.number().int().nonnegative(),
+  fees: z.number().int().nonnegative(),
+  net: z.number().int().nonnegative(),
+  orderCount: z.number().int().nonnegative(),
+  totalKg: z.number().nonnegative(),
+});
+
+export type EarningsMonthlySeriesItem = z.infer<typeof earningsMonthlySeriesItemSchema>;
 
 /**
  * Earnings response schemas (GET /earnings).
@@ -477,6 +520,8 @@ export const earningsCropSummarySchema = z.object({
   totalEarnings: z.number().int().nonnegative(),
   averagePricePerKg: z.number().int().nonnegative(),
   orderCount: z.number().int().nonnegative(),
+  averagePricePremiumPercent: z.number().optional(),
+  averagePremiumPercent: z.number().optional(),
 });
 
 export type EarningsCropSummary = z.infer<typeof earningsCropSummarySchema>;
@@ -492,18 +537,41 @@ export const earningsRecentPayoutSchema = z.object({
 
 export type EarningsRecentPayout = z.infer<typeof earningsRecentPayoutSchema>;
 
+export const earningsSummarySchema = z.object({
+  gross: z.number().int().nonnegative().optional(),
+  fees: z.number().int().nonnegative().optional(),
+  settledNet: z.number().int().nonnegative().optional(),
+  expectedNet: z.number().int().nonnegative().optional(),
+  activeNet: z.number().int().nonnegative().optional(),
+  totalExpectedNet: z.number().int().nonnegative().optional(),
+  feeRateBps: z.number().int().nonnegative().optional(),
+  feeRatePercent: z.number().nonnegative().optional(),
+  totalEarnings: z.number().int().nonnegative(),
+  totalSubtotal: z.number().int().nonnegative(),
+  totalPlatformFees: z.number().int().nonnegative(),
+  completedOrdersCount: z.number().int().nonnegative(),
+  pendingPayout: z.number().int().nonnegative(),
+  paidPayout: z.number().int().nonnegative(),
+  averagePricePremiumPercent: z.number(),
+  averagePremiumPercent: z.number().optional(),
+});
+
+export type EarningsSummary = z.infer<typeof earningsSummarySchema>;
+
+export const earningsFeeRateSchema = z.object({
+  bps: z.number().int().nonnegative(),
+  percent: z.number().nonnegative(),
+});
+
+export type EarningsFeeRate = z.infer<typeof earningsFeeRateSchema>;
+
 export const earningsDataSchema = z.object({
-  summary: z.object({
-    totalEarnings: z.number().int().nonnegative(),
-    totalSubtotal: z.number().int().nonnegative(),
-    totalPlatformFees: z.number().int().nonnegative(),
-    completedOrdersCount: z.number().int().nonnegative(),
-    pendingPayout: z.number().int().nonnegative(),
-    paidPayout: z.number().int().nonnegative(),
-    averagePricePremiumPercent: z.number(),
-  }),
+  summary: earningsSummarySchema,
   byCrop: z.array(earningsCropSummarySchema),
   recentPayouts: z.array(earningsRecentPayoutSchema),
+  monthlySeries: z.array(earningsMonthlySeriesItemSchema).optional(),
+  last6MonthsSeries: z.array(earningsMonthlySeriesItemSchema).optional(),
+  feeRate: earningsFeeRateSchema.optional(),
 });
 
 export type EarningsData = z.infer<typeof earningsDataSchema>;
