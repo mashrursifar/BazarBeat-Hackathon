@@ -30,6 +30,11 @@ import { addStock } from "../modules/inventory/inventory.service.js";
 import { assessCropQuality, getGradingProvider } from "../modules/ai/ai.service.js";
 import type { MockGradingProvider } from "../modules/ai/mock-grading.provider.js";
 import { AiAssessmentRecord } from "../modules/ai/ai-assessment-record.model.js";
+import { Order } from "../modules/orders/order.model.js";
+import {
+  type SeedDevHistoryResult,
+  seedDevHistory,
+} from "./dev-history-seeder.js";
 
 const BCRYPT_COST = 10;
 
@@ -37,6 +42,7 @@ export interface SeedDevListingsOptions {
   silent?: boolean;
   sampleDir?: string;
   nodeEnv?: string;
+  history?: boolean;
 }
 
 export interface SeedDevListingsResult {
@@ -45,6 +51,7 @@ export interface SeedDevListingsResult {
   listings: FarmerListing[];
   bidsCount: number;
   reconciliationPassed: boolean;
+  history?: SeedDevHistoryResult;
 }
 
 export interface UserSeedDefinition {
@@ -564,6 +571,10 @@ export async function verifyFarmerCropLedger(
         totals.listedKg -= quantity;
         totals.soldKg += quantity;
       }
+      if (movement.type === "RETURN") {
+        totals.availableKg += quantity;
+        totals.soldKg -= quantity;
+      }
       return totals;
     },
     { availableKg: 0, listedKg: 0, soldKg: 0 },
@@ -654,6 +665,7 @@ export async function seedDevListings(
   }
 
   const farmerIds = farmers.map((f) => f.id);
+  const buyerIds = buyers.map((b) => b.id);
 
   // 3. Cleanup previous dev-listing seed data for repeatability
   const existingListings = await Listing.find({ farmerId: { $in: farmerIds } })
@@ -664,9 +676,13 @@ export async function seedDevListings(
   if (existingListingIds.length > 0) {
     await Bid.deleteMany({ listingId: { $in: existingListingIds } });
     await IdempotencyRecord.deleteMany({ listingId: { $in: existingListingIds } });
+    await Order.deleteMany({ listingId: { $in: existingListingIds } });
     await Listing.deleteMany({ _id: { $in: existingListingIds } });
   }
 
+  await Order.deleteMany({
+    $or: [{ farmerId: { $in: farmerIds } }, { buyerId: { $in: buyerIds } }],
+  });
   await AiAssessmentRecord.deleteMany({ farmerId: { $in: farmerIds } });
   await StockMovement.deleteMany({ farmerId: { $in: farmerIds } });
   await InventoryItem.deleteMany({ farmerId: { $in: farmerIds } });
@@ -784,6 +800,28 @@ export async function seedDevListings(
     await verifyFarmerCropLedger(farmerId, cropId);
   }
 
+  // 7b. Seed historical activity (60 to 90 days) if history mode is enabled
+  let historyResult: SeedDevHistoryResult | undefined;
+  if (options.history) {
+    const demoFarmerUser = await User.findById(farmers[0]!.id);
+    const buyerUsers = await User.find({ _id: { $in: buyers.map((b) => b.id) } });
+
+    if (!demoFarmerUser) {
+      throw new Error("Demo farmer user not found for historical seeding");
+    }
+
+    historyResult = await seedDevHistory(
+      demoFarmerUser,
+      buyerUsers,
+      crops,
+    );
+
+    // Re-verify inventory ledger reconciliation for demo farmer across all crops
+    for (const crop of crops) {
+      await verifyFarmerCropLedger(farmers[0]!.id, crop._id.toString());
+    }
+  }
+
   // 8. Output demo credentials and summary banner unless silent
   if (!options.silent) {
     const banner = [
@@ -807,8 +845,14 @@ export async function seedDevListings(
       `Seeded:`,
       `  Farmers:  ${farmers.length} across ${new Set(farmers.map((f) => f.division)).size} divisions`,
       `  Buyers:   ${buyers.length}`,
-      `  Listings: ${publishedListings.length} across all 5 crops & grades (A, B, C)`,
+      `  Listings: ${publishedListings.length} active across all 5 crops & grades (A, B, C)`,
       `  Bids:     ${bidsCount} placed on active auctions`,
+      ...(historyResult
+        ? [
+            `  History:  ${historyResult.listingsCount} past auctions (${historyResult.soldCount} sold, ${historyResult.unsoldCount} unsold, ${historyResult.cancelledCount} cancelled)`,
+            `            ${historyResult.ordersCount} past/in-progress orders, ${historyResult.bidsCount} past bids across 75 days`,
+          ]
+        : []),
       `  Ledger:   RECONCILIATION VERIFIED`,
       "============================================================",
       "",
@@ -823,5 +867,6 @@ export async function seedDevListings(
     listings: publishedListings,
     bidsCount,
     reconciliationPassed: true,
+    history: historyResult,
   };
 }

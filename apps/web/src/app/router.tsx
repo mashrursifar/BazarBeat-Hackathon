@@ -24,6 +24,7 @@ const BuyerOrdersPage = lazy(() => import("../features/orders/buyer-orders-page.
 const BuyerOrderDetailPage = lazy(() => import("../features/orders/buyer-order-detail-page.js"));
 const SalesPage = lazy(() => import("../features/sales/sales-page.js"));
 const EarningsPage = lazy(() => import("../features/earnings/earnings-page.js"));
+const FarmerDashboardPage = lazy(() => import("../features/dashboards/farmer-dashboard-page.js"));
 
 const FARMER_PAGES = [
   ["dashboard", "dashboard"], ["products", "myListings"], ["new-listing", "newListing"],
@@ -57,6 +58,7 @@ function HomePage(): ReactElement {
 }
 
 function farmerPage(path: string, pageKey: string): { path: string; element: ReactElement } {
+  if (path === "dashboard") return { path, element: <FarmerDashboardPage /> };
   if (path === "inventory") return { path, element: <InventoryPage /> };
   if (path === "new-listing") return { path, element: <NewListingPage /> };
   if (path === "products") return { path, element: <MyListingsPage /> };

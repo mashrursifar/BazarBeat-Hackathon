@@ -34,13 +34,18 @@ async function run(): Promise<void> {
     await mongoose.connect(mongoUri);
     logger.info("Connected to MongoDB for dev listings seeding");
 
-    const result = await seedDevListings();
+    const history =
+      process.argv.includes("--history") ||
+      (process.env.SEED_HISTORY !== "false" && !process.argv.includes("--no-history"));
+
+    const result = await seedDevListings({ history });
     logger.info(
       {
         farmerCount: result.farmers.length,
         buyerCount: result.buyers.length,
         listingCount: result.listings.length,
         bidsCount: result.bidsCount,
+        history: result.history,
       },
       "Dev listing seeder completed successfully",
     );

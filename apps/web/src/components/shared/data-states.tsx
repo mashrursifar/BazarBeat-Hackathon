@@ -1,8 +1,45 @@
 import { type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
-export function StatCard({ label, value }: { label: string; value: ReactNode }): ReactElement {
-  return <div className="min-w-0 rounded-lg border border-stone-200 bg-white p-4 shadow-sm"><p className="text-sm text-muted-foreground">{label}</p><p className="mt-1 break-words text-xl font-bold">{value}</p></div>;
+export interface StatCardProps {
+  label: string;
+  value: ReactNode;
+  subtitle?: ReactNode;
+  change?: ReactNode;
+  action?: ReactNode;
+  className?: string;
+  icon?: ReactNode;
+}
+
+export function StatCard({
+  label,
+  value,
+  subtitle,
+  change,
+  action,
+  className = "",
+  icon,
+}: StatCardProps): ReactElement {
+  return (
+    <div
+      className={`flex min-w-0 flex-col justify-between rounded-lg border border-stone-200 bg-white p-4 shadow-sm ${className}`}
+    >
+      <div>
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          {icon && <div className="text-muted-foreground">{icon}</div>}
+        </div>
+        <p className="mt-1 break-words text-2xl font-bold tracking-tight text-foreground">{value}</p>
+        {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
+      </div>
+      {(change || action) && (
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-stone-100 pt-2">
+          {change && <div>{change}</div>}
+          {action && <div>{action}</div>}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export function EmptyState({ title, action }: { title: string; action?: ReactNode }): ReactElement {

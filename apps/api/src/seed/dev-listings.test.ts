@@ -16,6 +16,9 @@ import { Listing } from "../modules/listings/listing.model.js";
 import { Bid } from "../modules/bids/bid.model.js";
 import { InventoryItem } from "../modules/inventory/inventory-item.model.js";
 import { StockMovement } from "../modules/inventory/stock-movement.model.js";
+import { Order } from "../modules/orders/order.model.js";
+import { farmerDashboardService } from "../modules/dashboards/farmer-dashboard.service.js";
+import { buyerDashboardService } from "../modules/dashboards/buyer-dashboard.service.js";
 import { getMarketplaceListings } from "../modules/listings/listing.service.js";
 import {
   DEV_SEED_CREDENTIALS,
@@ -37,6 +40,7 @@ beforeAll(async () => {
     Bid.init(),
     InventoryItem.init(),
     StockMovement.init(),
+    Order.init(),
   ]);
 }, 180_000);
 
@@ -236,4 +240,102 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
       expect(balances.soldKg).toBe(0);
     }
   }, 30_000);
+
+  describe("History Mode (Task 7.5)", () => {
+    it("seeds 60 to 90 days of past activity with consistent invariants, reconciliation, and dashboard series", async () => {
+      const result = await seedDevListings({ history: true, silent: true });
+
+      // 1. History result is populated
+      expect(result.history).toBeDefined();
+      expect(result.history?.listingsCount).toBeGreaterThanOrEqual(20);
+      expect(result.history?.ordersCount).toBeGreaterThanOrEqual(15);
+      expect(result.history?.soldCount).toBeGreaterThanOrEqual(15);
+      expect(result.history?.unsoldCount).toBeGreaterThanOrEqual(1);
+      expect(result.history?.cancelledCount).toBeGreaterThanOrEqual(1);
+
+      // 2. Active listings are still exactly 25
+      expect(result.listings.length).toBe(25);
+      const activeCount = await Listing.countDocuments({ status: "ACTIVE" });
+      expect(activeCount).toBe(25);
+
+      // 3. Invariant: One order per sold listing
+      const soldListings = await Listing.find({ status: "SOLD" }).lean();
+      expect(soldListings.length).toBe(result.history!.soldCount);
+      for (const soldListing of soldListings) {
+        const order = await Order.findOne({ listingId: soldListing._id });
+        expect(order).not.toBeNull();
+        expect(order?.quantityKg).toBe(soldListing.quantityKg);
+        expect(order?.pricePerKg).toBe(soldListing.currentBidPerKg);
+        expect(order?.farmerId.toString()).toBe(soldListing.farmerId.toString());
+        expect(order?.buyerId.toString()).toBe(soldListing.currentBidderId?.toString());
+      }
+
+      // 4. Invariant: Bid counts and summaries match
+      for (const soldListing of soldListings) {
+        const bidCount = await Bid.countDocuments({ listingId: soldListing._id });
+        expect(soldListing.bidCount).toBe(bidCount);
+      }
+
+      // 5. Invariant: Inventory ledger reconciles for demo farmer across all crops
+      const demoFarmerId = result.farmers[0]!.id;
+      const crops = await Crop.find({ isActive: true }).lean();
+      for (const crop of crops) {
+        const balances = await verifyFarmerCropLedger(demoFarmerId, crop._id.toString());
+        expect(balances.soldKg).toBeGreaterThan(0);
+      }
+
+      // 6. Farmer Dashboard shows non-trivial series and KPIs
+      const farmerDash = await farmerDashboardService.getFarmerDashboard(demoFarmerId, {
+        range: "30d",
+      });
+      expect(farmerDash.data.kpis.totalSales.value).toBeGreaterThan(0);
+      expect(farmerDash.data.kpis.earnings.value).toBeGreaterThan(0);
+      expect(farmerDash.data.kpis.winRate.value).toBeGreaterThan(0);
+      expect(farmerDash.data.kpis.orders?.value).toBeGreaterThan(0);
+      expect(farmerDash.data.kpis.topCrop).not.toBeNull();
+      expect(farmerDash.data.salesTrend.length).toBe(30);
+      const nonZeroTrend = farmerDash.data.salesTrend.filter((b) => b.sales > 0);
+      expect(nonZeroTrend.length).toBeGreaterThan(0);
+      expect(farmerDash.data.earningsByCrop.length).toBeGreaterThan(0);
+
+      // 7. Buyer Dashboard shows non-trivial series and KPIs for demo buyer
+      const demoBuyerId = result.buyers[0]!.id;
+      const buyerDash = await buyerDashboardService.getBuyerDashboard(demoBuyerId, {
+        range: "30d",
+      });
+      expect(buyerDash.data.kpis.totalSpend.value).toBeGreaterThan(0);
+      expect(buyerDash.data.kpis.winRate.value).toBeGreaterThan(0);
+      expect(buyerDash.data.kpis.orders?.value).toBeGreaterThan(0);
+      expect(buyerDash.data.spendTrend.length).toBe(30);
+      const nonZeroSpend = buyerDash.data.spendTrend.filter((b) => b.spend > 0);
+      expect(nonZeroSpend.length).toBeGreaterThan(0);
+      expect(buyerDash.data.purchasesByCrop.length).toBeGreaterThan(0);
+    }, 45_000);
+
+    it("is repeatable and leaves a consistent database when history mode is run twice", async () => {
+      // First run with history
+      const firstResult = await seedDevListings({ history: true, silent: true });
+      const firstListingsCount = await Listing.countDocuments();
+      const firstOrdersCount = await Order.countDocuments();
+      const firstBidsCount = await Bid.countDocuments();
+
+      // Second run with history
+      const secondResult = await seedDevListings({ history: true, silent: true });
+      const secondListingsCount = await Listing.countDocuments();
+      const secondOrdersCount = await Order.countDocuments();
+      const secondBidsCount = await Bid.countDocuments();
+
+      expect(secondListingsCount).toBe(firstListingsCount);
+      expect(secondOrdersCount).toBe(firstOrdersCount);
+      expect(secondBidsCount).toBe(firstBidsCount);
+
+      // Invariants and reconciliation hold on repeat
+      expect(secondResult.reconciliationPassed).toBe(true);
+      const demoFarmerId = secondResult.farmers[0]!.id;
+      const crops = await Crop.find({ isActive: true }).lean();
+      for (const crop of crops) {
+        await verifyFarmerCropLedger(demoFarmerId, crop._id.toString());
+      }
+    }, 45_000);
+  });
 });
