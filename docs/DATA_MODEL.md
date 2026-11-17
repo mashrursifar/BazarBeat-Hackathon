@@ -220,7 +220,7 @@ Domain events are typed in-process events defined in `@bazarbeat/shared` and emi
 | cancelledBy?                                                  | ref User                                                                      | Cancelling participant ID                                               |
 | cancelReason?, cancelNote?                                    | string?                                                                       | Cancellation audit details                                              |
 | stockReturn?                                                  | {decision RETURNED \| DISCARDED, decidedAt, note?}                            | Farmer stock return decision after cancellation (only once)             |
-| Indexes: (farmerId, createdAt), (farmerId, status, createdAt desc) for farmer dashboard order aggregations and pending orders, (buyerId, createdAt), status. |
+| Indexes: (farmerId, createdAt), (farmerId, status, createdAt desc) for farmer dashboard order aggregations and pending orders, (buyerId, createdAt), (buyerId, status, createdAt desc) for buyer dashboard order aggregations and pending orders, status. |
 
 ### Order Participant Privacy and Handover
 

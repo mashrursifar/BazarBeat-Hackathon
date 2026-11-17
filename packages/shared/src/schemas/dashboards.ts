@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { buyerOrderCardSchema } from "./orders.js";
 
 /**
  * Standardized dashboard range presets.
@@ -224,20 +225,36 @@ export const buyerActiveBidItemSchema = z.object({
 });
 export type BuyerActiveBidItem = z.infer<typeof buyerActiveBidItemSchema>;
 
+export const buyerRightNowSchema = z.object({
+  activeBids: z.number().int().nonnegative(),
+  winningBids: z.number().int().nonnegative(),
+  outbidBids: z.number().int().nonnegative(),
+  ordersNeedingAction: z.number().int().nonnegative(),
+  nearestDeadline: z.string().nullable().optional(),
+});
+export type BuyerRightNow = z.infer<typeof buyerRightNowSchema>;
+
 export const buyerDashboardKpiSetSchema = z.object({
   totalSpend: kpiMetricSchema, // integer poisha
   activeBids: kpiMetricSchema, // count
   winRate: kpiMetricSchema, // percentage (0..100)
   avgPriceVsMarket: kpiMetricSchema, // percentage premium/discount vs AI market estimate
   pendingOrders: kpiMetricSchema, // count
+  kgPurchased: kpiMetricSchema.optional(), // total kg purchased in period
+  savingsVsAiEstimate: kpiMetricSchema.optional(), // savings vs AI estimate
+  orders: kpiMetricSchema.optional(), // count of orders in period
+  nearestDeadline: z.string().nullable().optional(),
 });
 export type BuyerDashboardKpiSet = z.infer<typeof buyerDashboardKpiSetSchema>;
 
 export const buyerDashboardDataSchema = z.object({
   kpis: buyerDashboardKpiSetSchema,
+  rightNow: buyerRightNowSchema.optional(),
   spendTrend: z.array(buyerSpendTrendBucketSchema),
   purchasesByCrop: z.array(buyerPurchasesByCropSchema),
   activeBidsList: z.array(buyerActiveBidItemSchema).optional(),
+  nearestEndingBids: z.array(buyerActiveBidItemSchema).optional(),
+  recentOrders: z.array(buyerOrderCardSchema).optional(),
 });
 export type BuyerDashboardData = z.infer<typeof buyerDashboardDataSchema>;
 

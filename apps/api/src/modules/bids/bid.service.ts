@@ -15,6 +15,7 @@ import {
   type PublicUser,
   UserRole,
   calculateSubtotal,
+  calculateWinRate,
   getAntiSnipingExtensionDurationMs,
   getAntiSnipingTriggerWindowMs,
 } from "@bazarbeat/shared";
@@ -661,12 +662,31 @@ export async function getListingBids(
  * - Newest activity first (sorted by the buyer's latest bid placedAt on that listing)
  * - Filterable by group (active | won | lost) with pagination (page, limit, total, totalPages)
  */
-export async function getMyBids(
-  buyer: PublicUser,
-  query: MyBidsQuery,
-): Promise<MyBidsResponse> {
-  const clock = getClock();
-  const validBuyerId = ensureObjectId(buyer.id);
+export interface BuyerBidsGroupedResult {
+  activeRows: MyBidsRow[];
+  wonRows: MyBidsRow[];
+  lostRows: MyBidsRow[];
+  allRows: MyBidsRow[];
+  activeCount: number;
+  winningCount: number;
+  outbidCount: number;
+  wonCount: number;
+  lostCount: number;
+  totalCompletedCount: number;
+  winRate: number;
+}
+
+/**
+ * Shared My Bids grouping implementation.
+ * Groups all bids placed by a buyer by listing to produce exactly one row per listing,
+ * deriving the canonical status (WINNING, OUTBID, WON, LOST), latest activity, and win rate.
+ * Used by both `getMyBids` and `BuyerDashboardService`.
+ */
+export async function getBuyerBidsGrouped(
+  buyerId: string | ObjectId,
+): Promise<BuyerBidsGroupedResult> {
+  const validBuyerId =
+    typeof buyerId === "string" ? ensureObjectId(buyerId) : buyerId.toString().toLowerCase();
   const buyerObjectId = new ObjectId(validBuyerId);
 
   // 1. Fetch all bids placed by this buyer, sorted newest first
@@ -675,29 +695,18 @@ export async function getMyBids(
     .lean();
 
   if (buyerBids.length === 0) {
-    if (query.group !== undefined) {
-      return {
-        data: [],
-        meta: {
-          serverTime: clock.iso(),
-          page: query.page,
-          limit: query.limit,
-          total: 0,
-          totalPages: 0,
-          group: query.group,
-        },
-      };
-    }
     return {
-      data: {
-        active: [],
-        won: [],
-        lost: [],
-      },
-      meta: {
-        serverTime: clock.iso(),
-        total: 0,
-      },
+      activeRows: [],
+      wonRows: [],
+      lostRows: [],
+      allRows: [],
+      activeCount: 0,
+      winningCount: 0,
+      outbidCount: 0,
+      wonCount: 0,
+      lostCount: 0,
+      totalCompletedCount: 0,
+      winRate: 0,
     };
   }
 
@@ -840,10 +849,76 @@ export async function getMyBids(
     return "lost";
   }
 
-  // 6. Handle query with or without group filter
+  const activeRows = allRows.filter((r) => getRowGroup(r.status) === "active");
+  const wonRows = allRows.filter((r) => getRowGroup(r.status) === "won");
+  const lostRows = allRows.filter((r) => getRowGroup(r.status) === "lost");
+
+  const activeCount = activeRows.length;
+  const winningCount = activeRows.filter((r) => r.status === "WINNING").length;
+  const outbidCount = activeRows.filter((r) => r.status === "OUTBID").length;
+  const wonCount = wonRows.length;
+  const lostCount = lostRows.length;
+  const totalCompletedCount = wonCount + lostCount;
+  const winRate = calculateWinRate(wonCount, totalCompletedCount);
+
+  return {
+    activeRows,
+    wonRows,
+    lostRows,
+    allRows,
+    activeCount,
+    winningCount,
+    outbidCount,
+    wonCount,
+    lostCount,
+    totalCompletedCount,
+    winRate,
+  };
+}
+
+export async function getMyBids(
+  buyer: PublicUser,
+  query: MyBidsQuery,
+): Promise<MyBidsResponse> {
+  const clock = getClock();
+  const grouped = await getBuyerBidsGrouped(buyer.id);
+
+  if (grouped.allRows.length === 0) {
+    if (query.group !== undefined) {
+      return {
+        data: [],
+        meta: {
+          serverTime: clock.iso(),
+          page: query.page,
+          limit: query.limit,
+          total: 0,
+          totalPages: 0,
+          group: query.group,
+        },
+      };
+    }
+    return {
+      data: {
+        active: [],
+        won: [],
+        lost: [],
+      },
+      meta: {
+        serverTime: clock.iso(),
+        total: 0,
+      },
+    };
+  }
+
+  // Handle query with or without group filter
   if (query.group !== undefined) {
     const targetGroup = query.group;
-    const filteredRows = allRows.filter((r) => getRowGroup(r.status) === targetGroup);
+    const filteredRows =
+      targetGroup === "active"
+        ? grouped.activeRows
+        : targetGroup === "won"
+          ? grouped.wonRows
+          : grouped.lostRows;
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
     const total = filteredRows.length;
@@ -863,19 +938,15 @@ export async function getMyBids(
     };
   }
 
-  const activeRows = allRows.filter((r) => getRowGroup(r.status) === "active");
-  const wonRows = allRows.filter((r) => getRowGroup(r.status) === "won");
-  const lostRows = allRows.filter((r) => getRowGroup(r.status) === "lost");
-
   return {
     data: {
-      active: activeRows,
-      won: wonRows,
-      lost: lostRows,
+      active: grouped.activeRows,
+      won: grouped.wonRows,
+      lost: grouped.lostRows,
     },
     meta: {
       serverTime: clock.iso(),
-      total: allRows.length,
+      total: grouped.allRows.length,
     },
   };
 }

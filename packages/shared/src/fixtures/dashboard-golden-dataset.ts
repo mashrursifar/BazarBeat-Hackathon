@@ -1326,8 +1326,58 @@ export const GOLDEN_EXPECTED_VALUES = {
       activeBids: { value: 2, previous: 0, changePercent: null },
       winRate: { value: 75.0, previous: null, changePercent: null },
       pendingOrders: { value: 1, previous: 0, changePercent: null },
-      avgPriceVsMarket: { value: 6.8, previous: null, changePercent: null },
+      avgPriceVsMarket: { value: 5.4, previous: null, changePercent: null },
+      kgPurchased: { value: 190.5, previous: 0, changePercent: null },
     },
+    // Buyer 1 (7d range: 2026-11-10 to 2026-11-16 vs previous 2026-11-03 to 2026-11-09)
+    // Current 7d spend: Order 01 (116,025) + Order 04 (210,015) + Order 07 (290,000) + Order 12 (160,000) = 776,040 poisha
+    // Previous 7d spend: Order 10 (352,000 poisha on Nov 04)
+    // Change % = ((776040 - 352000) / 352000) * 100 = +120.5%
+    kpis7d: {
+      totalSpend: { value: 776040, previous: 352000, changePercent: 120.5 },
+      activeBids: { value: 2, previous: 0, changePercent: null },
+      winRate: { value: 75.0, previous: null, changePercent: null },
+      pendingOrders: { value: 1, previous: 0, changePercent: null },
+      kgPurchased: { value: 110.5, previous: 80.0, changePercent: 38.1 },
+    },
+    spendTrend7d: [
+      { bucket: "2026-11-10", date: "2026-11-10", spend: 116025, quantityKg: 25.5, orderCount: 1 },
+      { bucket: "2026-11-11", date: "2026-11-11", spend: 0, quantityKg: 0, orderCount: 0 }, // ZERO BUCKET
+      { bucket: "2026-11-12", date: "2026-11-12", spend: 0, quantityKg: 0, orderCount: 0 }, // ZERO BUCKET
+      { bucket: "2026-11-13", date: "2026-11-13", spend: 0, quantityKg: 0, orderCount: 0 }, // ZERO BUCKET
+      { bucket: "2026-11-14", date: "2026-11-14", spend: 210015, quantityKg: 15.0, orderCount: 1 },
+      { bucket: "2026-11-15", date: "2026-11-15", spend: 290000, quantityKg: 20.0, orderCount: 1 },
+      { bucket: "2026-11-16", date: "2026-11-16", spend: 160000, quantityKg: 50.0, orderCount: 1 }, // Order 12
+    ],
+    purchasesByCrop30d: [
+      {
+        cropId: "670000000000000000000103",
+        cropSlug: "green-chilli",
+        cropName: "Green Chilli",
+        cropNameBn: "কাঁচা মরিচ",
+        quantityKg: 35.0,
+        totalSpend: 500015,
+        orderCount: 2,
+      },
+      {
+        cropId: "670000000000000000000101",
+        cropSlug: "onion",
+        cropName: "Onion",
+        cropNameBn: "পেঁয়াজ",
+        quantityKg: 105.5,
+        totalSpend: 468025,
+        orderCount: 2,
+      },
+      {
+        cropId: "670000000000000000000102",
+        cropSlug: "potato",
+        cropName: "Potato",
+        cropNameBn: "আলু",
+        quantityKg: 50.0,
+        totalSpend: 160000,
+        orderCount: 1,
+      },
+    ],
   },
   buyer2: {
     // Buyer 2:

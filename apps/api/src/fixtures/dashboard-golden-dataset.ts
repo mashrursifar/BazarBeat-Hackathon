@@ -145,7 +145,13 @@ export async function loadDashboardGoldenDataset(): Promise<LoadedDashboardGolde
       extensionCount: 0,
       status: l.status,
       currentBidPerKg: l.currentBidPerKg,
-      currentBidderId: l.winningBidderId ? new ObjectId(l.winningBidderId) : undefined,
+      currentBidderId: l.winningBidderId
+        ? new ObjectId(l.winningBidderId)
+        : GOLDEN_BIDS.filter((b) => b.listingId === l.id).sort((a, b) => b.amountPerKg - a.amountPerKg)[0]
+          ? new ObjectId(
+              GOLDEN_BIDS.filter((b) => b.listingId === l.id).sort((a, b) => b.amountPerKg - a.amountPerKg)[0]!.buyerId,
+            )
+          : undefined,
       bidCount: l.bidCount,
       winningBidId: l.winningBidId ? new ObjectId(l.winningBidId) : undefined,
       location: {
