@@ -17,6 +17,7 @@ import { configRouter } from "./modules/config/config.routes.js";
 import { ordersRouter } from "./modules/orders/order.routes.js";
 import { earningsRouter, salesRouter } from "./modules/orders/sales-earnings.routes.js";
 import { dashboardsRouter } from "./modules/dashboards/dashboards.routes.js";
+import { marketPricesRouter } from "./modules/market-prices/market-prices.routes.js";
 
 export const app = express();
 app.use(
@@ -47,6 +48,7 @@ app.use("/api/v1/orders", ordersRouter);
 app.use("/api/v1/sales", salesRouter);
 app.use("/api/v1/earnings", earningsRouter);
 app.use("/api/v1/dashboards", dashboardsRouter);
+app.use("/api/v1/market-prices", marketPricesRouter);
 
 app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ data: { status: "ok", database: getDatabaseStatus() } });

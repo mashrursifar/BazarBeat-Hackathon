@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { buyerOrderCardSchema } from "./orders.js";
+import { cropGradeSchema } from "./ai-listings.js";
 
 /**
  * Standardized dashboard range presets.
@@ -280,6 +281,30 @@ export const marketHistoryPointSchema = z.object({
 });
 export type MarketHistoryPoint = z.infer<typeof marketHistoryPointSchema>;
 
+export const marketGradeGuideItemSchema = z.object({
+  grade: cropGradeSchema,
+  description: z.string().optional(),
+  lowPerKg: z.number().int().positive(),
+  expectedPerKg: z.number().int().positive(),
+  highPerKg: z.number().int().positive(),
+  suggestedFloorPerKg: z.number().int().positive().optional(),
+  trend: marketPriceTrendSchema.optional(),
+  confidence: z.number().optional(),
+  explanation: z.array(z.string()).optional(),
+  modelVersion: z.string().optional(),
+  provider: z.string().optional(),
+  degraded: z.boolean().optional(),
+  generatedAt: z.string().optional(),
+});
+export type MarketGradeGuideItem = z.infer<typeof marketGradeGuideItemSchema>;
+
+export const marketGradeGuideSchema = z.object({
+  A: marketGradeGuideItemSchema,
+  B: marketGradeGuideItemSchema,
+  C: marketGradeGuideItemSchema,
+});
+export type MarketGradeGuide = z.infer<typeof marketGradeGuideSchema>;
+
 export const marketHistoryDataSchema = z.object({
   cropId: z.string(),
   cropSlug: z.string().optional(),
@@ -293,6 +318,7 @@ export const marketHistoryDataSchema = z.object({
   maxPricePerKg: z.number().int().positive(),
   changePercent: z.number().nullable().optional(),
   series: z.array(marketHistoryPointSchema),
+  gradeGuide: marketGradeGuideSchema.optional(),
 });
 export type MarketHistoryData = z.infer<typeof marketHistoryDataSchema>;
 

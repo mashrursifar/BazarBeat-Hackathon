@@ -205,6 +205,69 @@ describe("Dashboard & Market Schemas", () => {
 
       expect(marketHistoryResponseSchema.safeParse(payload).success).toBe(true);
     });
+
+    it("validates market history response with grade guide for A, B, and C", () => {
+      const payload = {
+        data: {
+          cropId: "670000000000000000000101",
+          cropName: "Onion",
+          range: "30d" as const,
+          trend: "UP" as const,
+          currentAvgPricePerKg: 4600,
+          minPricePerKg: 4200,
+          maxPricePerKg: 5000,
+          changePercent: 2.2,
+          series: [
+            {
+              date: "2026-11-16",
+              avgPricePerKg: 4600,
+              minPricePerKg: 4400,
+              maxPricePerKg: 4900,
+              source: "PLATFORM",
+            },
+          ],
+          gradeGuide: {
+            A: {
+              grade: "A" as const,
+              description: "Firm bulbs",
+              expectedPerKg: 5060,
+              lowPerKg: 4554,
+              highPerKg: 5566,
+              suggestedFloorPerKg: 4554,
+              trend: "UP" as const,
+              provider: "mock",
+            },
+            B: {
+              grade: "B" as const,
+              description: "Minor marks",
+              expectedPerKg: 4600,
+              lowPerKg: 4140,
+              highPerKg: 5060,
+              suggestedFloorPerKg: 4140,
+              trend: "UP" as const,
+              provider: "mock",
+            },
+            C: {
+              grade: "C" as const,
+              description: "Small bulbs",
+              expectedPerKg: 3910,
+              lowPerKg: 3519,
+              highPerKg: 4301,
+              suggestedFloorPerKg: 3519,
+              trend: "UP" as const,
+              provider: "mock",
+            },
+          },
+        },
+        meta: {
+          serverTime: "2026-11-16T12:00:00.000Z",
+          cropId: "670000000000000000000101",
+          range: "30d" as const,
+        },
+      };
+
+      expect(marketHistoryResponseSchema.safeParse(payload).success).toBe(true);
+    });
   });
 
   describe("Market Summary & National Summary Schemas", () => {

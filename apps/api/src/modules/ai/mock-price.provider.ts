@@ -18,8 +18,8 @@ export class MockPricePredictionProvider implements PricePredictionProvider {
     division?: string,
   ): Promise<PriceGuidance> {
     const { cropId, grade } = request;
-    // Retrieve recent market rows (up to 60)
-    const recentRows = await getRecentMarketPrices(cropId, division ?? "dhaka", 60);
+    // Retrieve recent market rows (up to 60) for division or national if omitted
+    const recentRows = await getRecentMarketPrices(cropId, division, 60);
     const baseAvg = recentRows.length
       ? Math.round(recentRows.reduce((sum, r) => sum + r.avgPricePerKg, 0) / recentRows.length)
       : 5_000; // fallback default if no rows
