@@ -1,4 +1,9 @@
-import "dotenv/config";
+import path from "node:path";
+import dotenv from "dotenv";
+
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), "../../.env") });
+dotenv.config({ path: path.resolve(process.cwd(), "../.env") });
 
 import { z } from "zod";
 
@@ -15,6 +20,10 @@ export const envSchema = z.object({
   AI_SERVICE_KEY: z.string().default("local-mock-key"),
   STORAGE_PROVIDER: z.enum(["local", "cloud"]).default("local"),
   UPLOAD_DIR: z.string().default("./uploads"),
+  CLOUDINARY_URL: z.string().optional(),
+  CLOUDINARY_CLOUD_NAME: z.string().optional(),
+  CLOUDINARY_API_KEY: z.string().optional(),
+  CLOUDINARY_API_SECRET: z.string().optional(),
   DEMO_MODE: z.stringbool().default(false),
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10_000).default(200),
 }).superRefine((values, context) => {

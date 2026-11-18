@@ -11,15 +11,19 @@ import {
 import { AppError } from "../../shared/errors.js";
 import { logger } from "../../shared/logger.js";
 import { Crop } from "../crops/crop.model.js";
-import { LocalDiskStorageProvider } from "../storage/local-disk.provider.js";
+import { type StorageProvider, createStorageProvider } from "../storage/index.js";
 import { type ProcessedImage, processImage } from "../storage/image-processor.js";
 import type { GradingProvider, PricePredictionProvider } from "./interfaces.js";
 import { createGradingProvider, createPricePredictionProvider } from "./provider.factory.js";
 import { AiAssessmentRecord, type AiAssessmentRecordDoc } from "./ai-assessment-record.model.js";
 
-const storageProvider = new LocalDiskStorageProvider();
+const storageProvider = createStorageProvider();
 const gradingProvider = createGradingProvider();
 const pricePredictionProvider = createPricePredictionProvider();
+
+export function getStorageProvider(): StorageProvider {
+  return storageProvider;
+}
 
 export function getGradingProvider(): GradingProvider {
   return gradingProvider;
