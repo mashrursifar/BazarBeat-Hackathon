@@ -24,6 +24,7 @@ export interface FilterValues {
   maxPricePoisha?: number;
   minQuantityKg?: number;
   endingWithin?: number;
+  watchingOnly?: boolean;
 }
 
 export interface MarketplaceFilterBarProps {
@@ -95,6 +96,7 @@ export function MarketplaceFilterBar({
     if (filters.maxPricePoisha !== undefined) count++;
     if (filters.minQuantityKg !== undefined) count++;
     if (filters.endingWithin !== undefined) count++;
+    if (filters.watchingOnly) count++;
     return count;
   }, [filters]);
 
@@ -361,6 +363,38 @@ export function MarketplaceFilterBar({
             {t("marketplace.clearFilters")}
           </button>
         )}
+
+        <button
+          type="button"
+          data-testid="filter-chip-watching-mobile"
+          onClick={() =>
+            onFilterChange({
+              ...filters,
+              watchingOnly: !filters.watchingOnly,
+            })
+          }
+          className={cn(
+            "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold border min-h-[44px] transition-colors select-none",
+            filters.watchingOnly
+              ? "border-red-200 bg-red-50 text-red-600"
+              : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50",
+          )}
+        >
+          <svg
+            className={cn(
+              "h-3.5 w-3.5",
+              filters.watchingOnly ? "fill-red-500 stroke-red-500" : "fill-none stroke-current stroke-2",
+            )}
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+            />
+          </svg>
+          <span>{t("watchlist.watchingChip", "Watching")}</span>
+        </button>
       </div>
 
       {/* Desktop: Inline Filter Bar */}
@@ -376,16 +410,49 @@ export function MarketplaceFilterBar({
               </span>
             )}
           </div>
-          {activeFilterCount > 0 && (
+          <div className="flex items-center gap-2">
             <button
               type="button"
-              data-testid="filter-clear-all-desktop"
-              onClick={onClearFilters}
-              className="text-xs font-semibold text-stone-500 hover:text-stone-900 underline decoration-dotted cursor-pointer"
+              data-testid="filter-chip-watching"
+              onClick={() =>
+                onFilterChange({
+                  ...filters,
+                  watchingOnly: !filters.watchingOnly,
+                })
+              }
+              className={cn(
+                "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold border transition-colors cursor-pointer select-none",
+                filters.watchingOnly
+                  ? "border-red-200 bg-red-50 text-red-600"
+                  : "border-stone-200 bg-white text-stone-600 hover:bg-stone-50",
+              )}
             >
-              {t("marketplace.clearFilters")}
+              <svg
+                className={cn(
+                  "h-3.5 w-3.5",
+                  filters.watchingOnly ? "fill-red-500 stroke-red-500" : "fill-none stroke-current stroke-2",
+                )}
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
+                />
+              </svg>
+              <span>{t("watchlist.watchingChip", "Watching")}</span>
             </button>
-          )}
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                data-testid="filter-clear-all-desktop"
+                onClick={onClearFilters}
+                className="text-xs font-semibold text-stone-500 hover:text-stone-900 underline decoration-dotted cursor-pointer"
+              >
+                {t("marketplace.clearFilters")}
+              </button>
+            )}
+          </div>
         </div>
         {renderFilterInputs(false)}
       </div>

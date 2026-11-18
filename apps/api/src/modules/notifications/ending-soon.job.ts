@@ -1,5 +1,4 @@
 import { ObjectId } from "bson";
-import mongoose from "mongoose";
 import {
   ListingStatus,
   NotificationType,

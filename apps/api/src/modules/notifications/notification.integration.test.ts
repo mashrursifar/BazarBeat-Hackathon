@@ -6,7 +6,6 @@ import mongoose from "mongoose";
 import request from "supertest";
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
-  DomainEventName,
   NotificationType,
   OrderSubEvent,
   type PublicUser,
@@ -238,7 +237,7 @@ describe("Notification Endpoints & User Stream (Task 8.4)", () => {
         },
       );
 
-      req.on("error", (err) => {
+      req.on("error", () => {
         // ignore client destroy errors
       });
     });
@@ -403,7 +402,7 @@ describe("Notification Endpoints & User Stream (Task 8.4)", () => {
         dedupeKey: "NEW_BID:507f1f77bcf86cd799439011",
       });
 
-      const notifA2 = await createOrCoalesceNotification({
+      await createOrCoalesceNotification({
         userId: userAId,
         type: NotificationType.AUCTION_SOLD,
         title: "Sold cabbage",

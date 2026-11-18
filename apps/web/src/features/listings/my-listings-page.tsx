@@ -11,6 +11,7 @@ import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { PriceTag } from "../../components/shared/price-tag.js";
 import { Button } from "../../components/ui/button.js";
+import { renderGradingReason } from "../ai-reasons/ai-reason-text.js";
 import { useCrops, useListingDetail, useMyListings } from "./api/use-listing-wizard-api.js";
 
 type StatusTab = ListingStatus | "ALL";
@@ -181,7 +182,7 @@ export function ListingDetailDrawer({
                         <ul className="list-disc pl-4 space-y-0.5 text-stone-600">
                           {listing.aiAssessment.qualityNotes.map((note, idx) => (
                             <li key={idx}>
-                              {typeof note === "string" ? note : t(`ai.gradingReasons.${note.code}`, note.code)}
+                              {renderGradingReason(note, t)}
                             </li>
                           ))}
                         </ul>

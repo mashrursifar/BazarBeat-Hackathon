@@ -13,6 +13,7 @@ import { useCompareTray } from "../../features/marketplace/context/compare-tray-
 import { formatDisplayPrice } from "@bazarbeat/shared";
 import { formatLocalizedNumber } from "../../lib/format.js";
 import { cn } from "../../lib/utils.js";
+import { WatchlistButton } from "../../features/watchlist/components/watchlist-button.js";
 import { CountdownTimer } from "./countdown-timer.js";
 import { GradeBadge } from "./grade-badge.js";
 import { PriceTag } from "./price-tag.js";
@@ -155,15 +156,20 @@ ListingCard.Image = function ListingCardImage({
     </div>
   );
 
-  if (detailUrl) {
-    return (
-      <Link to={detailUrl} className="block focus:outline-none">
-        {imageElement}
-      </Link>
-    );
-  }
-
-  return imageElement;
+  return (
+    <div className="relative">
+      {detailUrl ? (
+        <Link to={detailUrl} className="block focus:outline-none">
+          {imageElement}
+        </Link>
+      ) : (
+        imageElement
+      )}
+      <div className="absolute top-2.5 right-2.5 z-10">
+        <ListingCard.WatchlistButton />
+      </div>
+    </div>
+  );
 };
 
 export interface ListingCardHeaderProps {
@@ -355,5 +361,25 @@ ListingCard.CompareCheckbox = function ListingCardCompareCheckbox({
         </span>
       </label>
     </div>
+  );
+};
+
+export interface ListingCardWatchlistButtonProps {
+  className?: string;
+  onWatchlistChanged?: (isWatched: boolean) => void;
+}
+
+ListingCard.WatchlistButton = function ListingCardWatchlistButton({
+  className,
+  onWatchlistChanged,
+}: ListingCardWatchlistButtonProps): ReactElement {
+  const { listing } = useListingCardContext();
+  return (
+    <WatchlistButton
+      listingId={listing.id}
+      initialIsWatched={Boolean(listing.isWatched)}
+      onWatchlistChanged={onWatchlistChanged}
+      className={className}
+    />
   );
 };

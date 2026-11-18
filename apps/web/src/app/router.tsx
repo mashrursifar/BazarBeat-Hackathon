@@ -41,6 +41,9 @@ const BuyerDashboardPage = lazy(() => import("../features/dashboards/buyer-dashb
 const FarmerMarketPricesPage = lazy(() => import("../features/market-prices/farmer-market-prices-page.js"));
 const BuyerMarketOverviewPage = lazy(() => import("../features/market-prices/buyer-market-overview-page.js"));
 const NotificationsPage = lazy(() => import("../features/notifications/notifications-page.js"));
+const WatchlistPage = lazy(() =>
+  import("../features/watchlist/watchlist-page.js").then((module) => ({ default: module.WatchlistPage })),
+);
 
 const FARMER_PAGES = [
   ["dashboard", "dashboard"],
@@ -123,6 +126,7 @@ function buyerPage(path: string, pageKey: string): { path: string; element: Reac
   if (path === "compare") return { path, element: <ComparePage /> };
   if (path === "my-bids") return { path, element: <MyBidsPage /> };
   if (path === "orders") return { path, element: <BuyerOrdersPage /> };
+  if (path === "watchlist") return { path, element: <WatchlistPage /> };
   if (path === "market-overview") return { path, element: <BuyerMarketOverviewPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }

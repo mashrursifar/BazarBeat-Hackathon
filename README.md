@@ -89,6 +89,9 @@ npm run seed              # Seeds the 5 crops catalog
 npm run seed:dev-listings # Seeds 25 listings (5 per crop), 8 farmers across 8 divisions, 5 buyers, inventory reservations and bids
 ```
 
+> [!NOTE]
+> **Reseeding Notice (Phase 8):** AI quality notes and price guidance explanations have transitioned to structured reason codes (`GradingReasonCode` and `PriceReasonCode`) with client-side i18n translation. Existing development databases should be reseeded via `npm run seed:dev-listings`.
+
 Demo user accounts created by the seeder:
 - **Demo Farmer:** `01700000001` / `farmerpassword123` (Rahim Uddin, Dhaka / Savar)
 - **Demo Buyer:** `01712345678` / `buyerpassword123` (Demo Buyer — Karim Traders, Dhaka / Dhanmondi)

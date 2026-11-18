@@ -3,9 +3,9 @@ import {
   NotificationType,
   UserRole,
 } from "@bazarbeat/shared";
-import { act, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import React, { type ReactElement, type ReactNode } from "react";
-import { MemoryRouter, useLocation } from "react-router-dom";
+import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import * as AuthContextModule from "../auth/auth-context.js";

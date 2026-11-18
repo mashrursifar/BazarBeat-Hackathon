@@ -9,7 +9,6 @@ import {
   NotificationType,
   type PublicUser,
   UserRole,
-  WATCHLIST_LIMITS,
 } from "@bazarbeat/shared";
 
 const farmerId = new ObjectId().toString();

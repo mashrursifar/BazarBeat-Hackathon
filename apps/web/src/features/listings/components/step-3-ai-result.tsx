@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 
 import { GradeBadge } from "../../../components/shared/grade-badge.js";
 import { Button } from "../../../components/ui/button.js";
+import { renderGradingReason } from "../../ai-reasons/ai-reason-text.js";
 import { useListingWizard } from "../context/listing-wizard-context.js";
 
 export function Step3AiResult(): ReactElement {
@@ -281,7 +282,7 @@ export function Step3AiResult(): ReactElement {
             {assessmentResult.qualityNotes.map((note, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <span className="text-emerald-600 font-bold mt-0.5">✓</span>
-                <span>{typeof note === "string" ? note : t(`ai.gradingReasons.${note.code}`, note.code)}</span>
+                <span>{renderGradingReason(note, t)}</span>
               </li>
             ))}
           </ul>

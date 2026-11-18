@@ -12,6 +12,7 @@ import {
   listingResponseMetaSchema,
   listingStatusSchema,
   priceTrendSchema,
+  qualityNoteSchema,
 } from "./ai-listings.js";
 import { databaseIdSchema, inventoryQuantityKgSchema } from "./catalog-inventory.js";
 
@@ -214,7 +215,7 @@ export const buyerListingDetailSchema = z
       .strict(),
     grade: cropGradeSchema,
     confidenceBand: confidenceBandSchema.optional().nullable(),
-    reasons: z.array(z.string().trim().min(1)),
+    reasons: z.array(qualityNoteSchema),
     aiPriceSnapshot: aiPriceSnapshotSchema,
     provider: aiProviderSchema,
     degraded: z.boolean(),

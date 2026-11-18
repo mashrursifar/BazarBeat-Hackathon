@@ -1,8 +1,8 @@
 import type { Request, Response } from "express";
 import {
   DomainEventName,
-  type NotificationItem,
   NOTIFICATION_TIMING,
+  type NotificationItem,
   type PublicUser,
 } from "@bazarbeat/shared";
 

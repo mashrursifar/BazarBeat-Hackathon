@@ -1,4 +1,4 @@
-import type { PriceGuidance } from "@bazarbeat/shared";
+import { type PriceGuidance, PriceReasonCode } from "@bazarbeat/shared";
 
 export interface PricingStrategyParams {
   baseAvg: number; // poisha per kg, integer
@@ -42,7 +42,17 @@ export function calculatePriceGuidance(params: PricingStrategyParams): PriceGuid
     highPerKg: high,
     trend,
     confidence: 1 - scarcity * 0.5, // simple confidence reduction when sparse
-    explanation: [`Recent market prices analyzed for grade ${grade}`],
+    explanation: [
+      { code: PriceReasonCode.HISTORICAL_BENCHMARK, params: { grade } },
+      {
+        code:
+          trend === "UP"
+            ? PriceReasonCode.TREND_UP
+            : trend === "DOWN"
+              ? PriceReasonCode.TREND_DOWN
+              : PriceReasonCode.TREND_FLAT,
+      },
+    ],
     modelVersion: "mock-price-1.0",
     provider: "mock" as const,
     degraded: false,

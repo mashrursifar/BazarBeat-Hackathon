@@ -1,5 +1,5 @@
 import { NotificationType, UserRole } from "@bazarbeat/shared";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { type RenderResult, fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -35,7 +35,7 @@ describe("NotificationBell Component (Task 8.6)", () => {
     });
   });
 
-  function setupBell(unreadCount: number, recentCount = 0) {
+  function setupBell(unreadCount: number, recentCount = 0): RenderResult {
     const recentNotifications = [];
     for (let i = 1; i <= recentCount; i++) {
       recentNotifications.push({

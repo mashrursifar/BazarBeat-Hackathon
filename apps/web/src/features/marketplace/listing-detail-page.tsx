@@ -11,8 +11,10 @@ import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { DemoAiChip } from "../../components/shared/demo-ai-chip.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { PriceTag } from "../../components/shared/price-tag.js";
+import { WatchlistButton } from "../watchlist/components/watchlist-button.js";
 import { Button } from "../../components/ui/button.js";
 import { formatLocalizedNumber } from "../../lib/format.js";
+import { renderGradingReason } from "../ai-reasons/ai-reason-text.js";
 import { useListingStream } from "../realtime/use-listing-stream.js";
 import { useBuyerListingDetail, useListingBids } from "./api/use-buyer-listing.js";
 import { AiMarketRangeVisual } from "./components/ai-market-range-visual.js";
@@ -140,7 +142,7 @@ export function BuyerListingDetailPage(): ReactElement {
         {liveAnnouncement}
       </div>
 
-      {/* Top Breadcrumb & Demo AI Chip */}
+      {/* Top Breadcrumb & Actions */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           to="/buyer/marketplace"
@@ -151,7 +153,16 @@ export function BuyerListingDetailPage(): ReactElement {
           <span>{t("listingDetail.backToMarketplace")}</span>
         </Link>
 
-        <DemoAiChip size="md" />
+        <div className="flex items-center gap-2">
+          <WatchlistButton
+            listingId={listing.id}
+            initialIsWatched={Boolean(listing.isWatched)}
+            showLabel={true}
+            size="md"
+            className="border border-stone-200 px-3 bg-white"
+          />
+          <DemoAiChip size="md" />
+        </div>
       </div>
 
       {/* 2-Column Responsive Layout */}
@@ -207,7 +218,7 @@ export function BuyerListingDetailPage(): ReactElement {
                       className="inline-flex items-center gap-1 rounded-lg bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-800"
                     >
                       <span className="text-emerald-600 font-bold">✓</span>
-                      <span>{reason}</span>
+                      <span>{renderGradingReason(reason, t)}</span>
                     </span>
                   ))}
                 </div>

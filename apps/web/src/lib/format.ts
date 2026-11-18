@@ -195,3 +195,64 @@ export function formatCompactPoisha(amountPoisha: number, isBangla = false): str
   const str = `৳${taka}`;
   return isBangla ? toBanglaDigits(str) : str;
 }
+
+/**
+ * Formats poisha per kg with ৳ and unit in English or Bangla (e.g. ৳৪৫/কেজি or ৳45/kg).
+ */
+export function formatPricePerKg(amountPoisha: number, isBangla = false): string {
+  const formatted = formatPoisha(amountPoisha);
+  if (isBangla) {
+    return `${toBanglaDigits(formatted)}/কেজি`;
+  }
+  return `${formatted}/kg`;
+}
+
+/**
+ * Formats relative time from a timestamp in English or Bangla.
+ */
+export function formatRelativeTime(
+  timestamp: string | number | Date,
+  isBangla = false,
+  baseTime: Date = new Date(),
+): string {
+  const target = new Date(timestamp).getTime();
+  const now = baseTime.getTime();
+  const diffMs = now - target;
+  const isFuture = diffMs < 0;
+  const absSeconds = Math.floor(Math.abs(diffMs) / 1000);
+
+  if (absSeconds < 60) {
+    return isBangla ? "এইমাত্র" : "just now";
+  }
+
+  const absMinutes = Math.floor(absSeconds / 60);
+  if (absMinutes < 60) {
+    if (isBangla) {
+      const num = toBanglaDigits(absMinutes);
+      return isFuture ? `${num} মিনিট বাকি` : `${num} মিনিট আগে`;
+    }
+    return isFuture
+      ? `${absMinutes} minute${absMinutes === 1 ? "" : "s"} left`
+      : `${absMinutes} minute${absMinutes === 1 ? "" : "s"} ago`;
+  }
+
+  const absHours = Math.floor(absMinutes / 60);
+  if (absHours < 24) {
+    if (isBangla) {
+      const num = toBanglaDigits(absHours);
+      return isFuture ? `${num} ঘণ্টা বাকি` : `${num} ঘণ্টা আগে`;
+    }
+    return isFuture
+      ? `${absHours} hour${absHours === 1 ? "" : "s"} left`
+      : `${absHours} hour${absHours === 1 ? "" : "s"} ago`;
+  }
+
+  const absDays = Math.floor(absHours / 24);
+  if (isBangla) {
+    const num = toBanglaDigits(absDays);
+    return isFuture ? `${num} দিন বাকি` : `${num} দিন আগে`;
+  }
+  return isFuture
+    ? `${absDays} day${absDays === 1 ? "" : "s"} left`
+    : `${absDays} day${absDays === 1 ? "" : "s"} ago`;
+}

@@ -5,6 +5,7 @@ import { evaluateFloorPrice, formatPoisha } from "@bazarbeat/shared";
 import { PriceTag } from "../../../components/shared/price-tag.js";
 import { Button } from "../../../components/ui/button.js";
 import { Input } from "../../../components/ui/input.js";
+import { renderPriceReason } from "../../ai-reasons/ai-reason-text.js";
 import { usePricePrediction } from "../api/use-listing-wizard-api.js";
 import { useListingWizard } from "../context/listing-wizard-context.js";
 
@@ -244,6 +245,19 @@ export function Step4Price(): ReactElement {
                 "Based on recent mandi/bazar transactions, this is what you could expect selling locally.",
               )}
             </p>
+            {priceGuidance.explanation && priceGuidance.explanation.length > 0 && (
+              <div data-testid="price-reasons-list" className="flex flex-wrap gap-1.5 pt-1">
+                {priceGuidance.explanation.map((item, idx) => (
+                  <span
+                    key={idx}
+                    className="inline-flex items-center gap-1 rounded-md bg-stone-100 px-2 py-0.5 text-xs text-stone-700"
+                  >
+                    <span>📊</span>
+                    <span>{renderPriceReason(item, t)}</span>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Optional Local Selling Cost Input */}

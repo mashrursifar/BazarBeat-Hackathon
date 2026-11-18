@@ -166,6 +166,12 @@ export function MarketplaceContent(): ReactElement {
       params.delete("endingWithin");
     }
 
+    if (newFilters.watchingOnly) {
+      params.set("watchingOnly", "true");
+    } else {
+      params.delete("watchingOnly");
+    }
+
     setSearchParams(params);
   };
 
@@ -204,9 +210,17 @@ export function MarketplaceContent(): ReactElement {
       maxPricePoisha: validatedQuery.maxPrice,
       minQuantityKg: validatedQuery.minQuantity ?? validatedQuery.minQty,
       endingWithin: validatedQuery.endingWithin,
+      watchingOnly: searchParams.get("watchingOnly") === "true",
     }),
-    [validatedQuery],
+    [validatedQuery, searchParams],
   );
+
+  const displayedListings = useMemo(() => {
+    if (currentFilters.watchingOnly) {
+      return listings.filter((l) => Boolean(l.isWatched));
+    }
+    return listings;
+  }, [listings, currentFilters.watchingOnly]);
 
   return (
     <main
@@ -302,7 +316,7 @@ export function MarketplaceContent(): ReactElement {
               {t("marketplace.retry")}
             </button>
           </div>
-        ) : listings.length === 0 ? (
+        ) : displayedListings.length === 0 ? (
           <div
             data-testid="marketplace-empty-state"
             className="rounded-xl border border-dashed border-stone-300 bg-stone-50/50 p-10 text-center"
@@ -338,7 +352,7 @@ export function MarketplaceContent(): ReactElement {
               data-testid="marketplace-listings-grid"
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
             >
-              {listings.map((listing) => (
+              {displayedListings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
             </div>

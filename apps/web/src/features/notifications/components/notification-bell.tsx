@@ -38,7 +38,7 @@ export function NotificationBell(): ReactElement {
     if (isOpen) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => {
+    return (): void => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, [isOpen]);
@@ -53,7 +53,7 @@ export function NotificationBell(): ReactElement {
     if (isOpen) {
       document.addEventListener("keydown", handleKeyDown);
     }
-    return () => {
+    return (): void => {
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [isOpen]);

@@ -1,4 +1,5 @@
 import mongoose, { type InferSchemaType } from "mongoose";
+import { type QualityNote } from "@bazarbeat/shared";
 
 const assessmentImageSchema = new mongoose.Schema(
   {
@@ -28,7 +29,7 @@ const aiAssessmentRecordSchema = new mongoose.Schema(
     confidence: { type: Number, required: true, min: 0, max: 1 },
     confidenceBand: { type: String, enum: ["HIGH", "MEDIUM", "LOW"], required: true },
     classProbabilities: { type: classProbabilitiesSchema, required: true },
-    qualityNotes: { type: [String], required: true },
+    qualityNotes: { type: [mongoose.Schema.Types.Mixed], required: true },
     cropMatch: { type: Boolean, required: true },
     modelVersion: { type: String, required: true },
     provider: { type: String, enum: ["mock", "http"], required: true },
@@ -45,7 +46,12 @@ const aiAssessmentRecordSchema = new mongoose.Schema(
 
 aiAssessmentRecordSchema.index({ farmerId: 1, createdAt: -1 });
 
-export type AiAssessmentRecordDoc = InferSchemaType<typeof aiAssessmentRecordSchema>;
+export type AiAssessmentRecordDoc = Omit<
+  InferSchemaType<typeof aiAssessmentRecordSchema>,
+  "qualityNotes"
+> & {
+  qualityNotes: QualityNote[];
+};
 export const AiAssessmentRecord = mongoose.models.AiAssessmentRecord
   ? mongoose.model<AiAssessmentRecordDoc>("AiAssessmentRecord")
   : mongoose.model<AiAssessmentRecordDoc>("AiAssessmentRecord", aiAssessmentRecordSchema);

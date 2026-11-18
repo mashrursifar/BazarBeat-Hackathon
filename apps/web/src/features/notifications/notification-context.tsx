@@ -141,7 +141,6 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
 
     let eventSource: EventSource | null = null;
     let pollTimer: NodeJS.Timeout | null = null;
-    let isConnected = false;
 
     function startPollingFallback(): void {
       if (pollTimer) return;
@@ -161,7 +160,6 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
       eventSource = new EventSource("/api/v1/me/stream", { withCredentials: true });
 
       eventSource.addEventListener("snapshot", (event) => {
-        isConnected = true;
         stopPollingFallback();
         try {
           const payload = JSON.parse(event.data) as { unreadCount: number };
@@ -226,15 +224,14 @@ export function NotificationProvider({ children }: { children: ReactNode }): Rea
         }
       });
 
-      eventSource.onerror = () => {
-        isConnected = false;
+      eventSource.onerror = (): void => {
         startPollingFallback();
       };
     } catch {
       startPollingFallback();
     }
 
-    return () => {
+    return (): void => {
       if (eventSource) {
         eventSource.close();
       }
@@ -265,10 +262,10 @@ const defaultContextValue: NotificationContextValue = {
   recentNotifications: [],
   loading: false,
   toasts: [],
-  markRead: async () => {},
-  dismissToast: () => {},
-  handleClickNotification: async () => {},
-  refetchUnread: async () => {},
+  markRead: async () => { },
+  dismissToast: () => { },
+  handleClickNotification: async () => { },
+  refetchUnread: async () => { },
 };
 
 export function useNotifications(): NotificationContextValue {

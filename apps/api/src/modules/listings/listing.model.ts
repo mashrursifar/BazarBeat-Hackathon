@@ -1,5 +1,10 @@
 import mongoose, { type InferSchemaType } from "mongoose";
-import { CropGrade, ListingStatus } from "@bazarbeat/shared";
+import {
+  CropGrade,
+  ListingStatus,
+  type PriceExplanation,
+  type QualityNote,
+} from "@bazarbeat/shared";
 
 const listingImageSchema = new mongoose.Schema(
   {
@@ -25,7 +30,7 @@ const listingAiAssessmentSchema = new mongoose.Schema(
     confidence: { type: Number, required: true, min: 0, max: 1 },
     confidenceBand: { type: String, enum: ["HIGH", "MEDIUM", "LOW"] },
     classProbabilities: { type: classProbabilitiesSchema, required: true },
-    qualityNotes: { type: [String], required: true },
+    qualityNotes: { type: [mongoose.Schema.Types.Mixed], required: true },
     cropMatch: { type: Boolean, required: true },
     modelVersion: { type: String, required: true },
     provider: { type: String, enum: ["mock", "http"], required: true },
@@ -43,7 +48,7 @@ const listingAiPriceGuidanceSchema = new mongoose.Schema(
     highPerKg: { type: Number, required: true, min: 1 },
     trend: { type: String, enum: ["UP", "FLAT", "DOWN"], required: true },
     confidence: { type: Number, required: true, min: 0, max: 1 },
-    explanation: { type: [String], required: true },
+    explanation: { type: [mongoose.Schema.Types.Mixed], required: true },
     modelVersion: { type: String, required: true },
     provider: { type: String, enum: ["mock", "http"], required: true },
     degraded: { type: Boolean, default: false, required: true },
@@ -131,7 +136,17 @@ listingSchema.index({ status: 1, createdAt: -1 });
 listingSchema.index({ farmerId: 1, status: 1 });
 listingSchema.index({ farmerId: 1, status: 1, endsAt: 1 });
 
-export type ListingRecord = InferSchemaType<typeof listingSchema>;
+export type ListingRecord = Omit<
+  InferSchemaType<typeof listingSchema>,
+  "aiAssessment" | "aiPriceGuidance"
+> & {
+  aiAssessment: Omit<InferSchemaType<typeof listingAiAssessmentSchema>, "qualityNotes"> & {
+    qualityNotes: QualityNote[];
+  };
+  aiPriceGuidance: Omit<InferSchemaType<typeof listingAiPriceGuidanceSchema>, "explanation"> & {
+    explanation: PriceExplanation[];
+  };
+};
 export const Listing = mongoose.models.Listing
   ? mongoose.model<ListingRecord>("Listing")
   : mongoose.model<ListingRecord>("Listing", listingSchema);

@@ -49,10 +49,14 @@ export const qualityNoteSchema = z.union([
   gradingReasonItemSchema,
 ]);
 
+export type QualityNote = z.infer<typeof qualityNoteSchema>;
+
 export const priceExplanationSchema = z.union([
   z.string().trim().min(1),
   priceReasonItemSchema,
 ]);
+
+export type PriceExplanation = z.infer<typeof priceExplanationSchema>;
 
 
 export const classProbabilitiesSchema = z

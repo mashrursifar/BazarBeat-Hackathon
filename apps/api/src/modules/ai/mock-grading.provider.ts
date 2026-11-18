@@ -1,5 +1,9 @@
 import crypto from "crypto";
-import { AIProvider, type AssessmentResult } from "@bazarbeat/shared";
+import {
+  AIProvider,
+  type AssessmentResult,
+  GradingReasonCode,
+} from "@bazarbeat/shared";
 import { GradingProvider } from "./interfaces.js";
 
 /**
@@ -50,7 +54,7 @@ export class MockGradingProvider implements GradingProvider {
           override.confidenceBand ??
           (override.confidence && override.confidence < 0.8 ? "MEDIUM" : "HIGH"),
         classProbabilities: override.classProbabilities ?? { A: 0.3, B: 0.5, C: 0.2 },
-        qualityNotes: override.qualityNotes ?? ["Visual quality evaluated by AI"],
+        qualityNotes: override.qualityNotes ?? [{ code: GradingReasonCode.VISUAL_AI_EVALUATED }],
         cropMatch: override.cropMatch ?? true,
         modelVersion: override.modelVersion ?? "mock-1.0",
         provider: override.provider ?? AIProvider.MOCK,
@@ -65,12 +69,29 @@ export class MockGradingProvider implements GradingProvider {
     const hash = this.hashBuffer(image);
     const grade = this.registry.get(hash) ?? this.gradeFromHash(hash);
 
+    const qualityNotes =
+      grade === "A"
+        ? [
+            { code: GradingReasonCode.COLOR_UNIFORM },
+            { code: GradingReasonCode.SKIN_INTACT },
+            { code: GradingReasonCode.FRESH_HARVEST },
+          ]
+        : grade === "B"
+          ? [
+              { code: GradingReasonCode.SHAPE_REGULAR },
+              { code: GradingReasonCode.MINOR_BLEMISHES },
+            ]
+          : [
+              { code: GradingReasonCode.SIZE_VARIATION },
+              { code: GradingReasonCode.SURFACE_DEFECTS },
+            ];
+
     const result: AssessmentResult = {
       grade,
       confidence: 0.95,
       confidenceBand: "HIGH",
       classProbabilities: { A: 0.3, B: 0.5, C: 0.2 },
-      qualityNotes: ["Consistent color and shape", "Sound skin with no rot or damage"],
+      qualityNotes,
       cropMatch: true,
       modelVersion: "mock-1.0",
       provider: AIProvider.MOCK,
