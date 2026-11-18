@@ -126,6 +126,13 @@ Playwright's first run may require `npx playwright install` to install its brows
   2. Journey 4 dashboard reflection: after a short auction closes sold, farmer's booked sales and buyer's booked spend increase while active auction counts drop.
   3. Brand-new user empty states for farmer and buyer with welcoming CTAs (create first listing, explore marketplace).
   4. Strict role isolation across dashboard routes (`/farmer/dashboard` vs `/buyer/dashboard`, `/farmer/market-prices` vs `/buyer/market-overview`).
+- **Phase 8 E2E (Notifications, Watchlist, Bangla & Accessibility):**
+  1. Live notification delivery: buyer bids and farmer's bell badge increments live with a toast (`e2e/journey-phase-8-notifications.spec.ts`).
+  2. Multi-actor outbid alert: second buyer outbids, alerting first buyer live, while farmer's unread `NEW_BID` notification coalesces onto the listing dedupe key.
+  3. Auction closing outcomes: winner receives `AUCTION_WON`, farmer receives `AUCTION_SOLD`, and losing bidders receive `AUCTION_LOST`.
+  4. Watchlist lifecycle: saving active listings to watchlist, ended watched listings remaining accessible read-only, and demo `ENDING_SOON` notifications.
+  5. Bangla parity & localization: language switch enforcing document `lang="bn"`, localized Bengali numerals, and zero missing translation keys.
+  6. Accessibility audits: automated WCAG 2.1 AA audits across Landing, Farmer, Buyer, Notifications, and Watchlist pages (`e2e/accessibility-qa.spec.ts`, `e2e/journey-phase-8-notifications.spec.ts`).
 
 ## Manually testing an auction
 

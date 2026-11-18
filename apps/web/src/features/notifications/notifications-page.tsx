@@ -65,7 +65,7 @@ export default function NotificationsPage(): ReactElement {
   };
 
   return (
-    <section className="mx-auto max-w-4xl space-y-6">
+    <section data-testid="notifications-page" className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
@@ -168,6 +168,7 @@ export default function NotificationsPage(): ReactElement {
                 key={notification.id}
                 type="button"
                 data-testid={`page-notification-item-${notification.id}`}
+                data-notification-type={notification.type}
                 onClick={() => void handleClickNotification(notification)}
                 className={`flex w-full items-start gap-4 p-4 text-left transition-colors hover:bg-stone-50 ${
                   !notification.isRead ? "bg-green-50/40" : ""
@@ -182,6 +183,7 @@ export default function NotificationsPage(): ReactElement {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <p
+                      data-testid={`notification-card-${notification.type}`}
                       className={`text-sm ${
                         !notification.isRead
                           ? "font-bold text-foreground"

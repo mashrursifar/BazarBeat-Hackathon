@@ -267,6 +267,96 @@ export async function autoCancelOrderViaApi(
   );
 }
 
+/**
+ * Stable test helper for triggering user-level mock SSE delivery (/me/stream) in the browser context.
+ */
+export async function dispatchMockUserSse(
+  page: Page,
+  eventName: string,
+  payload: unknown,
+): Promise<void> {
+  await page.evaluate(
+    ({ ev, data }) => {
+      const win = window as unknown as {
+        __dispatchMockUserSse?: (e: string, d: unknown) => void;
+      };
+      win.__dispatchMockUserSse?.(ev, data);
+    },
+    { ev: eventName, data: payload },
+  );
+}
+
+/**
+ * Stable test helper for adding a listing to buyer watchlist via API.
+ */
+export async function addToWatchlistViaApi(
+  page: Page,
+  listingId: string,
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async (id) => {
+      const response = await fetch(`/api/v1/watchlist`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify({ listingId: id }),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    listingId,
+  );
+}
+
+/**
+ * Stable test helper for removing a listing from buyer watchlist via API.
+ */
+export async function removeFromWatchlistViaApi(
+  page: Page,
+  listingId: string,
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async (id) => {
+      const response = await fetch(`/api/v1/watchlist/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    listingId,
+  );
+}
+
+/**
+ * Stable test helper for marking notifications as read via API.
+ */
+export async function markNotificationsReadViaApi(
+  page: Page,
+  payload: { ids?: string[]; all?: boolean },
+): Promise<ApiResponse> {
+  return await page.evaluate(
+    async (body) => {
+      const response = await fetch(`/api/v1/notifications/read`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Protection": "1",
+        },
+        body: JSON.stringify(body),
+      });
+      const data = await response.json().catch(() => null);
+      return { status: response.status, body: data };
+    },
+    payload,
+  );
+}
+
 export {
   DEV_SEED_CREDENTIALS,
   SEED_BUYER_DEFINITIONS,

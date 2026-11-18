@@ -7,6 +7,8 @@ import {
   type FarmerListing,
   type FarmerOrderCard,
   type FarmerOrderDetail,
+  type NotificationItem,
+  NotificationType,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -15,6 +17,7 @@ import {
   type SalesTotals,
   StockReturnDecision,
   UserRole,
+  WATCHLIST_LIMITS,
   getOrderActions,
 } from "@bazarbeat/shared";
 
@@ -121,8 +124,11 @@ export interface MockState {
   listings: FarmerListing[];
   bids: MockBid[];
   orders: MockOrder[];
+  notifications: NotificationItem[];
+  watchlist: Array<{ userId: string; listingId: string; createdAt: string }>;
   registeredPages: Page[];
   dispatchSse: (listingId: string, eventName: string, payload: unknown) => Promise<void>;
+  dispatchUserSse: (eventName: string, payload: unknown) => Promise<void>;
 }
 
 export interface SetupMockApiOptions {
@@ -132,6 +138,8 @@ export interface SetupMockApiOptions {
   initialListings?: FarmerListing[];
   initialBids?: MockBid[];
   initialOrders?: MockOrder[];
+  initialNotifications?: NotificationItem[];
+  initialWatchlist?: Array<{ userId: string; listingId: string; createdAt: string }>;
   sharedState?: MockState;
   emptyUser?: boolean;
 }
@@ -392,6 +400,8 @@ export async function setupMockApi(
       listings: options?.initialListings ? [...options.initialListings] : seededListings,
       bids: options?.initialBids ? [...options.initialBids] : seededBids,
       orders: options?.initialOrders ? [...options.initialOrders] : [],
+      notifications: options?.initialNotifications ? [...options.initialNotifications] : [],
+      watchlist: options?.initialWatchlist ? [...options.initialWatchlist] : [],
       registeredPages: [page],
       dispatchSse: async (
         listingId: string,
@@ -409,6 +419,28 @@ export async function setupMockApi(
                   win.__dispatchMockSse?.(id, ev, data);
                 },
                 { id: listingId, ev: eventName, data: payload },
+              );
+            }
+          } catch {
+            // Ignore evaluation errors on closed or transitioning pages
+          }
+        }
+      },
+      dispatchUserSse: async (
+        eventName: string,
+        payload: unknown,
+      ): Promise<void> => {
+        for (const p of state.registeredPages) {
+          try {
+            if (!p.isClosed()) {
+              await p.evaluate(
+                ({ ev, data }) => {
+                  const win = window as unknown as {
+                    __dispatchMockUserSse?: (e: string, d: unknown) => void;
+                  };
+                  win.__dispatchMockUserSse?.(ev, data);
+                },
+                { ev: eventName, data: payload },
               );
             }
           } catch {
@@ -498,6 +530,26 @@ export async function setupMockApi(
       const sources = win.__mockEventSources || [];
       for (const es of sources) {
         if (es.url && es.url.includes(`/listings/${listingId}/stream`)) {
+          const msgEvent = new MessageEvent(eventName, {
+            data: JSON.stringify(payload),
+          });
+          es.dispatchEvent(msgEvent);
+          if (eventName === "message" && es.onmessage) {
+            es.onmessage(msgEvent);
+          }
+        }
+      }
+    };
+
+    (
+      window as unknown as {
+        __dispatchMockUserSse?: (eventName: string, payload: unknown) => void;
+      }
+    ).__dispatchMockUserSse = (eventName: string, payload: unknown): void => {
+      const win = window as unknown as { __mockEventSources?: MockEventSource[] };
+      const sources = win.__mockEventSources || [];
+      for (const es of sources) {
+        if (es.url && es.url.includes("/me/stream")) {
           const msgEvent = new MessageEvent(eventName, {
             data: JSON.stringify(payload),
           });
@@ -962,6 +1014,13 @@ export async function setupMockApi(
         );
       }
 
+      const watchingParam = url.searchParams.get("watching");
+      if (watchingParam === "true") {
+        filtered = filtered.filter((l) =>
+          state.watchlist.some((w) => w.userId === pageUser.id && w.listingId === l.id),
+        );
+      }
+
       const cards = filtered.map((l) => {
         const crop = crops.find((c) => c.id === l.cropId) ?? crops[0];
         const displayPrice = l.currentBidPerKg ?? l.floorPricePerKg;
@@ -994,6 +1053,9 @@ export async function setupMockApi(
           thumbnailUrl: l.images?.[0]?.url || "/images/crops/placeholder.svg",
           images: l.images,
           aiExpectedPricePerKg: l.aiPriceGuidance?.expectedPerKg,
+          isWatched: state.watchlist.some(
+            (w) => w.userId === pageUser.id && w.listingId === l.id,
+          ),
         };
       });
 
@@ -1090,6 +1152,8 @@ export async function setupMockApi(
             ? pageUser
             : buyerUser;
 
+      const previousBidderId = (listing as unknown as { currentBidderId?: string }).currentBidderId;
+
       const now = new Date();
       const bidId = `507f191e810c19729de8b${String(state.bids.length + 1).padStart(3, "0")}`;
       const bidSeq = (listing.bidCount || 0) + 1;
@@ -1142,6 +1206,91 @@ export async function setupMockApi(
         void state.dispatchSse(listing.id, "auction.extended", extendedPatch);
       }
       void state.dispatchSse(listing.id, "bid.placed", bidPlacedPatch);
+
+      // Notification matrix integration (Gap 2 / Gap 3)
+      const farmerId = farmerUser.id;
+      const crop = crops.find((c) => c.id === listing.cropId) ?? crops[0];
+
+      // 1. Farmer gets NEW_BID (coalesced per listing while unread)
+      if (bidder.id !== farmerId) {
+        const dedupeKey = `NEW_BID:${listing.id}`;
+        const existingUnread = state.notifications.find(
+          (n) => n.userId === farmerId && n.dedupeKey === dedupeKey && !n.isRead,
+        );
+
+        if (existingUnread) {
+          existingUnread.body = `A new bid of ৳${(amountPerKg / 100).toFixed(2)}/kg was placed (${bidSeq} bids).`;
+          existingUnread.params = {
+            ...existingUnread.params,
+            currentBidPerKg: amountPerKg,
+            bidCount: bidSeq,
+          };
+          existingUnread.updatedAt = now.toISOString();
+          const unreadCount = state.notifications.filter(
+            (n) => n.userId === farmerId && !n.isRead,
+          ).length;
+          void state.dispatchUserSse("notification.updated", {
+            notification: existingUnread,
+            unreadCount,
+          });
+        } else {
+          const newNotif: NotificationItem = {
+            id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            userId: farmerId,
+            type: NotificationType.NEW_BID,
+            title: `New bid on ${crop.nameEn}`,
+            body: `A new bid of ৳${(amountPerKg / 100).toFixed(2)}/kg was placed.`,
+            params: {
+              listingId: listing.id,
+              cropSlug: crop.slug,
+              currentBidPerKg: amountPerKg,
+              bidCount: bidSeq,
+            },
+            entityRef: { kind: "listing", id: listing.id },
+            isRead: false,
+            dedupeKey,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          };
+          state.notifications.unshift(newNotif);
+          const unreadCount = state.notifications.filter(
+            (n) => n.userId === farmerId && !n.isRead,
+          ).length;
+          void state.dispatchUserSse("notification.created", {
+            notification: newNotif,
+            unreadCount,
+          });
+        }
+      }
+
+      // 2. Previous highest bidder gets OUTBID
+      if (previousBidderId && previousBidderId !== bidder.id && previousBidderId !== farmerId) {
+        const outbidNotif: NotificationItem = {
+          id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+          userId: previousBidderId,
+          type: NotificationType.OUTBID,
+          title: `You were outbid on ${crop.nameEn}`,
+          body: `A new highest bid of ৳${(amountPerKg / 100).toFixed(2)}/kg was placed.`,
+          params: {
+            listingId: listing.id,
+            cropSlug: crop.slug,
+            newBidPerKg: amountPerKg,
+          },
+          entityRef: { kind: "listing", id: listing.id },
+          isRead: false,
+          dedupeKey: `OUTBID:${listing.id}:${amountPerKg}`,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        state.notifications.unshift(outbidNotif);
+        const unreadCount = state.notifications.filter(
+          (n) => n.userId === previousBidderId && !n.isRead,
+        ).length;
+        void state.dispatchUserSse("notification.created", {
+          notification: outbidNotif,
+          unreadCount,
+        });
+      }
 
       return route.fulfill({
         status: 201,
@@ -1448,6 +1597,130 @@ export async function setupMockApi(
 
       void state.dispatchSse(listing.id, "auction.closed", closedPatch);
 
+      // Notification matrix dispatch on close (Gap 2)
+      const farmerId = farmerUser.id;
+      const crop = crops.find((c) => c.id === listing.cropId) ?? crops[0];
+
+      if (targetStatus === "SOLD") {
+        const winningBid = state.bids
+          .filter((b) => b.listingId === listing.id)
+          .sort((a, b) => b.amountPerKg - a.amountPerKg)[0];
+        const winnerId = winningBid?.buyerId ?? buyerUser.id;
+        const winningPrice = listing.currentBidPerKg ?? listing.floorPricePerKg;
+        const totalAmount = winningPrice * listing.quantityKg;
+        const orderId = state.orders.find((o) => o.listingId === listing.id)?.id ?? `order-${listing.id}`;
+
+        // 1. Farmer gets AUCTION_SOLD
+        const soldNotif: NotificationItem = {
+          id: `notif-${Date.now()}-sold-farmer`,
+          userId: farmerId,
+          type: NotificationType.AUCTION_SOLD,
+          title: `Auction sold: ${crop.nameEn}`,
+          body: `Your ${crop.nameEn} listing sold for ৳${(winningPrice / 100).toFixed(2)}/kg.`,
+          params: {
+            listingId: listing.id,
+            cropSlug: crop.slug,
+            orderId,
+            winningBidPerKg: winningPrice,
+            totalAmount,
+          },
+          entityRef: { kind: "order", id: orderId },
+          isRead: false,
+          dedupeKey: `AUCTION_SOLD:${listing.id}`,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        state.notifications.unshift(soldNotif);
+        const farmerUnread = state.notifications.filter((n) => n.userId === farmerId && !n.isRead).length;
+        void state.dispatchUserSse("notification.created", {
+          notification: soldNotif,
+          unreadCount: farmerUnread,
+        });
+
+        // 2. Winner gets AUCTION_WON
+        const wonNotif: NotificationItem = {
+          id: `notif-${Date.now()}-won-buyer`,
+          userId: winnerId,
+          type: NotificationType.AUCTION_WON,
+          title: `You won ${crop.nameEn}!`,
+          body: `Congratulations! Your winning bid on ${crop.nameEn} was ৳${(winningPrice / 100).toFixed(2)}/kg.`,
+          params: {
+            listingId: listing.id,
+            cropSlug: crop.slug,
+            orderId,
+            winningBidPerKg: winningPrice,
+            totalAmount,
+          },
+          entityRef: { kind: "order", id: orderId },
+          isRead: false,
+          dedupeKey: `AUCTION_WON:${listing.id}`,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        state.notifications.unshift(wonNotif);
+        const winnerUnread = state.notifications.filter((n) => n.userId === winnerId && !n.isRead).length;
+        void state.dispatchUserSse("notification.created", {
+          notification: wonNotif,
+          unreadCount: winnerUnread,
+        });
+
+        // 3. Other bidders get AUCTION_LOST
+        const otherBidders = new Set(
+          state.bids
+            .filter((b) => b.listingId === listing.id && b.buyerId !== winnerId && b.buyerId !== farmerId)
+            .map((b) => b.buyerId),
+        );
+        for (const loserId of otherBidders) {
+          const lostNotif: NotificationItem = {
+            id: `notif-${Date.now()}-lost-${loserId}`,
+            userId: loserId,
+            type: NotificationType.AUCTION_LOST,
+            title: `Auction ended: ${crop.nameEn}`,
+            body: `The auction for ${crop.nameEn} ended at ৳${(winningPrice / 100).toFixed(2)}/kg.`,
+            params: {
+              listingId: listing.id,
+              cropSlug: crop.slug,
+              finalPricePerKg: winningPrice,
+            },
+            entityRef: { kind: "listing", id: listing.id },
+            isRead: false,
+            dedupeKey: `AUCTION_LOST:${listing.id}`,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          };
+          state.notifications.unshift(lostNotif);
+          const loserUnread = state.notifications.filter((n) => n.userId === loserId && !n.isRead).length;
+          void state.dispatchUserSse("notification.created", {
+            notification: lostNotif,
+            unreadCount: loserUnread,
+          });
+        }
+      } else if (targetStatus === "EXPIRED_UNSOLD") {
+        // Farmer gets AUCTION_UNSOLD
+        const unsoldNotif: NotificationItem = {
+          id: `notif-${Date.now()}-unsold-farmer`,
+          userId: farmerId,
+          type: NotificationType.AUCTION_UNSOLD,
+          title: `Auction ended unsold: ${crop.nameEn}`,
+          body: `Your auction for ${crop.nameEn} ended with no bids above the floor price.`,
+          params: {
+            listingId: listing.id,
+            cropSlug: crop.slug,
+          },
+          entityRef: { kind: "listing", id: listing.id },
+          isRead: false,
+          dedupeKey: `AUCTION_UNSOLD:${listing.id}`,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        };
+        state.notifications.unshift(unsoldNotif);
+        const farmerUnread = state.notifications.filter((n) => n.userId === farmerId && !n.isRead).length;
+        void state.dispatchUserSse("notification.created", {
+          notification: unsoldNotif,
+          unreadCount: farmerUnread,
+        });
+      }
+
       return route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -1480,8 +1753,23 @@ export async function setupMockApi(
 
       // If buyer or non-owner farmer, return BuyerListingDetail
       if (pageUser.role === UserRole.BUYER) {
+        const isWatched = state.watchlist.some(
+          (w) => w.userId === pageUser.id && w.listingId === listing.id,
+        );
         const listingBids = state.bids.filter((b) => b.listingId === listing.id);
         const myBids = listingBids.filter((b) => b.buyerId === pageUser.id);
+
+        // Gap 7 / Decision D-34: Ended watched listings remain accessible read-only
+        if (listing.status !== "ACTIVE" && myBids.length === 0 && !isWatched) {
+          return route.fulfill({
+            status: 404,
+            contentType: "application/json",
+            body: JSON.stringify({
+              error: { code: "NOT_FOUND", message: "Listing not found" },
+            }),
+          });
+        }
+
         const myHighest =
           myBids.length > 0
             ? Math.max(...myBids.map((b) => b.amountPerKg))
@@ -1545,6 +1833,7 @@ export async function setupMockApi(
           myHighestBidPerKg: myHighest,
           highestBidPerKg: myHighest,
           createdAt: listing.createdAt,
+          isWatched,
         };
 
         return route.fulfill({
@@ -2953,6 +3242,305 @@ export async function setupMockApi(
             range: "30d",
             serverTime: new Date().toISOString(),
           },
+        }),
+      });
+    }
+
+    // 37. User SSE Stream (GET /api/v1/me/stream)
+    if (path === "/api/v1/me/stream" && method === "GET") {
+      return route.fulfill({
+        status: 200,
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          Connection: "keep-alive",
+        },
+        body: ": ok\n\n",
+      });
+    }
+
+    // 38. Notifications List (GET /api/v1/notifications)
+    if (path === "/api/v1/notifications" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Not logged in" } }),
+        });
+      }
+
+      const unreadOnly = url.searchParams.get("unreadOnly") === "true";
+      const pageNum = Number(url.searchParams.get("page") || "1");
+      const limit = Number(url.searchParams.get("limit") || "20");
+
+      let userNotifs = state.notifications.filter((n) => n.userId === pageUser.id);
+      const unreadCount = userNotifs.filter((n) => !n.isRead).length;
+
+      if (unreadOnly) {
+        userNotifs = userNotifs.filter((n) => !n.isRead);
+      }
+
+      const total = userNotifs.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const startIndex = (pageNum - 1) * limit;
+      const paginated = userNotifs.slice(startIndex, startIndex + limit);
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: paginated,
+          meta: {
+            serverTime: new Date().toISOString(),
+            page: pageNum,
+            limit,
+            total,
+            totalPages,
+            unreadCount,
+          },
+        }),
+      });
+    }
+
+    // 39. Mark Notifications Read (POST /api/v1/notifications/read)
+    if (path === "/api/v1/notifications/read" && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Not logged in" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      let markedCount = 0;
+      if (body.all) {
+        for (const n of state.notifications) {
+          if (n.userId === pageUser.id && !n.isRead) {
+            n.isRead = true;
+            n.readAt = new Date().toISOString();
+            markedCount++;
+          }
+        }
+      } else if (Array.isArray(body.ids)) {
+        const idSet = new Set(body.ids);
+        for (const n of state.notifications) {
+          if (n.userId === pageUser.id && idSet.has(n.id) && !n.isRead) {
+            n.isRead = true;
+            n.readAt = new Date().toISOString();
+            markedCount++;
+          }
+        }
+      }
+
+      const unreadCount = state.notifications.filter(
+        (n) => n.userId === pageUser.id && !n.isRead,
+      ).length;
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: { markedCount },
+          meta: {
+            serverTime: new Date().toISOString(),
+            unreadCount,
+          },
+        }),
+      });
+    }
+
+    // 40. Buyer Watchlist (GET /api/v1/watchlist)
+    if (path === "/api/v1/watchlist" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can access watchlist" } }),
+        });
+      }
+
+      const pageNum = Number(url.searchParams.get("page") || "1");
+      const limit = Number(url.searchParams.get("limit") || "20");
+
+      const userWatch = state.watchlist.filter((w) => w.userId === pageUser.id);
+      const watchedListingIds = new Set(userWatch.map((w) => w.listingId));
+      const watchedListings = state.listings.filter((l) => watchedListingIds.has(l.id));
+
+      const cards = watchedListings.map((l) => {
+        const crop = crops.find((c) => c.id === l.cropId) ?? crops[0];
+        const displayPrice = l.currentBidPerKg ?? l.floorPricePerKg;
+        return {
+          id: l.id,
+          cropId: l.cropId,
+          crop: {
+            id: crop.id,
+            slug: crop.slug,
+            nameEn: crop.nameEn,
+            nameBn: crop.nameBn,
+            unit: crop.unit,
+          },
+          grade: l.aiAssessment.grade,
+          quantityKg: l.quantityKg,
+          floorPricePerKg: l.floorPricePerKg,
+          currentBidPerKg: l.currentBidPerKg ?? null,
+          displayPricePerKg: displayPrice,
+          totalDisplayCost: displayPrice * l.quantityKg,
+          minIncrementPerKg: l.minIncrementPerKg || 100,
+          hasBids: (l.bidCount || 0) > 0,
+          bidCount: l.bidCount || 0,
+          startsAt: l.startsAt,
+          endsAt: l.endsAt,
+          status: l.status,
+          location: {
+            division: l.location?.division || "dhaka",
+            district: l.location?.district || "dhaka",
+          },
+          thumbnailUrl: l.images?.[0]?.url || "/images/crops/placeholder.svg",
+          images: l.images,
+          aiExpectedPricePerKg: l.aiPriceGuidance?.expectedPerKg,
+          isWatched: true,
+        };
+      });
+
+      const total = cards.length;
+      const totalPages = Math.max(1, Math.ceil(total / limit));
+      const startIndex = (pageNum - 1) * limit;
+      const paginated = cards.slice(startIndex, startIndex + limit);
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: paginated,
+          meta: {
+            serverTime: new Date().toISOString(),
+            page: pageNum,
+            limit,
+            total,
+            totalPages,
+          },
+        }),
+      });
+    }
+
+    // 41. Add to Watchlist (POST /api/v1/watchlist)
+    if (path === "/api/v1/watchlist" && method === "POST") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can access watchlist" } }),
+        });
+      }
+
+      const body = JSON.parse(route.request().postData() || "{}");
+      const targetListing = state.listings.find((l) => l.id === body.listingId);
+      if (!targetListing) {
+        return route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "NOT_FOUND", message: "Listing not found" } }),
+        });
+      }
+      if (targetListing.status !== "ACTIVE") {
+        return route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "LISTING_NOT_ACTIVE",
+              message: "Only active listings can be added to the watchlist",
+            },
+          }),
+        });
+      }
+
+      const buyerWatchlist = state.watchlist.filter((w) => w.userId === pageUser.id);
+      if (
+        buyerWatchlist.length >= WATCHLIST_LIMITS.MAX_PER_BUYER &&
+        !buyerWatchlist.some((w) => w.listingId === body.listingId)
+      ) {
+        return route.fulfill({
+          status: 400,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: {
+              code: "WATCHLIST_CAP_EXCEEDED",
+              message: "Watchlist cap reached",
+            },
+          }),
+        });
+      }
+
+      if (!state.watchlist.some((w) => w.userId === pageUser.id && w.listingId === body.listingId)) {
+        state.watchlist.push({
+          userId: pageUser.id,
+          listingId: body.listingId,
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            success: true,
+            listingId: body.listingId,
+            isWatched: true,
+          },
+          meta: { serverTime: new Date().toISOString() },
+        }),
+      });
+    }
+
+    // 42. Remove from Watchlist (DELETE /api/v1/watchlist/:listingId)
+    if (path.match(/\/api\/v1\/watchlist\/[^/]+$/) && method === "DELETE") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHORIZED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can access watchlist" } }),
+        });
+      }
+
+      const listingId = path.split("/").pop()!;
+      state.watchlist = state.watchlist.filter(
+        (w) => !(w.userId === pageUser.id && w.listingId === listingId),
+      );
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            success: true,
+            listingId,
+            isWatched: false,
+          },
+          meta: { serverTime: new Date().toISOString() },
         }),
       });
     }

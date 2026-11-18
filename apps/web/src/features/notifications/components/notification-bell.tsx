@@ -61,7 +61,7 @@ export function NotificationBell(): ReactElement {
   const basePath = user?.role === "FARMER" ? "/farmer" : "/buyer";
 
   return (
-    <div className="relative inline-block text-left" ref={containerRef}>
+    <div data-testid="notification-bell" className="relative inline-block text-left" ref={containerRef}>
       <button
         type="button"
         data-testid="notification-bell-button"
