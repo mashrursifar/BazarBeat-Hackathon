@@ -399,4 +399,63 @@ describe("BuyerDashboardPage (Task 7.7)", () => {
       expect(screen.getByTestId("range-tab-90d")).toHaveAttribute("aria-selected", "true");
     });
   });
+
+  it("Task 7.9: renders spend trend and purchases by crop charts with endpoint data", async () => {
+    vi.spyOn(dashboardApi, "fetchBuyerDashboard").mockResolvedValue(mockPopulatedResponse);
+
+    renderBuyerDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("buyer-spend-trend-chart")).toBeInTheDocument();
+      expect(screen.getByTestId("buyer-crop-breakdown-chart")).toBeInTheDocument();
+    });
+
+    // Check spend trend accessible summary reflects total spend from endpoint data: 35k + 42k = 77k poisha (৳77000.00)
+    const spendSummary = screen.getByTestId("buyer-spend-trend-chart-text-summary");
+    expect(spendSummary).toHaveTextContent("৳77000.00");
+    expect(spendSummary).toHaveTextContent("1,150 kg");
+    expect(spendSummary).toHaveTextContent("5 orders");
+
+    // Check purchases by crop accessible summary reflects endpoint data: Onion ৳95000.00 (1,500 kg, 6 orders)
+    const cropSummary = screen.getByTestId("buyer-crop-breakdown-chart-text-summary");
+    expect(cropSummary).toHaveTextContent("Onion: ৳95000.00 (1,500 kg, 6 Orders)");
+
+    // Toggle to accessible table on the spend trend chart and verify numbers match endpoint
+    await userEvent.click(screen.getByTestId("buyer-spend-trend-chart-tab-table"));
+    const spendTable = screen.getByTestId("buyer-spend-trend-chart-table");
+    expect(spendTable).toHaveTextContent("10 Nov");
+    expect(spendTable).toHaveTextContent("৳35000.00");
+    expect(spendTable).toHaveTextContent("500 kg");
+    expect(spendTable).toHaveTextContent("12 Nov");
+    expect(spendTable).toHaveTextContent("৳42000.00");
+    expect(spendTable).toHaveTextContent("650 kg");
+    expect(spendTable).toHaveTextContent("৳77000.00"); // Total
+  });
+
+  it("Task 7.9: renders empty chart states when spend trend and purchases by crop have no purchases", async () => {
+    const responseWithActiveBidsNoSpend: BuyerDashboardResponse = {
+      ...mockPopulatedResponse,
+      data: {
+        ...mockPopulatedResponse.data,
+        kpis: {
+          ...mockPopulatedResponse.data.kpis,
+          totalSpend: { value: 0, previous: 0, changePercent: null },
+        },
+        spendTrend: [],
+        purchasesByCrop: [],
+      },
+    };
+
+    vi.spyOn(dashboardApi, "fetchBuyerDashboard").mockResolvedValue(responseWithActiveBidsNoSpend);
+
+    renderBuyerDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("buyer-spend-trend-chart")).toBeInTheDocument();
+      expect(screen.getByTestId("buyer-crop-breakdown-chart")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("buyer-spend-trend-chart-empty-state")).toBeInTheDocument();
+    expect(screen.getByTestId("buyer-crop-breakdown-chart-empty-state")).toBeInTheDocument();
+  });
 });

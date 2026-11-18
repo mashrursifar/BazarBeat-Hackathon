@@ -323,4 +323,64 @@ describe("FarmerDashboardPage (Task 7.6)", () => {
       expect(screen.getByTestId("range-tab-90d")).toHaveAttribute("aria-selected", "true");
     });
   });
+
+  it("Task 7.8: renders sales trend and crop breakdown charts with endpoint data", async () => {
+    vi.spyOn(dashboardApi, "fetchFarmerDashboard").mockResolvedValue(mockPopulatedResponse);
+
+    renderDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("farmer-sales-trend-chart")).toBeInTheDocument();
+      expect(screen.getByTestId("farmer-crop-breakdown-chart")).toBeInTheDocument();
+    });
+
+    // Check sales trend accessible summary reflects total sales from endpoint data: 25k + 30k = 55k poisha (৳55000.00)
+    const salesSummary = screen.getByTestId("farmer-sales-trend-chart-text-summary");
+    expect(salesSummary).toHaveTextContent("৳55000.00");
+    expect(salesSummary).toHaveTextContent("250 kg");
+    expect(salesSummary).toHaveTextContent("5 orders");
+
+    // Check crop breakdown accessible summary reflects endpoint data: Onion ৳75000.00 (850 kg, 8 orders)
+    const cropSummary = screen.getByTestId("farmer-crop-breakdown-chart-text-summary");
+    expect(cropSummary).toHaveTextContent("Onion: ৳75000.00 (850 kg, 8 Orders)");
+
+    // Toggle to accessible table on the sales trend chart and verify numbers match endpoint
+    await userEvent.click(screen.getByTestId("farmer-sales-trend-chart-tab-table"));
+    const salesTable = screen.getByTestId("farmer-sales-trend-chart-table");
+    expect(salesTable).toHaveTextContent("10 Nov");
+    expect(salesTable).toHaveTextContent("৳25000.00");
+    expect(salesTable).toHaveTextContent("100 kg");
+    expect(salesTable).toHaveTextContent("12 Nov");
+    expect(salesTable).toHaveTextContent("৳30000.00");
+    expect(salesTable).toHaveTextContent("150 kg");
+    expect(salesTable).toHaveTextContent("৳55000.00"); // Total
+  });
+
+  it("Task 7.8: renders empty chart states when sales trend and crop breakdown have no sales", async () => {
+    const responseWithActiveAuctionNoSales: FarmerDashboardResponse = {
+      ...mockPopulatedResponse,
+      data: {
+        ...mockPopulatedResponse.data,
+        kpis: {
+          ...mockPopulatedResponse.data.kpis,
+          totalSales: { value: 0, previous: 0, changePercent: null },
+          earnings: { value: 0, previous: 0, changePercent: null },
+        },
+        salesTrend: [],
+        earningsByCrop: [],
+      },
+    };
+
+    vi.spyOn(dashboardApi, "fetchFarmerDashboard").mockResolvedValue(responseWithActiveAuctionNoSales);
+
+    renderDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("farmer-sales-trend-chart")).toBeInTheDocument();
+      expect(screen.getByTestId("farmer-crop-breakdown-chart")).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId("farmer-sales-trend-chart-empty-state")).toBeInTheDocument();
+    expect(screen.getByTestId("farmer-crop-breakdown-chart-empty-state")).toBeInTheDocument();
+  });
 });

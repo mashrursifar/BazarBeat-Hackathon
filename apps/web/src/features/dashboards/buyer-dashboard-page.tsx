@@ -14,6 +14,8 @@ import { ChangeIndicator } from "../../components/shared/change-indicator.js";
 import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { OrderStatusBadge } from "../../components/shared/order-status-badge.js";
+import { TrendChart } from "../../components/shared/trend-chart.js";
+import { BarBreakdownChart } from "../../components/shared/bar-breakdown-chart.js";
 import { formatLocalizedNumber, formatLocalizedPoisha, toBanglaDigits } from "../../lib/format.js";
 import { fetchBuyerDashboard } from "./api/dashboard-api.js";
 
@@ -39,6 +41,10 @@ export function BuyerDashboardSkeleton(): ReactElement {
             <div key={i} className="h-32 rounded-lg border border-stone-200 bg-stone-100 p-4" />
           ))}
         </div>
+      </div>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="h-72 rounded-xl border border-stone-200 bg-stone-100 p-4" />
+        <div className="h-72 rounded-xl border border-stone-200 bg-stone-100 p-4" />
       </div>
     </div>
   );
@@ -92,6 +98,8 @@ export default function BuyerDashboardPage(): ReactElement {
     activeBidsList = [],
     nearestEndingBids = [],
     recentOrders = [],
+    spendTrend = [],
+    purchasesByCrop = [],
   } = data.data;
 
   const bidsToDisplay =
@@ -293,6 +301,45 @@ export default function BuyerDashboardPage(): ReactElement {
                 data-testid="stat-savings-market"
               />
             </div>
+          </section>
+
+          {/* Charts Section: Spend Trend & Purchases by Crop */}
+          <section className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2" aria-label="Spend and crop charts">
+            <TrendChart
+              title={t("buyerDashboard.spendTrendTitle")}
+              subtitle={t("buyerDashboard.spendTrendSubtitle")}
+              data={spendTrend.map((bucket) => ({
+                bucket: bucket.bucket,
+                date: bucket.date,
+                value: bucket.spend,
+                quantityKg: bucket.quantityKg,
+                orderCount: bucket.orderCount,
+              }))}
+              valueLabel={t("buyerDashboard.bookedSpend")}
+              emptyMessage={t("charts.emptySpendTrend")}
+              isBangla={isBangla}
+              color="hsl(145 58% 28%)"
+              data-testid="buyer-spend-trend-chart"
+            />
+
+            <BarBreakdownChart
+              title={t("buyerDashboard.purchasesByCropTitle")}
+              subtitle={t("buyerDashboard.purchasesByCropSubtitle")}
+              data={purchasesByCrop.map((crop) => ({
+                cropId: crop.cropId,
+                cropSlug: crop.cropSlug,
+                cropName: crop.cropName,
+                cropNameBn: crop.cropNameBn,
+                value: crop.totalSpend,
+                quantityKg: crop.quantityKg,
+                orderCount: crop.orderCount,
+              }))}
+              valueLabel={t("buyerDashboard.bookedSpend")}
+              emptyMessage={t("charts.emptyBuyerCropBreakdown")}
+              isBangla={isBangla}
+              color="hsl(38 92% 50%)"
+              data-testid="buyer-crop-breakdown-chart"
+            />
           </section>
 
           {/* Group 2: "Right Now" Status */}
