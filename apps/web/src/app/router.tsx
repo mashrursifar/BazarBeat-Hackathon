@@ -38,6 +38,8 @@ const SalesPage = lazy(() => import("../features/sales/sales-page.js"));
 const EarningsPage = lazy(() => import("../features/earnings/earnings-page.js"));
 const FarmerDashboardPage = lazy(() => import("../features/dashboards/farmer-dashboard-page.js"));
 const BuyerDashboardPage = lazy(() => import("../features/dashboards/buyer-dashboard-page.js"));
+const FarmerMarketPricesPage = lazy(() => import("../features/market-prices/farmer-market-prices-page.js"));
+const BuyerMarketOverviewPage = lazy(() => import("../features/market-prices/buyer-market-overview-page.js"));
 
 const FARMER_PAGES = [
   ["dashboard", "dashboard"],
@@ -110,6 +112,7 @@ function farmerPage(path: string, pageKey: string): { path: string; element: Rea
   if (path === "orders") return { path, element: <FarmerOrdersPage /> };
   if (path === "sales") return { path, element: <SalesPage /> };
   if (path === "earnings") return { path, element: <EarningsPage /> };
+  if (path === "market-prices") return { path, element: <FarmerMarketPricesPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 
@@ -119,6 +122,7 @@ function buyerPage(path: string, pageKey: string): { path: string; element: Reac
   if (path === "compare") return { path, element: <ComparePage /> };
   if (path === "my-bids") return { path, element: <MyBidsPage /> };
   if (path === "orders") return { path, element: <BuyerOrdersPage /> };
+  if (path === "market-overview") return { path, element: <BuyerMarketOverviewPage /> };
   return { path, element: <PlaceholderPage pageKey={pageKey} /> };
 }
 

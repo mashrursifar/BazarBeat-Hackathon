@@ -118,6 +118,11 @@ Playwright's first run may require `npx playwright install` to install its brows
   Auction closing sold, order lifecycle across farmer and buyer, contact privacy masking before confirmation and reveal afterwards, handover scheduling (0-72h ahead), simulated wallet payment, delivery, buyer receipt confirmation, and sales/earnings dashboard reflection (`e2e/journey-4-orders-sales.spec.ts`).
 - **Journey 5 (Unsold Relisting, Order Cancel with Stock Return, Timers & Role Isolation):**
   Auction closing unsold with relist prompt and inventory restoration, order cancellation flow with stock-return prompt (restoring available inventory), auto-cancel timer transition of unconfirmed orders, and mutual role isolation preventing role hijacking (`e2e/journey-5-unsold-and-lifecycle.spec.ts`).
+- **Phase 7 E2E (Dashboards, Analytics & Market Overview):**
+  1. Demo farmer and buyer dashboards displaying seeded numbers with responsive SVG/Recharts charts, crop breakdowns, and range tab switching (`e2e/journey-phase-7-dashboards.spec.ts`).
+  2. Journey 4 dashboard reflection: after a short auction closes sold, farmer's booked sales and buyer's booked spend increase while active auction counts drop.
+  3. Brand-new user empty states for farmer and buyer with welcoming CTAs (create first listing, explore marketplace).
+  4. Strict role isolation across dashboard routes (`/farmer/dashboard` vs `/buyer/dashboard`, `/farmer/market-prices` vs `/buyer/market-overview`).
 
 ## Manually testing an auction
 
@@ -131,6 +136,13 @@ You can test the full bidding flow across roles in development:
    If starting from an empty database, seed the crop catalog:
    ```sh
    npm run seed
+   ```
+   To seed demo listings, farmers, buyers, and rich historical orders/bids for the dashboards:
+   ```sh
+   npm run seed:dev-listings
+   # History seeding is enabled by default. To explicitly control it:
+   npm run seed:dev-listings -- --history
+   npm run seed:dev-listings -- --no-history
    ```
 
 2. **Set up a buyer account:**

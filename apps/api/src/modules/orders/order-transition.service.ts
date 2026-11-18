@@ -481,13 +481,21 @@ export class OrderTransitionService {
   public async cancel(
     orderId: string,
     actor: ActorContext,
-    request: { reason: string; note?: string },
+    request: { reason: string; note?: string; expectedStatus?: OrderStatus },
   ): Promise<MinimalOrder> {
     if (!request.reason || request.reason.trim().length === 0) {
       throw new AppError(400, "VALIDATION_ERROR", "Cancellation reason is required");
     }
 
     const order = await fetchOrderOrThrow(orderId);
+
+    if (request.expectedStatus && order.status !== request.expectedStatus) {
+      throw new AppError(
+        409,
+        OrderErrorCode.INVALID_TRANSITION,
+        `Order is in status '${order.status}', expected '${request.expectedStatus}'`,
+      );
+    }
     const isSystem =
       actor.isSystem === true || actor.userId === "SYSTEM" || (actor.role as string) === "SYSTEM";
 

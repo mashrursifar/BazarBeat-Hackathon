@@ -381,6 +381,7 @@ export const nationalSummaryCropItemSchema = z.object({
   maxPricePerKg: z.number().int().positive(),
   activeListingsCount: z.number().int().nonnegative().default(0),
   completedSalesCount: z.number().int().nonnegative().default(0),
+  totalQuantityKg: z.number().nonnegative().optional().default(0),
 });
 export type NationalSummaryCropItem = z.infer<typeof nationalSummaryCropItemSchema>;
 

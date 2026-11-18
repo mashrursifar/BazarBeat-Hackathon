@@ -242,7 +242,16 @@ userId, listingId; unique together.
 
 ## Derived data (never stored as truth)
 
-Dashboard statistics are computed from Orders/Bids/Listings via aggregation queries in the `dashboards` module. Cache only if needed, and invalidate on domain events.
+Dashboard statistics are computed dynamically from Orders, Bids, and Listings via MongoDB aggregation pipelines in `apps/api/src/modules/dashboards/`:
+- **Farmer Dashboard Aggregations:**
+  - Order aggregations filtered by `{ farmerId, createdAt: { $gte: rangeStart, $lt: rangeEnd } }` using compound index `{ farmerId: 1, status: 1, createdAt: -1 }` (IXSCAN).
+  - Active auctions query filtered by `{ farmerId, status: "ACTIVE", endsAt: { $gt: now } }` using compound index `{ farmerId: 1, status: 1, endsAt: 1 }` (IXSCAN).
+  - Time-series buckets grouped using `$dateToString` with `timezone: "Asia/Dhaka"` into daily (`%Y-%m-%d`) or monthly (`%Y-%m`) intervals, zero-filled across missing dates.
+  - Golden dataset agreement: booked sales, settled net earnings (excluding CANCELLED and DISPUTED), orders, and win rate match Sales and Earnings pages to the exact poisha.
+- **Buyer Dashboard Aggregations:**
+  - Order aggregations filtered by `{ buyerId, createdAt: { $gte: rangeStart, $lt: rangeEnd } }` using compound index `{ buyerId: 1, status: 1, createdAt: -1 }` (IXSCAN).
+  - Active bids query matching unique listings with active bids, partitioned into winning and outbid states using compound index `{ buyerId: 1, placedAt: -1 }` (IXSCAN).
+  - Time-series buckets zero-filled in Asia/Dhaka time; purchases by crop sorted by spend descending.
 
 ## Seed data requirements
 
@@ -258,5 +267,10 @@ Dashboard statistics are computed from Orders/Bids/Listings via aggregation quer
   - Mixed states: ending soon (< 1h), medium duration (3h, 6h, 12h), long duration (24h).
   - Seeded bids on select listings to simulate active auctions, winning states, and price competition.
   - Full inventory ledger reconciliation: adds harvest stock, executes `reserveStockForListing` (`LIST` movements), and verifies that available + listed = harvest stock with zero discrepancy.
+- **Historical Orders & Dashboard Seeding (`dev-history-seeder.ts`):**
+  - Enabled by default in `npm run seed:dev-listings` (or via `--history` flag / `SEED_HISTORY=true`; bypass with `--no-history`).
+  - Seeds 15 historical listings across 30 days (12 SOLD into orders, 2 EXPIRED_UNSOLD, 1 CANCELLED).
+  - Generates 12 completed/in-progress orders across 3 buyers and 2 farmers with realistic timelines, simulated wallet and COD payments, handover notes, and status histories.
+  - Grounds the dashboard golden dataset: Demo Farmer 30d booked sales = 13,113.90 BDT (1,311,390 poisha), settled net = 6,546.79 BDT (654,679 poisha), expected net = 6,304.82 BDT (630,482 poisha); Demo Buyer 30d booked spend = 11,280.40 BDT (1,128,040 poisha).
 - 60 days of MarketPrice history per crop per division.
 - Demo mode creates a few auctions that end within minutes.

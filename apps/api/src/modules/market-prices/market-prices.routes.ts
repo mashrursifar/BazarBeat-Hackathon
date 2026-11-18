@@ -16,11 +16,10 @@ import {
 
 export const marketPricesRouter = Router();
 
-// 1. GET /market-prices/summary?division (Role: Buyer)
+// 1. GET /market-prices/summary?division (Role: Any authenticated)
 marketPricesRouter.get(
   "/summary",
   requireAuthentication,
-  requireRole(UserRole.BUYER),
   validateQuery(marketSummaryQuerySchema),
   getMarketSummaryController,
 );

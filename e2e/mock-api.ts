@@ -133,6 +133,7 @@ export interface SetupMockApiOptions {
   initialBids?: MockBid[];
   initialOrders?: MockOrder[];
   sharedState?: MockState;
+  emptyUser?: boolean;
 }
 
 export async function setupMockApi(
@@ -2505,6 +2506,453 @@ export async function setupMockApi(
             feeRate: { bps: 200, percent: 2.0 },
           },
           meta: { serverTime: now.toISOString() },
+        }),
+      });
+    }
+
+    // 32. Farmer Dashboard (GET /api/v1/dashboards/farmer)
+    if (path === "/api/v1/dashboards/farmer" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.FARMER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only farmers can access the farmer dashboard" } }),
+        });
+      }
+
+      const range = (url.searchParams.get("range") ?? "30d") as "7d" | "30d" | "90d";
+      const isEmpty = Boolean(options?.emptyUser);
+
+      const activeListings = state.listings.filter(
+        (l) => l.status === "ACTIVE" && l.farmerId === pageUser.id,
+      );
+      const pendingOrders = state.orders.filter(
+        (o) => o.farmerId === pageUser.id && o.status === OrderStatus.PENDING,
+      );
+      const nonCancelledOrders = state.orders.filter(
+        (o) => o.farmerId === pageUser.id && o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.DISPUTED,
+      );
+
+      // Base numbers (seeded history defaults from golden dataset)
+      const baseSales = range === "7d" ? 580725 : range === "90d" ? 2450000 : 1311390;
+      const baseEarnings = range === "7d" ? 569110 : range === "90d" ? 2401000 : 1285161;
+
+      // Add dynamic sales from state.orders created in the session
+      const dynamicSales = nonCancelledOrders.reduce((sum, o) => sum + o.subtotal, 0);
+      const dynamicEarnings = nonCancelledOrders.reduce((sum, o) => sum + o.farmerNet, 0);
+
+      const totalSales = isEmpty ? 0 : baseSales + dynamicSales;
+      const earnings = isEmpty ? 0 : baseEarnings + dynamicEarnings;
+      const activeAuctions = isEmpty ? 0 : activeListings.length;
+      const pendingCount = isEmpty ? 0 : pendingOrders.length;
+
+      const salesTrend = [
+        { bucket: "2026-11-10", date: "2026-11-10", sales: isEmpty ? 0 : 266025, quantityKg: isEmpty ? 0 : 75.5, orderCount: isEmpty ? 0 : 2 },
+        { bucket: "2026-11-11", date: "2026-11-11", sales: 0, quantityKg: 0, orderCount: 0 },
+        { bucket: "2026-11-12", date: "2026-11-12", sales: isEmpty ? 0 : 56875, quantityKg: isEmpty ? 0 : 12.5, orderCount: isEmpty ? 0 : 1 },
+        { bucket: "2026-11-13", date: "2026-11-13", sales: 0, quantityKg: 0, orderCount: 0 },
+        { bucket: "2026-11-14", date: "2026-11-14", sales: isEmpty ? 0 : 506490, quantityKg: isEmpty ? 0 : 115.5, orderCount: isEmpty ? 0 : 2 },
+        { bucket: "2026-11-15", date: "2026-11-15", sales: isEmpty ? 0 : 482000, quantityKg: isEmpty ? 0 : 60.0, orderCount: isEmpty ? 0 : 2 },
+        { bucket: "2026-11-16", date: "2026-11-16", sales: isEmpty ? 0 : dynamicSales, quantityKg: isEmpty ? 0 : 50.0, orderCount: isEmpty ? 0 : nonCancelledOrders.length },
+      ];
+
+      const endingSoonAuctions = isEmpty
+        ? []
+        : activeListings.map((l) => {
+            const crop = crops.find((c) => c.id === l.cropId) ?? crops[0];
+            return {
+              id: l.id,
+              cropId: l.cropId,
+              cropName: crop.nameEn,
+              cropNameBn: crop.nameBn,
+              grade: l.aiAssessment?.grade ?? "A",
+              quantityKg: l.quantityKg,
+              floorPricePerKg: l.floorPricePerKg,
+              currentBidPerKg: l.currentBidPerKg ?? l.floorPricePerKg,
+              bidCount: l.bidCount,
+              endsAt: l.endsAt,
+              secondsRemaining: Math.max(0, Math.floor((new Date(l.endsAt).getTime() - Date.now()) / 1000)),
+              status: l.status,
+            };
+          });
+
+      const earningsByCrop = isEmpty
+        ? []
+        : [
+            {
+              cropId: CROP_BITTER_GOURD_ID,
+              cropSlug: "bitter-gourd",
+              cropName: "Bitter Gourd",
+              cropNameBn: "করলা",
+              quantityKg: 100,
+              totalSales: 450000,
+              earnings: 441000,
+              orderCount: 1,
+            },
+            {
+              cropId: CROP_POTATO_ID,
+              cropSlug: "potato",
+              cropName: "Potato",
+              cropNameBn: "আলু",
+              quantityKg: 200,
+              totalSales: 560000,
+              earnings: 548800,
+              orderCount: 2,
+            },
+          ];
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            kpis: {
+              totalSales: { value: totalSales, previous: 0, changePercent: null },
+              earnings: { value: earnings, previous: 0, changePercent: null },
+              activeAuctions: { value: activeAuctions, previous: 0, changePercent: null },
+              pendingOrders: { value: pendingCount, previous: 0, changePercent: null },
+              winRate: { value: isEmpty ? 0 : 75.0, previous: null, changePercent: null },
+              topCrop: isEmpty
+                ? null
+                : {
+                    cropId: CROP_BITTER_GOURD_ID,
+                    cropSlug: "bitter-gourd",
+                    cropName: "Bitter Gourd",
+                    cropNameBn: "করলা",
+                    quantityKg: 100,
+                    totalSales: 450000,
+                    earnings: 441000,
+                    orderCount: 1,
+                  },
+              orders: { value: isEmpty ? 0 : 7 + nonCancelledOrders.length, previous: 0, changePercent: null },
+              kgListed: isEmpty ? 0 : 50,
+              nearestDeadline: null,
+            },
+            rightNow: {
+              activeAuctions,
+              ordersNeedingAction: pendingCount,
+              nearestDeadline: null,
+              kgListed: isEmpty ? 0 : 50,
+            },
+            salesTrend,
+            earningsByCrop,
+            endingSoonAuctions,
+            endingSoon: endingSoonAuctions,
+          },
+          meta: {
+            serverTime: new Date().toISOString(),
+            range,
+            granularity: range === "90d" ? "month" : "day",
+            timezone: "Asia/Dhaka",
+          },
+        }),
+      });
+    }
+
+    // 33. Buyer Dashboard (GET /api/v1/dashboards/buyer)
+    if (path === "/api/v1/dashboards/buyer" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can access the buyer dashboard" } }),
+        });
+      }
+
+      const range = (url.searchParams.get("range") ?? "30d") as "7d" | "30d" | "90d";
+      const isEmpty = Boolean(options?.emptyUser);
+
+      const activeListingsWithBids = state.listings.filter(
+        (l) => l.status === "ACTIVE" && l.currentBidPerKg !== undefined,
+      );
+      const buyerPendingOrders = state.orders.filter(
+        (o) => o.buyerId === pageUser.id && o.status === OrderStatus.PENDING,
+      );
+      const buyerNonCancelledOrders = state.orders.filter(
+        (o) => o.buyerId === pageUser.id && o.status !== OrderStatus.CANCELLED && o.status !== OrderStatus.DISPUTED,
+      );
+
+      // Base numbers (seeded history defaults from golden dataset)
+      const baseSpend = range === "7d" ? 420000 : range === "90d" ? 2250000 : 1128040;
+      const dynamicSpend = buyerNonCancelledOrders.reduce((sum, o) => sum + o.subtotal, 0);
+
+      const totalSpend = isEmpty ? 0 : baseSpend + dynamicSpend;
+      const activeBids = isEmpty ? 0 : activeListingsWithBids.length;
+      const pendingCount = isEmpty ? 0 : buyerPendingOrders.length;
+
+      const spendTrend = [
+        { bucket: "2026-11-10", date: "2026-11-10", spend: isEmpty ? 0 : 210015, quantityKg: isEmpty ? 0 : 50.0, orderCount: isEmpty ? 0 : 1 },
+        { bucket: "2026-11-11", date: "2026-11-11", spend: 0, quantityKg: 0, orderCount: 0 },
+        { bucket: "2026-11-12", date: "2026-11-12", spend: 0, quantityKg: 0, orderCount: 0 },
+        { bucket: "2026-11-13", date: "2026-11-13", spend: 0, quantityKg: 0, orderCount: 0 },
+        { bucket: "2026-11-14", date: "2026-11-14", spend: isEmpty ? 0 : 290000, quantityKg: isEmpty ? 0 : 60.0, orderCount: isEmpty ? 0 : 1 },
+        { bucket: "2026-11-15", date: "2026-11-15", spend: isEmpty ? 0 : 352000, quantityKg: isEmpty ? 0 : 80.0, orderCount: isEmpty ? 0 : 1 },
+        { bucket: "2026-11-16", date: "2026-11-16", spend: isEmpty ? 0 : dynamicSpend, quantityKg: isEmpty ? 0 : 50.0, orderCount: isEmpty ? 0 : buyerNonCancelledOrders.length },
+      ];
+
+      const activeBidsList = isEmpty
+        ? []
+        : activeListingsWithBids.map((l) => {
+            const crop = crops.find((c) => c.id === l.cropId) ?? crops[0];
+            return {
+              listingId: l.id,
+              cropId: l.cropId,
+              cropName: crop.nameEn,
+              cropNameBn: crop.nameBn,
+              photoUrl: l.images[0]?.url ?? null,
+              grade: l.aiAssessment?.grade ?? "A",
+              myBidPerKg: l.currentBidPerKg ?? l.floorPricePerKg,
+              currentBidPerKg: l.currentBidPerKg ?? l.floorPricePerKg,
+              bidCount: Math.max(1, l.bidCount),
+              endsAt: l.endsAt,
+              status: "WINNING" as const,
+            };
+          });
+
+      const purchasesByCrop = isEmpty
+        ? []
+        : [
+            {
+              cropId: CROP_BITTER_GOURD_ID,
+              cropSlug: "bitter-gourd",
+              cropName: "Bitter Gourd",
+              cropNameBn: "করলা",
+              quantityKg: 50,
+              totalSpend: 225000,
+              orderCount: 1,
+            },
+            {
+              cropId: CROP_POTATO_ID,
+              cropSlug: "potato",
+              cropName: "Potato",
+              cropNameBn: "আলু",
+              quantityKg: 100,
+              totalSpend: 280000,
+              orderCount: 1,
+            },
+          ];
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            kpis: {
+              totalSpend: { value: totalSpend, previous: 0, changePercent: null },
+              activeBids: { value: activeBids, previous: 0, changePercent: null },
+              winRate: { value: isEmpty ? 0 : 75.0, previous: null, changePercent: null },
+              avgPriceVsMarket: { value: isEmpty ? 0 : 5.4, previous: null, changePercent: null },
+              pendingOrders: { value: pendingCount, previous: 0, changePercent: null },
+              kgPurchased: { value: isEmpty ? 0 : 190.5, previous: 0, changePercent: null },
+              orders: { value: isEmpty ? 0 : 5 + buyerNonCancelledOrders.length, previous: 0, changePercent: null },
+              nearestDeadline: null,
+            },
+            rightNow: {
+              activeBids,
+              winningBids: activeBids > 0 ? 1 : 0,
+              outbidBids: 0,
+              ordersNeedingAction: pendingCount,
+              nearestDeadline: null,
+            },
+            spendTrend,
+            purchasesByCrop,
+            activeBidsList,
+            nearestEndingBids: activeBidsList,
+            recentOrders: [],
+          },
+          meta: {
+            serverTime: new Date().toISOString(),
+            range,
+            granularity: range === "90d" ? "month" : "day",
+            timezone: "Asia/Dhaka",
+          },
+        }),
+      });
+    }
+
+    // 34. Market Prices Summary (GET /api/v1/market-prices/summary)
+    if (path === "/api/v1/market-prices/summary" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            items: [
+              {
+                cropId: CROP_BITTER_GOURD_ID,
+                cropName: "Bitter Gourd",
+                cropNameBn: "করলা",
+                cropSlug: "bitter-gourd",
+                currentAvgPricePerKg: 4600,
+                minPricePerKg: 3800,
+                maxPricePerKg: 5200,
+                trend: "UP",
+                priceChange7dPercent: 4.2,
+                activeListingsCount: 2,
+                lastUpdated: new Date().toISOString(),
+              },
+              {
+                cropId: CROP_POTATO_ID,
+                cropName: "Potato",
+                cropNameBn: "আলু",
+                cropSlug: "potato",
+                currentAvgPricePerKg: 2800,
+                minPricePerKg: 2400,
+                maxPricePerKg: 3200,
+                trend: "FLAT",
+                priceChange7dPercent: 0.0,
+                activeListingsCount: 4,
+                lastUpdated: new Date().toISOString(),
+              },
+              {
+                cropId: CROP_ONION_ID,
+                cropName: "Onion",
+                cropNameBn: "পেঁয়াজ",
+                cropSlug: "onion",
+                currentAvgPricePerKg: 6500,
+                minPricePerKg: 5800,
+                maxPricePerKg: 7200,
+                trend: "UP",
+                priceChange7dPercent: 5.1,
+                activeListingsCount: 3,
+                lastUpdated: new Date().toISOString(),
+              },
+            ],
+          },
+          meta: {
+            totalCrops: 3,
+            serverTime: new Date().toISOString(),
+          },
+        }),
+      });
+    }
+
+    // 35. National Market Overview (GET /api/v1/market-prices/national-summary)
+    if (path === "/api/v1/market-prices/national-summary" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+      if (pageUser.role !== UserRole.BUYER) {
+        return route.fulfill({
+          status: 403,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "FORBIDDEN", message: "Only buyers can access national market summary" } }),
+        });
+      }
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            divisions: [
+              {
+                division: "dhaka",
+                crops: [
+                  {
+                    cropId: CROP_BITTER_GOURD_ID,
+                    cropSlug: "bitter-gourd",
+                    cropName: "Bitter Gourd",
+                    avgPricePerKg: 4600,
+                    minPricePerKg: 3800,
+                    maxPricePerKg: 5200,
+                    activeListingsCount: 5,
+                    completedSalesCount: 10,
+                    totalQuantityKg: 250,
+                  },
+                ],
+              },
+            ],
+          },
+          meta: {
+            totalDivisions: 1,
+            serverTime: new Date().toISOString(),
+          },
+        }),
+      });
+    }
+
+    // 36. Market Price History (GET /api/v1/market-prices)
+    if (path === "/api/v1/market-prices" && method === "GET") {
+      if (!state.authenticated) {
+        return route.fulfill({
+          status: 401,
+          contentType: "application/json",
+          body: JSON.stringify({ error: { code: "UNAUTHENTICATED", message: "Not logged in" } }),
+        });
+      }
+
+      return route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          data: {
+            crop: {
+              id: CROP_BITTER_GOURD_ID,
+              slug: "bitter-gourd",
+              nameEn: "Bitter Gourd",
+              nameBn: "করলা",
+            },
+            series: [
+              {
+                date: "2026-11-16",
+                avgPricePerKg: 4600,
+                minPricePerKg: 3800,
+                maxPricePerKg: 5200,
+                source: "PLATFORM",
+              },
+              {
+                date: "2026-11-15",
+                avgPricePerKg: 4500,
+                minPricePerKg: 3800,
+                maxPricePerKg: 5100,
+                source: "PLATFORM",
+              },
+            ],
+            gradeGuide: [
+              {
+                grade: "A",
+                description: "Fresh green pods",
+                lowPerKg: 4200,
+                expectedPerKg: 4600,
+                highPerKg: 5200,
+                suggestedFloorPerKg: 4300,
+                trend: "UP",
+              },
+            ],
+          },
+          meta: {
+            cropId: CROP_BITTER_GOURD_ID,
+            division: "dhaka",
+            range: "30d",
+            serverTime: new Date().toISOString(),
+          },
         }),
       });
     }

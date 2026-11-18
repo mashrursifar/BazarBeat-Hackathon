@@ -16,6 +16,8 @@ import { GradeBadge } from "../../components/shared/grade-badge.js";
 import { TrendChart } from "../../components/shared/trend-chart.js";
 import { BarBreakdownChart } from "../../components/shared/bar-breakdown-chart.js";
 import { formatLocalizedNumber, formatLocalizedPoisha, toBanglaDigits } from "../../lib/format.js";
+import { useOptionalAuth } from "../auth/auth-context.js";
+import { fetchMarketSummary } from "../market-prices/api/market-prices-api.js";
 import { fetchFarmerDashboard } from "./api/dashboard-api.js";
 
 function isPreset(value: string): value is DashboardRangePreset {
@@ -62,6 +64,17 @@ export default function FarmerDashboardPage(): ReactElement {
     queryFn: () => fetchFarmerDashboard({ range: activeRange }),
     refetchInterval: 30_000,
     refetchOnWindowFocus: true,
+  });
+
+  const auth = useOptionalAuth();
+  const user = auth?.user;
+  const userDivision = user?.division?.toLowerCase()?.trim() || "";
+
+  const { data: marketSummaryData } = useQuery({
+    queryKey: ["farmer-dashboard-market-summary", { division: userDivision }],
+    queryFn: () => fetchMarketSummary({ division: userDivision || undefined }),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
   });
 
   const handleRangeChange = (preset: DashboardRangePreset): void => {
@@ -447,6 +460,109 @@ export default function FarmerDashboardPage(): ReactElement {
                 data-testid="stat-nearest-deadline"
               />
             </div>
+          </section>
+
+          {/* Today's Market Section (using Market Summary endpoint) */}
+          <section className="mt-8" aria-labelledby="todays-market-title" data-testid="todays-market-card">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2
+                  id="todays-market-title"
+                  className="text-lg font-bold tracking-tight text-foreground sm:text-xl"
+                >
+                  {t("marketPrices.todayMarketTitle")}
+                </h2>
+                <p className="text-xs text-muted-foreground">
+                  {userDivision
+                    ? t("marketPrices.todayMarketSubtitle", {
+                        division: userDivision.toUpperCase(),
+                      })
+                    : t("marketPrices.todayMarketNationalSubtitle")}
+                </p>
+              </div>
+              <Link
+                to="/farmer/market-prices"
+                className="text-xs font-semibold text-primary hover:underline self-start sm:self-auto"
+                data-testid="todays-market-view-all"
+              >
+                {t("marketPrices.viewAllMarketPrices")}
+              </Link>
+            </div>
+
+            {marketSummaryData?.data?.items && marketSummaryData.data.items.length > 0 ? (
+              <div
+                className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5"
+                data-testid="todays-market-items"
+              >
+                {marketSummaryData.data.items.slice(0, 5).map((item) => {
+                  const cropTitle = isBangla ? item.cropNameBn || item.cropName : item.cropName;
+                  return (
+                    <Link
+                      key={item.cropId}
+                      to={`/farmer/market-prices?cropId=${item.cropId}${
+                        userDivision ? `&division=${userDivision}` : ""
+                      }`}
+                      className="flex flex-col justify-between rounded-lg border border-stone-200 bg-white p-3 shadow-xs transition hover:border-primary/50 hover:shadow-sm"
+                      data-testid={`today-market-item-${item.cropSlug}`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="font-semibold text-xs text-foreground truncate">
+                          {cropTitle}
+                        </span>
+                        {item.trend === "UP" ? (
+                          <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1 rounded">
+                            ↑
+                          </span>
+                        ) : item.trend === "DOWN" ? (
+                          <span className="text-[10px] font-bold text-rose-700 bg-rose-50 px-1 rounded">
+                            ↓
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold text-stone-600 bg-stone-100 px-1 rounded">
+                            →
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        <div className="text-base font-bold text-primary">
+                          {formatLocalizedPoisha(item.currentAvgPricePerKg, isBangla)}
+                          <span className="text-[10px] font-normal text-muted-foreground"> / kg</span>
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-muted-foreground flex items-center justify-between">
+                          <span>
+                            {item.priceChange7dPercent !== null &&
+                            item.priceChange7dPercent !== undefined ? (
+                              <span
+                                className={
+                                  item.priceChange7dPercent >= 0
+                                    ? "text-emerald-700 font-semibold"
+                                    : "text-rose-700 font-semibold"
+                                }
+                              >
+                                {item.priceChange7dPercent > 0 ? "+" : ""}
+                                {isBangla
+                                  ? toBanglaDigits(item.priceChange7dPercent.toFixed(1))
+                                  : item.priceChange7dPercent.toFixed(1)}
+                                %
+                              </span>
+                            ) : (
+                              "0.0%"
+                            )}
+                          </span>
+                          <span>{t("farmerDashboard.range.7d")}</span>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="mt-3 rounded-lg border border-dashed border-stone-200 bg-stone-50/50 p-4 text-center text-xs text-muted-foreground">
+                <Link to="/farmer/market-prices" className="text-primary font-medium hover:underline">
+                  {t("marketPrices.viewAllMarketPrices")}
+                </Link>
+              </div>
+            )}
           </section>
 
           {/* Ending Soon Auctions List */}

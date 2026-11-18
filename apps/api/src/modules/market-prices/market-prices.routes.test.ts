@@ -153,13 +153,13 @@ describe("Task 7.4 — Market Data Endpoints (P1)", () => {
         expect(res.body.error.code).toBe("UNAUTHENTICATED");
       });
 
-      it("returns 403 FORBIDDEN for farmers (Role: Buyer only)", async () => {
+      it("permits farmers (Role A: any authenticated user)", async () => {
         const res = await request(app)
           .get("/api/v1/market-prices/summary?division=dhaka")
           .set("Cookie", withAuthCookie("farmer1"))
-          .expect(403);
+          .expect(200);
 
-        expect(res.body.error.code).toBe("FORBIDDEN");
+        expect(marketSummaryResponseSchema.safeParse(res.body).success).toBe(true);
       });
 
       it("permits buyers", async () => {

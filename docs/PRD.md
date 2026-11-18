@@ -25,6 +25,12 @@ A marketplace where farmers list produce with AI-verified quality and a floor pr
 | Grade | AI quality class: A (best), B, C |
 | Award | Auction closes with a winning bid ≥ floor |
 | Win rate | Percentage of auctions won or sold. For a farmer: sold listings divided by total closed listings (`sold / (sold + expiredUnsold + cancelled) * 100`). For a buyer: won listings divided by total completed listings bid on (`won / (won + lost) * 100`) |
+| Booked Sales | Total gross value of won auction orders in the selected period, excluding CANCELLED orders |
+| Booked Spend | Total purchase spend by a buyer across won orders in the selected period, excluding CANCELLED orders |
+| Settled Earnings | Farmer's actual net earnings (`subtotal - platformFee`) on COMPLETED orders, excluding CANCELLED and DISPUTED |
+| Expected Earnings | Farmer's projected net earnings across in-progress orders (`PENDING`, `CONFIRMED`, `DELIVERED`) |
+| Price Premium | Quantity-weighted percentage difference between winning auction price and AI benchmark price estimate at listing time |
+| Active Auctions / Bids | Auctions currently in ACTIVE status accepting bids; bids placed on active auctions partitioned into winning and outbid states |
 | Period-over-period (PoP) change | Percentage change in a KPI comparing the current time window against the immediately preceding period of equal duration (`((current - previous) / previous) * 100`). Defined as null (no delta) when the previous period's value is zero |
 | Range presets & buckets | Standardized time windows (`7d`, `30d`, `90d`, `1y`, `all`) mapped to daily or monthly time-series buckets strictly aligned to `Asia/Dhaka` calendar boundaries, with zero-filling for missing activity dates |
 | Market summary & National summary | Aggregated benchmark prices (average, min, max) and price trend across crops and Bangladesh divisions |

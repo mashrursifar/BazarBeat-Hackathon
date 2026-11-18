@@ -32,7 +32,10 @@ export function StatCard({
           <p className="text-sm font-medium text-muted-foreground">{label}</p>
           {icon && <div className="text-muted-foreground">{icon}</div>}
         </div>
-        <div className="mt-1 break-words text-2xl font-bold tracking-tight text-foreground">
+        <div
+          data-testid={testId ? `${testId}-value` : undefined}
+          className="mt-1 break-words text-2xl font-bold tracking-tight text-foreground"
+        >
           {value}
         </div>
         {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}

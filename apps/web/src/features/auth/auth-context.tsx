@@ -88,6 +88,10 @@ export function AuthProvider({ children }: { children: ReactNode }): ReactElemen
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
+export function useOptionalAuth(): AuthState | null {
+  return useContext(AuthContext);
+}
+
 export function useAuth(): AuthState {
   const state = useContext(AuthContext);
   if (state === null) throw new Error("useAuth must be used inside AuthProvider");

@@ -664,6 +664,7 @@ export class MarketPriceService {
             maxPricePerKg,
             activeListingsCount: activeListings.length,
             completedSalesCount,
+            totalQuantityKg: totalQty,
           });
         } else {
           // Cell with no active listings: fetch benchmark from provider cached for 10 minutes
@@ -679,6 +680,7 @@ export class MarketPriceService {
             maxPricePerKg: benchmark.highPerKg,
             activeListingsCount: 0,
             completedSalesCount,
+            totalQuantityKg: 0,
           });
         }
       }

@@ -4,9 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { FarmerDashboardResponse } from "@bazarbeat/shared";
+import type { FarmerDashboardResponse, MarketSummaryResponse } from "@bazarbeat/shared";
 import "../../lib/i18n.js";
 import * as dashboardApi from "./api/dashboard-api.js";
+import * as marketApi from "../market-prices/api/market-prices-api.js";
 import FarmerDashboardPage from "./farmer-dashboard-page.js";
 
 const mockPopulatedResponse: FarmerDashboardResponse = {
@@ -382,5 +383,46 @@ describe("FarmerDashboardPage (Task 7.6)", () => {
 
     expect(screen.getByTestId("farmer-sales-trend-chart-empty-state")).toBeInTheDocument();
     expect(screen.getByTestId("farmer-crop-breakdown-chart-empty-state")).toBeInTheDocument();
+  });
+
+  it("Task 7.10: renders Today's market card using summary endpoint", async () => {
+    const mockSummary: MarketSummaryResponse = {
+      data: {
+        items: [
+          {
+            cropId: "crop-onion",
+            cropSlug: "onion",
+            cropName: "Onion",
+            cropNameBn: "পেঁয়াজ",
+            division: "rajshahi",
+            currentAvgPricePerKg: 6500,
+            minPricePerKg: 6000,
+            maxPricePerKg: 7000,
+            trend: "UP",
+            priceChange7dPercent: 5.2,
+            activeListingsCount: 8,
+            lastUpdated: "2026-11-18T10:00:00.000Z",
+          },
+        ],
+      },
+      meta: {
+        serverTime: "2026-11-18T12:00:00.000Z",
+        totalCrops: 1,
+      },
+    };
+
+    vi.spyOn(dashboardApi, "fetchFarmerDashboard").mockResolvedValue(mockPopulatedResponse);
+    vi.spyOn(marketApi, "fetchMarketSummary").mockResolvedValue(mockSummary);
+
+    renderDashboardPage();
+
+    await waitFor(() => {
+      expect(screen.getByTestId("todays-market-card")).toBeInTheDocument();
+      expect(screen.getByText("Today's Market")).toBeInTheDocument();
+      expect(screen.getByTestId("todays-market-view-all")).toHaveAttribute("href", "/farmer/market-prices");
+      expect(screen.getByTestId("today-market-item-onion")).toBeInTheDocument();
+      expect(screen.getByText("৳65.00")).toBeInTheDocument();
+      expect(screen.getByText("+5.2%")).toBeInTheDocument();
+    });
   });
 });

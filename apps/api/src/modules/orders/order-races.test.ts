@@ -106,6 +106,7 @@ describe("Task 6.12 — Review: Races (P0)", () => {
         const cancelPromise = service.cancel(orderId, buyerActor, {
           reason: "BUYER_REQUEST",
           note: `Cancel race ${i}`,
+          expectedStatus: OrderStatus.PENDING,
         });
 
         const results = await Promise.allSettled([confirmPromise, cancelPromise]);
