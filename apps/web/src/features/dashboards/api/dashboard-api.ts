@@ -1,6 +1,8 @@
 import {
+  type BuyerDashboardResponse,
   type DashboardQuery,
   type FarmerDashboardResponse,
+  buyerDashboardResponseSchema,
   farmerDashboardResponseSchema,
 } from "@bazarbeat/shared";
 
@@ -35,4 +37,35 @@ export async function fetchFarmerDashboard(
 
   const json = await response.json();
   return farmerDashboardResponseSchema.parse(json);
+}
+
+export async function fetchBuyerDashboard(
+  query: Partial<DashboardQuery> = {},
+): Promise<BuyerDashboardResponse> {
+  const params = new URLSearchParams();
+  if (query.range) params.set("range", query.range);
+
+  const url = `${API_BASE_URL}/dashboards/buyer${params.toString() ? `?${params.toString()}` : ""}`;
+  const response = await fetch(url, {
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    let errorCode = response.status === 401 ? "UNAUTHENTICATED" : "API_ERROR";
+    try {
+      const errJson = (await response.json()) as { error?: { code?: string; message?: string } };
+      if (errJson?.error?.code) {
+        errorCode = errJson.error.code;
+      }
+    } catch {
+      // Fallback to generic status
+    }
+    throw new Error(errorCode);
+  }
+
+  const json = await response.json();
+  return buyerDashboardResponseSchema.parse(json);
 }

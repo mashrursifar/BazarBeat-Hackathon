@@ -37,6 +37,7 @@ const BuyerOrderDetailPage = lazy(() => import("../features/orders/buyer-order-d
 const SalesPage = lazy(() => import("../features/sales/sales-page.js"));
 const EarningsPage = lazy(() => import("../features/earnings/earnings-page.js"));
 const FarmerDashboardPage = lazy(() => import("../features/dashboards/farmer-dashboard-page.js"));
+const BuyerDashboardPage = lazy(() => import("../features/dashboards/buyer-dashboard-page.js"));
 
 const FARMER_PAGES = [
   ["dashboard", "dashboard"],
@@ -113,6 +114,7 @@ function farmerPage(path: string, pageKey: string): { path: string; element: Rea
 }
 
 function buyerPage(path: string, pageKey: string): { path: string; element: ReactElement } {
+  if (path === "dashboard") return { path, element: <BuyerDashboardPage /> };
   if (path === "marketplace") return { path, element: <MarketplacePage /> };
   if (path === "compare") return { path, element: <ComparePage /> };
   if (path === "my-bids") return { path, element: <MyBidsPage /> };
