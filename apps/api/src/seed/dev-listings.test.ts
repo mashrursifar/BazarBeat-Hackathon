@@ -20,11 +20,7 @@ import { Order } from "../modules/orders/order.model.js";
 import { farmerDashboardService } from "../modules/dashboards/farmer-dashboard.service.js";
 import { buyerDashboardService } from "../modules/dashboards/buyer-dashboard.service.js";
 import { getMarketplaceListings } from "../modules/listings/listing.service.js";
-import {
-  DEV_SEED_CREDENTIALS,
-  seedDevListings,
-  verifyFarmerCropLedger,
-} from "./dev-listings.js";
+import { DEV_SEED_CREDENTIALS, seedDevListings, verifyFarmerCropLedger } from "./dev-listings.js";
 
 let mongoServer: MongoMemoryServer | undefined;
 
@@ -315,6 +311,7 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
     it("is repeatable and leaves a consistent database when history mode is run twice", async () => {
       // First run with history
       const firstResult = await seedDevListings({ history: true, silent: true });
+      expect(firstResult.reconciliationPassed).toBe(true);
       const firstListingsCount = await Listing.countDocuments();
       const firstOrdersCount = await Order.countDocuments();
       const firstBidsCount = await Bid.countDocuments();

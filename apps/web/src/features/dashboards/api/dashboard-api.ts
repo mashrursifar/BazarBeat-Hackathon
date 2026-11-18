@@ -7,7 +7,7 @@ import {
 const API_BASE_URL = import.meta.env.VITE_API_URL ?? "/api/v1";
 
 export async function fetchFarmerDashboard(
-  query: DashboardQuery = {},
+  query: Partial<DashboardQuery> = {},
 ): Promise<FarmerDashboardResponse> {
   const params = new URLSearchParams();
   if (query.range) params.set("range", query.range);

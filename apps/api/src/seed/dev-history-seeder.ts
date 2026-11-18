@@ -1,4 +1,5 @@
-import { Types } from "mongoose";
+import { ObjectId } from "bson";
+import type { Types } from "mongoose";
 import {
   CropGrade,
   FulfilmentMethod,
@@ -11,13 +12,13 @@ import {
   calculateSubtotal,
 } from "@bazarbeat/shared";
 
-import { Crop, type CropRecord } from "../modules/crops/crop.model.js";
+import type { CropRecord } from "../modules/crops/crop.model.js";
 import { Listing } from "../modules/listings/listing.model.js";
 import { Bid } from "../modules/bids/bid.model.js";
 import { Order } from "../modules/orders/order.model.js";
 import { InventoryItem } from "../modules/inventory/inventory-item.model.js";
 import { StockMovement } from "../modules/inventory/stock-movement.model.js";
-import { User, type UserRecord } from "../modules/users/user.model.js";
+import type { UserRecord } from "../modules/users/user.model.js";
 import { MARKET_PRICE_BASE_PRICES } from "../modules/market-prices/market-price-seed.js";
 
 export interface SeedDevHistoryResult {
@@ -377,7 +378,7 @@ export async function seedDevHistory(
     { availableKg: number; listedKg: number; soldKg: number }
   >();
 
-  const getDeltas = (cropId: string) => {
+  const getDeltas = (cropId: string): { availableKg: number; listedKg: number; soldKg: number } => {
     let entry = inventoryDeltas.get(cropId);
     if (!entry) {
       entry = { availableKg: 0, listedKg: 0, soldKg: 0 };
@@ -395,7 +396,8 @@ export async function seedDevHistory(
     const deltas = getDeltas(cropIdStr);
 
     const basePrice = MARKET_PRICE_BASE_PRICES[plan.cropSlug];
-    const gradeMultiplier = plan.grade === CropGrade.A ? 1.05 : plan.grade === CropGrade.B ? 0.95 : 0.85;
+    const gradeMultiplier =
+      plan.grade === CropGrade.A ? 1.05 : plan.grade === CropGrade.B ? 0.95 : 0.85;
     const expectedPricePerKg = Math.round(basePrice * gradeMultiplier);
     const floorPricePerKg = Math.round(expectedPricePerKg * 0.95);
 
@@ -422,7 +424,7 @@ export async function seedDevHistory(
     deltas.availableKg += plan.quantityKg;
 
     // 2. Create Listing in backdated state
-    const listingId = new Types.ObjectId();
+    const listingId = new ObjectId();
 
     // 3. Ledger: Listing reservation (LIST)
     const listOperationId = `hist-list-${listingId}`;
@@ -443,7 +445,11 @@ export async function seedDevHistory(
     deltas.listedKg += plan.quantityKg;
 
     // 4. Create Bids
-    const createdBidDocs = [];
+    const createdBidDocs: Array<{
+      _id: Types.ObjectId;
+      amountPerKg: number;
+      buyerId: Types.ObjectId;
+    }> = [];
     let currentBidPerKg = floorPricePerKg;
 
     for (let bIdx = 0; bIdx < plan.bids.length; bIdx += 1) {
@@ -467,23 +473,31 @@ export async function seedDevHistory(
         createdAt: bidCreatedAt,
         updatedAt: bidCreatedAt,
       });
-      createdBidDocs.push(bidDoc);
+      createdBidDocs.push({
+        _id: bidDoc._id as Types.ObjectId,
+        amountPerKg: bidDoc.amountPerKg,
+        buyerId: bidDoc.buyerId as Types.ObjectId,
+      });
       bidsCount += 1;
     }
 
     // 5. Finalize Listing state and invariants
-    let winningBidDoc = null;
-    let winningBuyer = null;
+    let winningBidDoc: {
+      _id: Types.ObjectId;
+      amountPerKg: number;
+      buyerId: Types.ObjectId;
+    } | null = null;
+    let winningBuyer: (UserRecord & { _id: Types.ObjectId }) | null = null;
 
     if (plan.status === "SOLD" && createdBidDocs.length > 0) {
-      winningBidDoc = createdBidDocs.reduce(
+      const topBid = createdBidDocs.reduce(
         (highest, b) => (b.amountPerKg > highest.amountPerKg ? b : highest),
         createdBidDocs[0]!,
       );
+      winningBidDoc = topBid;
       winningBuyer =
-        demoBuyers.find((b) => b._id.toString() === winningBidDoc.buyerId.toString()) ??
-        demoBuyers[0]!;
-      currentBidPerKg = winningBidDoc.amountPerKg;
+        demoBuyers.find((b) => b._id.toString() === topBid.buyerId.toString()) ?? demoBuyers[0]!;
+      currentBidPerKg = topBid.amountPerKg;
     }
 
     const listingStatus =
@@ -642,7 +656,13 @@ export async function seedDevHistory(
             ? [{ status: OrderStatus.COMPLETED, at: completedAt }]
             : []),
           ...(orderStatus === OrderStatus.CANCELLED
-            ? [{ status: OrderStatus.CANCELLED, at: cancelledAt, note: "Buyer requested cancellation" }]
+            ? [
+                {
+                  status: OrderStatus.CANCELLED,
+                  at: cancelledAt,
+                  note: "Buyer requested cancellation",
+                },
+              ]
             : []),
         ],
         confirmedAt: orderStatus !== OrderStatus.PENDING ? confirmedAt : undefined,
@@ -719,7 +739,7 @@ export async function seedDevHistory(
   for (const [cropIdStr, delta] of inventoryDeltas.entries()) {
     const item = await InventoryItem.findOne({
       farmerId: demoFarmer._id,
-      cropId: new Types.ObjectId(cropIdStr),
+      cropId: new ObjectId(cropIdStr),
     });
 
     if (item) {
@@ -730,7 +750,7 @@ export async function seedDevHistory(
     } else {
       await InventoryItem.create({
         farmerId: demoFarmer._id,
-        cropId: new Types.ObjectId(cropIdStr),
+        cropId: new ObjectId(cropIdStr),
         availableKg: Math.round(delta.availableKg * 10) / 10,
         listedKg: Math.round(delta.listedKg * 10) / 10,
         soldKg: Math.round(delta.soldKg * 10) / 10,

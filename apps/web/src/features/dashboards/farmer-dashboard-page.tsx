@@ -13,11 +13,7 @@ import { ErrorState, StatCard } from "../../components/shared/data-states.js";
 import { ChangeIndicator } from "../../components/shared/change-indicator.js";
 import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { GradeBadge } from "../../components/shared/grade-badge.js";
-import {
-  formatLocalizedNumber,
-  formatLocalizedPoisha,
-  toBanglaDigits,
-} from "../../lib/format.js";
+import { formatLocalizedNumber, formatLocalizedPoisha, toBanglaDigits } from "../../lib/format.js";
 import { fetchFarmerDashboard } from "./api/dashboard-api.js";
 
 function isPreset(value: string): value is DashboardRangePreset {
@@ -108,9 +104,7 @@ export default function FarmerDashboardPage(): ReactElement {
           <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
             {t("farmerDashboard.pageTitle")}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t("farmerDashboard.pageSubtitle")}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{t("farmerDashboard.pageSubtitle")}</p>
         </div>
         <div className="flex items-center gap-3">
           <Link
@@ -167,11 +161,7 @@ export default function FarmerDashboardPage(): ReactElement {
               stroke="currentColor"
               aria-hidden="true"
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M12 4.5v15m7.5-7.5h-15"
-              />
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
             </svg>
           </div>
           <h2 className="mt-4 text-xl font-bold text-foreground sm:text-2xl">
@@ -244,9 +234,7 @@ export default function FarmerDashboardPage(): ReactElement {
                 label={t("farmerDashboard.totalSales")}
                 value={formatLocalizedPoisha(kpis.totalSales.value, isBangla)}
                 subtitle={t("farmerDashboard.totalSalesSubtitle")}
-                change={
-                  <ChangeIndicator changePercent={kpis.totalSales.changePercent} />
-                }
+                change={<ChangeIndicator changePercent={kpis.totalSales.changePercent} />}
                 data-testid="stat-total-sales"
               />
 
@@ -255,9 +243,7 @@ export default function FarmerDashboardPage(): ReactElement {
                 label={t("farmerDashboard.earnings")}
                 value={formatLocalizedPoisha(kpis.earnings.value, isBangla)}
                 subtitle={t("farmerDashboard.earningsSubtitle")}
-                change={
-                  <ChangeIndicator changePercent={kpis.earnings.changePercent} />
-                }
+                change={<ChangeIndicator changePercent={kpis.earnings.changePercent} />}
                 data-testid="stat-net-earnings"
               />
 
@@ -266,9 +252,7 @@ export default function FarmerDashboardPage(): ReactElement {
                 label={t("farmerDashboard.orders")}
                 value={formatLocalizedNumber(kpis.orders?.value ?? 0, isBangla)}
                 subtitle={t("farmerDashboard.ordersSubtitle")}
-                change={
-                  <ChangeIndicator changePercent={kpis.orders?.changePercent} />
-                }
+                change={<ChangeIndicator changePercent={kpis.orders?.changePercent} />}
                 data-testid="stat-orders"
               />
 
@@ -288,8 +272,7 @@ export default function FarmerDashboardPage(): ReactElement {
               <StatCard
                 label={t("farmerDashboard.pricePremium")}
                 value={
-                  kpis.pricePremium?.value !== null &&
-                  kpis.pricePremium?.value !== undefined
+                  kpis.pricePremium?.value !== null && kpis.pricePremium?.value !== undefined
                     ? `${kpis.pricePremium.value > 0 ? "+" : ""}${
                         isBangla
                           ? toBanglaDigits(kpis.pricePremium.value.toFixed(1))
@@ -298,11 +281,7 @@ export default function FarmerDashboardPage(): ReactElement {
                     : "—"
                 }
                 subtitle={t("farmerDashboard.pricePremiumSubtitle")}
-                change={
-                  <ChangeIndicator
-                    changePercent={kpis.pricePremium?.changePercent}
-                  />
-                }
+                change={<ChangeIndicator changePercent={kpis.pricePremium?.changePercent} />}
                 className="border-emerald-200 bg-emerald-50/30"
                 data-testid="stat-price-premium"
               />
@@ -404,11 +383,7 @@ export default function FarmerDashboardPage(): ReactElement {
                 label={t("farmerDashboard.nearestDeadline")}
                 value={
                   rightNow?.nearestDeadline || kpis.nearestDeadline ? (
-                    <CountdownTimer
-                      endsAt={
-                        rightNow?.nearestDeadline ?? kpis.nearestDeadline!
-                      }
-                    />
+                    <CountdownTimer endsAt={rightNow?.nearestDeadline ?? kpis.nearestDeadline!} />
                   ) : (
                     "—"
                   )
@@ -467,12 +442,9 @@ export default function FarmerDashboardPage(): ReactElement {
                       <div>
                         <div className="flex items-start justify-between gap-2">
                           <div>
-                            <h3 className="font-semibold text-foreground">
-                              {cropDisplayName}
-                            </h3>
+                            <h3 className="font-semibold text-foreground">{cropDisplayName}</h3>
                             <p className="text-xs text-muted-foreground">
-                              {formatLocalizedNumber(auction.quantityKg, isBangla)}{" "}
-                              kg
+                              {formatLocalizedNumber(auction.quantityKg, isBangla)} kg
                             </p>
                           </div>
                           <GradeBadge grade={auction.grade as CropGrade} />

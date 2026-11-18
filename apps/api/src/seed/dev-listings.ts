@@ -31,10 +31,7 @@ import { assessCropQuality, getGradingProvider } from "../modules/ai/ai.service.
 import type { MockGradingProvider } from "../modules/ai/mock-grading.provider.js";
 import { AiAssessmentRecord } from "../modules/ai/ai-assessment-record.model.js";
 import { Order } from "../modules/orders/order.model.js";
-import {
-  type SeedDevHistoryResult,
-  seedDevHistory,
-} from "./dev-history-seeder.js";
+import { type SeedDevHistoryResult, seedDevHistory } from "./dev-history-seeder.js";
 
 const BCRYPT_COST = 10;
 
@@ -810,11 +807,7 @@ export async function seedDevListings(
       throw new Error("Demo farmer user not found for historical seeding");
     }
 
-    historyResult = await seedDevHistory(
-      demoFarmerUser,
-      buyerUsers,
-      crops,
-    );
+    historyResult = await seedDevHistory(demoFarmerUser, buyerUsers, crops);
 
     // Re-verify inventory ledger reconciliation for demo farmer across all crops
     for (const crop of crops) {
