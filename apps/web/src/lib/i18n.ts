@@ -10,6 +10,40 @@ void i18n.use(initReactI18next).init({
         appName: "BazarBeat",
         tagline: "Better price. Stronger farmer.",
         introduction: "A fairer way for farmers and buyers to meet.",
+        landing: {
+          badge: "Digital Agricultural Marketplace",
+          heading: "Better Price, Stronger Farmer",
+          subheading:
+            "A transparent digital marketplace connecting Bangladeshi farmers and buyers with AI quality grading, floor price protection, and real-time competitive bidding.",
+          farmerSectionTitle: "For Farmers",
+          farmerSectionSubtitle: "Sell produce at fair market value with zero middlemen pressure.",
+          farmerStep1Title: "1. AI Quality Grading",
+          farmerStep1Desc:
+            "Upload produce photos for instant Grade A/B/C classification and benchmark mandi price guidance.",
+          farmerStep2Title: "2. Floor-Protected Bidding",
+          farmerStep2Desc:
+            "Set your minimum acceptable price per kg. Buyers compete upwards in timed auctions; your crop is never sold below floor.",
+          farmerStep3Title: "3. Direct Handover & Payment",
+          farmerStep3Desc:
+            "Confirm schedule, receive timely settlement, and keep higher margins on every harvest.",
+          farmerCta: "Start as Farmer",
+          buyerSectionTitle: "For Buyers",
+          buyerSectionSubtitle:
+            "Source verified quality crops directly from local farming communities.",
+          buyerStep1Title: "1. Verified Produce Catalog",
+          buyerStep1Desc:
+            "Explore active lots across 5 core crops with transparent grading photos, location, and volume.",
+          buyerStep2Title: "2. Fair Ascending Bids",
+          buyerStep2Desc:
+            "Place binding bids with clear minimum increments and live countdowns. Win lots fairly and transparently.",
+          buyerStep3Title: "3. Guaranteed Settlement",
+          buyerStep3Desc:
+            "Track order status, schedule pickup, and receive verified produce with problem resolution support.",
+          buyerCta: "Explore as Buyer",
+          browseMarketCTA: "Browse Marketplace",
+          loginPrompt: "Already have an account?",
+          loginLink: "Log In",
+        },
         exploreMarketplace: "Explore marketplace",
         marketplacePlaceholder: "Marketplace is getting ready.",
         language: "Language",
@@ -486,6 +520,8 @@ void i18n.use(initReactI18next).init({
           finalizing: "Finalizing…",
           ended: "Auction ended",
           urgent: "Ending soon",
+          thresholdWarning: "Auction ending in less than 10 minutes",
+          thresholdUrgent: "Auction ending in less than 2 minutes",
           timeLeft: "Time left: {{time}}",
           urgentTimeLeft: "Ending soon: {{time}}",
           daysHoursLeft: "{{days}}d {{hours}}h",
@@ -1300,6 +1336,40 @@ void i18n.use(initReactI18next).init({
         appName: "বাজারবিট",
         tagline: "ন্যায্য দাম, শক্তিশালী কৃষক",
         introduction: "কৃষক ও ক্রেতাদের মিলিত হওয়ার আরও ন্যায্য উপায়।",
+        landing: {
+          badge: "ডিজিটাল কৃষি মার্কেটপ্লেস",
+          heading: "ন্যায্য দাম, শক্তিশালী কৃষক",
+          subheading:
+            "এআই গুণমান যাচাই, ন্যূনতম দর সুরক্ষা এবং রিয়েল-টাইম প্রতিযোগিতামূলক নিলামের মাধ্যমে বাংলাদেশের কৃষক ও ক্রেতাদের নির্ভরযোগ্য সংযোগ।",
+          farmerSectionTitle: "কৃষকদের জন্য",
+          farmerSectionSubtitle: "মধ্যস্বত্বভোগীদের চাপমুক্ত হয়ে ন্যায্যমূল্যে নিজের ফসল বিক্রি করুন।",
+          farmerStep1Title: "১. এআই গুণমান যাচাই",
+          farmerStep1Desc:
+            "ফসলের ছবি আপলোড করে মুহূর্তেই গ্রেড ক/খ/গ ও পাইকারি বাজারদর নির্দেশিকা পান।",
+          farmerStep2Title: "২. ন্যূনতম দর সুরক্ষা",
+          farmerStep2Desc:
+            "নিজের ন্যূনতম দর নির্ধারণ করুন। ক্রেতারা ঊর্ধ্বমুখী ডাক দেন; নির্ধারিত দরের নিচে ফসল বিক্রি হবে না।",
+          farmerStep3Title: "৩. সরাসরি হস্তান্তর ও মূল্য প্রাপ্তি",
+          farmerStep3Desc:
+            "সময়সূচি নির্ধারণ করুন, সময়মতো নিশ্চিত মূল্য গ্রহণ করুন এবং ফসলের সঠিক লাভ ঘরে তুলুন।",
+          farmerCta: "কৃষক হিসেবে শুরু করুন",
+          buyerSectionTitle: "ক্রেতাদের জন্য",
+          buyerSectionSubtitle:
+            "সরাসরি কৃষকদের কাছ থেকে মানসম্মত ফসল পাইকারি দরে সংগ্রহ করুন।",
+          buyerStep1Title: "১. যাচাইকৃত ফসলের তালিকা",
+          buyerStep1Desc:
+            "স্বচ্ছ ছবি, অবস্থান ও পরিমাণসহ ৫টি প্রধান ফসলের চলমান তালিকা দেখুন।",
+          buyerStep2Title: "২. উন্মুক্ত প্রতিযোগিতামূলক ডাক",
+          buyerStep2Desc:
+            "নির্দিষ্ট নিয়ম মেনে সরাসরি ডাক দিন ও সময় গণনার সাথে স্বচ্ছভাবে নিলামে অংশগ্রহণ করুন।",
+          buyerStep3Title: "৩. নিশ্চিত ডেলিভারি ও নিষ্পত্তি",
+          buyerStep3Desc:
+            "অর্ডারের ধাপ ট্র্যাক করুন, পণ্য বুঝে নিন এবং নির্ভরযোগ্য সহায়তার সুবিধা পান।",
+          buyerCta: "ক্রেতা হিসেবে শুরু করুন",
+          browseMarketCTA: "মার্কেটপ্লেস দেখুন",
+          loginPrompt: "ইতিমধ্যে অ্যাকাউন্ট আছে?",
+          loginLink: "লগ ইন করুন",
+        },
         exploreMarketplace: "বাজার দেখুন",
         marketplacePlaceholder: "বাজার প্রস্তুত করা হচ্ছে।",
         language: "ভাষা",
@@ -1771,6 +1841,8 @@ void i18n.use(initReactI18next).init({
           finalizing: "চূড়ান্ত হচ্ছে…",
           ended: "নিলাম শেষ হয়েছে",
           urgent: "শীঘ্রই শেষ হবে",
+          thresholdWarning: "নিলাম ১০ মিনিটের কম সময়ে শেষ হবে",
+          thresholdUrgent: "নিলাম ২ মিনিটের কম সময়ে শেষ হবে",
           timeLeft: "বাকি সময়: {{time}}",
           urgentTimeLeft: "শীঘ্রই শেষ হবে: {{time}}",
           daysHoursLeft: "{{days}} দিন {{hours}} ঘণ্টা",

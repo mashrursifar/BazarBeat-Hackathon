@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <rect width="512" height="512" rx="128" fill="#1b6535"/>
+  <circle cx="256" cy="256" r="180" fill="#f4f7ef" opacity="0.15"/>
+  <!-- Leaf and Sprout glyph -->
+  <path d="M256 120C256 120 180 170 180 270C180 340 230 380 256 390C282 380 332 340 332 270C332 170 256 120 256 120Z" fill="#22c55e"/>
+  <path d="M256 120C256 120 270 200 256 388" stroke="#15803d" stroke-width="12" stroke-linecap="round"/>
+  <path d="M256 260C280 240 310 240 310 240" stroke="#15803d" stroke-width="10" stroke-linecap="round"/>
+  <path d="M256 290C230 270 205 275 205 275" stroke="#15803d" stroke-width="10" stroke-linecap="round"/>
+  <!-- Golden Coin / Floor protection spark -->
+  <circle cx="340" cy="180" r="48" fill="#f59e0b" stroke="#ffffff" stroke-width="8"/>
+  <text x="340" y="196" font-family="Arial, sans-serif" font-size="44" font-weight="bold" fill="#ffffff" text-anchor="middle">৳</text>
+</svg>

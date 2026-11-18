@@ -158,6 +158,7 @@ export default function FarmerOrdersPage(): ReactElement {
       {/* 5 Tabs with counts */}
       <div className="mt-6 border-b border-stone-200">
         <nav
+          role="tablist"
           className="-mb-px flex space-x-2 overflow-x-auto pb-1"
           aria-label={t("orders.tabs.label", "Order status tabs")}
         >

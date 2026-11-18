@@ -2,6 +2,8 @@
 
 This glossary defines standard, agreed-upon Bangla terms for BazarBeat's domain concepts, ensuring consistent, accessible, and natural phrasing across all user-facing interfaces.
 
+> **Task 8.10 Review Sheet:** The complete human review sheet containing every user-facing string (English vs Bangla) grouped by screen in priority order is documented in [`docs/BANGLA_REVIEW_SHEET.md`](BANGLA_REVIEW_SHEET.md).
+
 ---
 
 ## 1. Core Marketplace Concepts

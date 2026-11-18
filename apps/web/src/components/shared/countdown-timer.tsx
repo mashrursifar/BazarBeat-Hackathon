@@ -1,4 +1,4 @@
-import { type ReactElement } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { ListingStatus } from "@bazarbeat/shared";
 
@@ -34,13 +34,16 @@ const SIZE_STYLES = {
   },
 };
 
+type CountdownThreshold = "normal" | "warning" | "urgent" | "extended" | "finalizing" | "ended";
+
 /**
- * Shared CountdownTimer component adhering to UI_UX_GUIDELINES §5.
+ * Shared CountdownTimer component adhering to UI_UX_GUIDELINES §5 and §6,
+ * and Gap 11 (screen reader countdown policy: announce only at thresholds, never every second).
  *
  * States:
  * - Normal: >= 10 minutes (calm neutral/stone)
  * - Amber: < 10 minutes (warm amber warning)
- * - Red: < 2 minutes (urgent red with subtle pulse)
+ * - Red: < 2 minutes (urgent red with subtle pulse, motion-reduce safe)
  * - Extended: Brief flash when anti-sniping pushes endsAt back
  * - Finalizing…: At zero when status is ACTIVE until server confirms outcome
  */
@@ -66,6 +69,38 @@ export function CountdownTimer({
     isExtended,
   } = useCountdown({ endsAt, serverTime, status });
 
+  const currentThreshold: CountdownThreshold = isExtended
+    ? "extended"
+    : isFinalizing
+      ? "finalizing"
+      : isExpired
+        ? "ended"
+        : isUrgent
+          ? "urgent"
+          : isWarning
+            ? "warning"
+            : "normal";
+
+  const prevThresholdRef = useRef<CountdownThreshold>(currentThreshold);
+  const [announcement, setAnnouncement] = useState<string>("");
+
+  useEffect(() => {
+    if (prevThresholdRef.current !== currentThreshold) {
+      if (currentThreshold === "warning") {
+        setAnnouncement(t("countdown.thresholdWarning", "Auction ending in less than 10 minutes"));
+      } else if (currentThreshold === "urgent") {
+        setAnnouncement(t("countdown.thresholdUrgent", "Auction ending in less than 2 minutes"));
+      } else if (currentThreshold === "extended") {
+        setAnnouncement(t("countdown.extended", "Extended (+2m)"));
+      } else if (currentThreshold === "finalizing") {
+        setAnnouncement(t("countdown.finalizing", "Finalizing…"));
+      } else if (currentThreshold === "ended") {
+        setAnnouncement(t("countdown.ended", "Auction ended"));
+      }
+      prevThresholdRef.current = currentThreshold;
+    }
+  }, [currentThreshold, t]);
+
   const styles = SIZE_STYLES[size];
   const displayDigits = isBangla ? toBanglaDigits(digital) : digital;
 
@@ -73,20 +108,20 @@ export function CountdownTimer({
   let stateContainerClasses = "bg-stone-100 text-stone-700 border-stone-200";
 
   if (isExtended) {
-    // Brief anti-sniping extension flash
+    // Brief anti-sniping extension flash (reduced-motion safe)
     stateContainerClasses =
-      "bg-amber-100 text-amber-900 border-amber-400 font-bold shadow-sm animate-pulse";
+      "bg-amber-100 text-amber-900 border-amber-400 font-bold shadow-sm animate-pulse motion-reduce:animate-none";
   } else if (isFinalizing) {
     // Reached zero but waiting for server closing confirmation
     stateContainerClasses =
-      "bg-stone-100 text-stone-700 border-stone-300 font-medium animate-pulse";
+      "bg-stone-100 text-stone-700 border-stone-300 font-medium animate-pulse motion-reduce:animate-none";
   } else if (isExpired) {
     // Confirmed closed
     stateContainerClasses = "bg-stone-100 text-stone-500 border-stone-200";
   } else if (isUrgent) {
-    // Under 2 minutes: red urgent state
+    // Under 2 minutes: red urgent state (reduced-motion safe)
     stateContainerClasses =
-      "bg-red-50 text-red-700 border-red-200 animate-pulse font-semibold";
+      "bg-red-50 text-red-700 border-red-200 animate-pulse motion-reduce:animate-none font-semibold";
   } else if (isWarning) {
     // Under 10 minutes: amber warning state
     stateContainerClasses =
@@ -98,7 +133,7 @@ export function CountdownTimer({
   return (
     <div
       role="timer"
-      aria-live="polite"
+      aria-live="off"
       data-testid="countdown-timer"
       data-urgent={isUrgent ? "true" : undefined}
       data-warning={isWarning ? "true" : undefined}
@@ -106,12 +141,17 @@ export function CountdownTimer({
       data-extended={isExtended ? "true" : undefined}
       data-finalizing={isFinalizing ? "true" : undefined}
       className={cn(
-        "inline-flex items-center border select-none transition-colors duration-200",
+        "inline-flex items-center border select-none transition-colors duration-200 motion-reduce:transition-none",
         styles.container,
         stateContainerClasses,
         className,
       )}
     >
+      {/* Gap 11: Screen reader polite threshold announcer (does NOT spam every second) */}
+      <span className="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="countdown-announcer">
+        {announcement}
+      </span>
+
       {showIcon && (
         <svg
           className={cn("shrink-0", styles.icon)}
@@ -148,7 +188,10 @@ export function CountdownTimer({
               {isUrgent ? t("countdown.urgent") : t("listings.timeLeft")}
             </span>
           )}
-          <span data-testid="countdown-digits" className={styles.time}>
+          <span
+            data-testid="countdown-digits"
+            className={cn(styles.time, isUrgent && "text-red-700")}
+          >
             {displayDigits}
           </span>
         </div>

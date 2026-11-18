@@ -98,7 +98,7 @@ export function LiveBidIndicator({
           <span
             data-testid="live-pulse-ring"
             className={cn(
-              "absolute inline-flex rounded-full bg-emerald-400 opacity-75 animate-ping",
+              "absolute inline-flex rounded-full bg-emerald-400 opacity-75 animate-ping motion-reduce:animate-none",
               styles.ping,
             )}
           />
@@ -106,7 +106,7 @@ export function LiveBidIndicator({
         <span
           data-testid="live-dot"
           className={cn(
-            "relative inline-flex rounded-full transition-colors",
+            "relative inline-flex rounded-full transition-colors motion-reduce:transition-none",
             styles.dot,
             isLive ? "bg-emerald-600" : "bg-stone-400",
           )}
@@ -131,8 +131,8 @@ export function LiveBidIndicator({
         <span
           data-testid="live-bid-count"
           className={cn(
-            "transition-all duration-300",
-            justUpdated && "font-bold text-emerald-800 scale-105",
+            "transition-all duration-300 motion-reduce:transition-none",
+            justUpdated && "font-bold text-emerald-800 scale-105 motion-reduce:transform-none",
           )}
         >
           {countLabel}

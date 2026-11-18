@@ -186,7 +186,7 @@ export function WatchlistPage(): ReactElement {
   };
 
   return (
-    <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 space-y-6">
+    <div data-testid="watchlist-page" className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8 space-y-6">
       {/* Page Header */}
       <div className="border-b border-stone-200 pb-5">
         <h1

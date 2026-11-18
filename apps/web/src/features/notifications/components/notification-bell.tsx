@@ -69,7 +69,7 @@ export function NotificationBell(): ReactElement {
         aria-expanded={isOpen}
         aria-haspopup="true"
         onClick={() => setIsOpen((prev) => !prev)}
-        className="relative flex h-10 w-10 items-center justify-center rounded-full text-stone-700 hover:bg-stone-100 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+        className="relative flex min-h-[44px] min-w-[44px] h-11 w-11 items-center justify-center rounded-full text-stone-700 hover:bg-stone-100 hover:text-foreground focus:outline-none focus:ring-2 focus:ring-primary transition-colors motion-reduce:transition-none"
       >
         <svg
           className="h-6 w-6"
@@ -89,7 +89,7 @@ export function NotificationBell(): ReactElement {
         {unreadCount > 0 && (
           <span
             data-testid="notification-badge"
-            className="absolute top-0 right-0 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow-sm"
+            className="absolute top-0.5 right-0.5 flex min-h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-[10px] font-bold text-white shadow-sm motion-reduce:animate-none"
           >
             {displayCount}
           </span>

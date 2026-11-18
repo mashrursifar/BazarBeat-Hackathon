@@ -97,4 +97,36 @@ describe("CountdownTimer component", () => {
 
     expect(screen.getByTestId("countdown-digits")).toHaveTextContent("১২:০০");
   });
+
+  it("complies with Gap 11 screen-reader policy: announces only at thresholds and does not spam every second", () => {
+    // Starts at 10m 02s
+    const endsAt = new Date(baseNow + (10 * 60 + 2) * 1000).toISOString();
+    render(<CountdownTimer endsAt={endsAt} />);
+
+    const announcer = screen.getByTestId("countdown-announcer");
+    const timer = screen.getByTestId("countdown-timer");
+
+    // The ticker container itself has aria-live="off" to prevent per-second chatty announcements
+    expect(timer).toHaveAttribute("aria-live", "off");
+    expect(announcer).toHaveTextContent("");
+
+    // Advance 5 seconds: crosses 10-minute warning threshold
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+
+    expect(announcer).toHaveTextContent("Auction ending in less than 10 minutes");
+
+    // Advance 1 second: still in warning, announcement is not spammed every second
+    act(() => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(announcer).toHaveTextContent("Auction ending in less than 10 minutes");
+
+    // Advance to under 2 minutes (urgent threshold)
+    act(() => {
+      vi.advanceTimersByTime(8 * 60 * 1000);
+    });
+    expect(announcer).toHaveTextContent("Auction ending in less than 2 minutes");
+  });
 });

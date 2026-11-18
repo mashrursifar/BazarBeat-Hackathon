@@ -1,8 +1,6 @@
 import { type ReactElement, Suspense, lazy } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, Navigate, createBrowserRouter } from "react-router-dom";
-
-import { LanguageSwitcher } from "../components/language-switcher.js";
+import { Navigate, createBrowserRouter } from "react-router-dom";
 
 const LoginPage = lazy(() =>
   import("../features/auth/auth-pages.js").then((module) => ({ default: module.LoginPage })),
@@ -41,6 +39,9 @@ const BuyerDashboardPage = lazy(() => import("../features/dashboards/buyer-dashb
 const FarmerMarketPricesPage = lazy(() => import("../features/market-prices/farmer-market-prices-page.js"));
 const BuyerMarketOverviewPage = lazy(() => import("../features/market-prices/buyer-market-overview-page.js"));
 const NotificationsPage = lazy(() => import("../features/notifications/notifications-page.js"));
+const LandingPage = lazy(() =>
+  import("../features/landing/landing-page.js").then((module) => ({ default: module.LandingPage })),
+);
 const WatchlistPage = lazy(() =>
   import("../features/watchlist/watchlist-page.js").then((module) => ({ default: module.WatchlistPage })),
 );
@@ -77,36 +78,6 @@ function RouteLoading(): ReactElement {
   );
 }
 
-function HomePage(): ReactElement {
-  const { t } = useTranslation();
-  return (
-    <main className="mx-auto flex min-h-screen max-w-5xl flex-col justify-center px-6 py-16">
-      <p className="text-sm font-semibold uppercase tracking-[0.2em] text-primary">
-        {t("appName")}
-      </p>
-      <h1 className="mt-4 max-w-2xl text-4xl font-bold leading-tight text-foreground sm:text-6xl">
-        {t("tagline")}
-      </h1>
-      <p className="mt-5 max-w-xl text-lg text-muted-foreground">{t("introduction")}</p>
-      <div className="mt-8 flex flex-wrap items-center gap-3">
-        <Link
-          className="min-h-12 rounded-md bg-primary px-5 py-3 font-semibold text-white"
-          to="/register"
-        >
-          {t("register.title")}
-        </Link>
-        <Link
-          className="min-h-12 rounded-md border border-primary px-5 py-3 font-semibold text-primary"
-          to="/login"
-        >
-          {t("login.title")}
-        </Link>
-        <LanguageSwitcher />
-      </div>
-    </main>
-  );
-}
-
 function farmerPage(path: string, pageKey: string): { path: string; element: ReactElement } {
   if (path === "dashboard") return { path, element: <FarmerDashboardPage /> };
   if (path === "inventory") return { path, element: <InventoryPage /> };
@@ -132,7 +103,14 @@ function buyerPage(path: string, pageKey: string): { path: string; element: Reac
 }
 
 export const router = createBrowserRouter([
-  { path: "/", element: <HomePage /> },
+  {
+    path: "/",
+    element: (
+      <Suspense fallback={<RouteLoading />}>
+        <LandingPage />
+      </Suspense>
+    ),
+  },
   {
     path: "/market",
     element: (
