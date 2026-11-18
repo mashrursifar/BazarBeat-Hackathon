@@ -155,6 +155,27 @@ export const notificationListResponseSchema = z
 
 export type NotificationListResponse = z.infer<typeof notificationListResponseSchema>;
 
+export const notificationQuerySchema = z
+  .object({
+    unreadOnly: z
+      .union([z.boolean(), z.enum(["true", "false"])])
+      .optional()
+      .transform((val) => (typeof val === "string" ? val === "true" : val)),
+    page: z
+      .union([z.number(), z.string()])
+      .optional()
+      .transform((val) => (val !== undefined ? Number(val) : undefined))
+      .pipe(z.number().int().positive().optional()),
+    limit: z
+      .union([z.number(), z.string()])
+      .optional()
+      .transform((val) => (val !== undefined ? Number(val) : undefined))
+      .pipe(z.number().int().positive().max(50).optional()),
+  })
+  .strict();
+
+export type NotificationQuery = z.infer<typeof notificationQuerySchema>;
+
 export const markNotificationsReadRequestSchema = z
   .object({
     ids: z.array(z.string().min(1)).optional(),

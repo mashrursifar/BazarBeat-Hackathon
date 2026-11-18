@@ -6,6 +6,9 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 import { LanguageSwitcher } from "../components/language-switcher.js";
 import { useAuth } from "../features/auth/auth-context.js";
 import { CompareTrayProvider } from "../features/marketplace/context/compare-tray-context.js";
+import { NotificationBell } from "../features/notifications/components/notification-bell.js";
+import { NotificationToastStack } from "../features/notifications/components/notification-toast-stack.js";
+import { NotificationProvider } from "../features/notifications/notification-context.js";
 
 type NavItem = { path: string; key: string; section?: string };
 const FARMER_NAV: readonly NavItem[] = [
@@ -38,7 +41,12 @@ export function AuthGuard(): ReactElement {
   if (loading) return <main className="p-8" role="status">{t("auth.loading")}</main>;
   if (error !== null) return <main className="mx-auto max-w-lg p-8"><p role="alert" className="mb-4 rounded-md bg-red-50 p-3 text-sm text-red-800">{t(error === "SESSION_EXPIRED" ? "errors.UNAUTHENTICATED" : "auth.loadError")}</p>{error === "SESSION_EXPIRED" ? <Link className="font-semibold text-primary underline" to="/login">{t("login.title")}</Link> : <button className="min-h-11 rounded bg-primary px-4 text-white" onClick={retry}>{t("auth.retry")}</button>}</main>;
   if (user === null) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
-  return <Outlet />;
+  return (
+    <NotificationProvider>
+      <Outlet />
+      <NotificationToastStack />
+    </NotificationProvider>
+  );
 }
 
 export function FarmerLayout(): ReactElement {
@@ -109,7 +117,7 @@ function RoleLayout({ role }: { role: UserRoleType }): ReactElement {
       <div className="min-w-0 flex-1">
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-4 py-2 sm:px-6">
           <div><span className="font-semibold">{user.name}</span><span className="ml-2 text-sm text-muted-foreground">{title}</span></div>
-          <div className="flex items-center gap-2"><LanguageSwitcher /><button className="min-h-11 rounded px-3 text-sm font-semibold text-primary underline" onClick={() => void handleSignOut()}>{t("auth.logout")}</button></div>
+          <div className="flex items-center gap-2"><NotificationBell /><LanguageSwitcher /><button className="min-h-11 rounded px-3 text-sm font-semibold text-primary underline" onClick={() => void handleSignOut()}>{t("auth.logout")}</button></div>
         </header>
         {signOutError && <p role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{t("auth.logoutError")}</p>}
         <main className="p-4 sm:p-6 lg:p-8"><Outlet /></main>

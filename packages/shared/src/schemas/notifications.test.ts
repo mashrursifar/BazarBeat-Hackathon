@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   DomainEventName,
   GradingReasonCode,
+  ListingStatus,
   NotificationType,
   OrderSubEvent,
   PriceReasonCode,
@@ -18,6 +19,7 @@ import {
   newBidNotificationParamsSchema,
   notificationItemSchema,
   notificationListResponseSchema,
+  notificationQuerySchema,
   orderUpdateNotificationParamsSchema,
   outbidNotificationParamsSchema,
 } from "./notifications.js";
@@ -226,6 +228,25 @@ describe("Notification Contracts & Rules (Task 8.1)", () => {
       expect(parsedResponse.meta.unreadCount).toBe(1);
     });
 
+    it("validates notificationQuerySchema", () => {
+      expect(notificationQuerySchema.parse({})).toEqual({});
+      expect(
+        notificationQuerySchema.parse({ unreadOnly: "true", page: "2", limit: "15" }),
+      ).toEqual({
+        unreadOnly: true,
+        page: 2,
+        limit: 15,
+      });
+      expect(
+        notificationQuerySchema.parse({ unreadOnly: false, page: 1, limit: 20 }),
+      ).toEqual({
+        unreadOnly: false,
+        page: 1,
+        limit: 20,
+      });
+      expect(() => notificationQuerySchema.parse({ limit: "99" })).toThrow();
+    });
+
     it("validates markNotificationsReadRequestSchema", () => {
       expect(markNotificationsReadRequestSchema.parse({ ids: ["n-1", "n-2"] })).toEqual({
         ids: ["n-1", "n-2"],
@@ -274,7 +295,47 @@ describe("Notification Contracts & Rules (Task 8.1)", () => {
       const addReq = { listingId };
       expect(addWatchlistRequestSchema.parse(addReq)).toEqual(addReq);
 
-      const resp = { data: [item], count: 1, limit: 50 };
+      const card = {
+        id: listingId,
+        cropId: listingId,
+        crop: {
+          id: listingId,
+          slug: "potato",
+          nameEn: "Potato",
+          nameBn: "আলু",
+          unit: "kg",
+        },
+        grade: "A" as const,
+        quantityKg: 500,
+        floorPricePerKg: 3000,
+        currentBidPerKg: 3200,
+        displayPricePerKg: 3200,
+        totalDisplayCost: 3200 * 500,
+        minIncrementPerKg: 100,
+        hasBids: true,
+        bidCount: 3,
+        startsAt: isoTime,
+        endsAt: isoTime,
+        status: ListingStatus.ACTIVE,
+        location: {
+          division: "Dhaka",
+          district: "Gazipur",
+          upazila: "Sreepur",
+        },
+        thumbnailUrl: "https://example.com/thumb.jpg",
+        isWatched: true,
+      };
+
+      const resp = {
+        data: [card],
+        meta: {
+          serverTime: isoTime,
+          page: 1,
+          limit: 50,
+          total: 1,
+          totalPages: 1,
+        },
+      };
       expect(watchlistResponseSchema.parse(resp)).toEqual(resp);
     });
 

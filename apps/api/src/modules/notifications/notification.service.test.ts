@@ -246,7 +246,7 @@ describe("Notification Service & Subscribers (Task 8.2)", () => {
         currentBidPerKg: 6000,
         bidCount: 2,
       });
-      expect(farmerNotif.entityRef?.toObject()).toEqual({ kind: "listing", id: listingId });
+      expect(farmerNotif.entityRef).toMatchObject({ kind: "listing", id: listingId });
 
       // 2. Previous bidder notification: OUTBID
       const buyerOneNotifs = await Notification.find({ userId: new ObjectId(buyerOneId) });
@@ -300,7 +300,7 @@ describe("Notification Service & Subscribers (Task 8.2)", () => {
         winningBidPerKg: 6500,
         totalAmount: 650000,
       });
-      expect(farmerNotif.entityRef?.toObject()).toEqual({ kind: "order", id: orderId });
+      expect(farmerNotif.entityRef).toMatchObject({ kind: "order", id: orderId });
 
       // 2. Winner: AUCTION_WON
       const winnerNotifs = await Notification.find({ userId: new ObjectId(buyerTwoId) });
@@ -325,7 +325,7 @@ describe("Notification Service & Subscribers (Task 8.2)", () => {
         cropSlug: "onion",
         finalPricePerKg: 6500,
       });
-      expect(loserNotif.entityRef?.toObject()).toEqual({ kind: "listing", id: listingId });
+      expect(loserNotif.entityRef).toMatchObject({ kind: "listing", id: listingId });
     });
 
     it("handles auction.closed (EXPIRED_UNSOLD): notifies farmer (AUCTION_UNSOLD)", async () => {
@@ -345,7 +345,7 @@ describe("Notification Service & Subscribers (Task 8.2)", () => {
         listingId,
         cropSlug: "onion",
       });
-      expect(farmerNotif.entityRef?.toObject()).toEqual({ kind: "listing", id: listingId });
+      expect(farmerNotif.entityRef).toMatchObject({ kind: "listing", id: listingId });
     });
 
     it("handles order.created: notifies farmer (ORDER_UPDATE - CREATED) with deadline", async () => {

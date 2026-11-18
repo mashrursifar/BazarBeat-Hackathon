@@ -72,7 +72,7 @@ export const getMarketplaceListingsController: RequestHandler<
   AuthenticatedLocals & QueryValidationLocals<MarketplaceQuery>
 > = async (_request, response): Promise<void> => {
   const query = response.locals.validatedQuery;
-  const result = await getMarketplaceListings(query);
+  const result = await getMarketplaceListings(query, response.locals.currentUser?.id);
 
   response.status(200).json({
     data: result.listings,

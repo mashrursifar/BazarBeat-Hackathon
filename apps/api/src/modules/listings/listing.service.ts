@@ -39,6 +39,10 @@ import {
   mapListingToBuyerDetail,
   mapListingToFarmerListing,
 } from "./listing.mapper.js";
+import {
+  getWatchedListingIds,
+  isListingWatched,
+} from "../watchlist/watchlist.service.js";
 
 function ensureObjectId(value: string): string {
   if (!/^[\da-f]{24}$/i.test(value)) {
@@ -337,18 +341,25 @@ export async function getListingById(
 
   let myHighestBidPerKg: number | null = null;
   let hasBids = false;
+  let isWatched = false;
 
   if (user.role === UserRole.BUYER) {
-    const buyerBids = await Bid.find({
-      listingId: id,
-      buyerId: ensureObjectId(user.id),
-    })
-      .select("amountPerKg")
-      .lean();
+    const [buyerBids, watched] = await Promise.all([
+      Bid.find({
+        listingId: id,
+        buyerId: ensureObjectId(user.id),
+      })
+        .select("amountPerKg")
+        .lean(),
+      isListingWatched(user.id, listingId),
+    ]);
 
-    // A buyer can open any ACTIVE listing, plus any listing they have bid on (so won and lost bids stay viewable);
+    isWatched = watched;
+
+    // A buyer can open any ACTIVE listing, any listing they have bid on (so won and lost bids stay viewable),
+    // plus any ended listing in their watchlist (read-only, Decision D-34);
     // anything else is NOT_FOUND.
-    if (record.status !== ListingStatus.ACTIVE && buyerBids.length === 0) {
+    if (record.status !== ListingStatus.ACTIVE && buyerBids.length === 0 && !isWatched) {
       throw new AppError(404, "NOT_FOUND", "Listing not found");
     }
 
@@ -380,7 +391,7 @@ export async function getListingById(
     minIncrementPerKg: cropDoc?.minIncrementPerKg ?? record.minIncrementPerKg ?? 100,
   };
 
-  return mapListingToBuyerDetail(
+  const detail = mapListingToBuyerDetail(
     record as unknown as ListingRecord & { _id: { toString(): string }; createdAt: Date },
     cropSummary,
     {
@@ -388,6 +399,12 @@ export async function getListingById(
       myHighestBidPerKg,
     },
   );
+
+  if (user.role === UserRole.BUYER) {
+    detail.isWatched = isWatched;
+  }
+
+  return detail;
 }
 
 /**
@@ -751,6 +768,7 @@ interface AggregateFacetResult {
  */
 export async function getMarketplaceListings(
   query: MarketplaceQuery,
+  buyerUserId?: string,
 ): Promise<MarketplaceListingsResult> {
   if (query.status && query.status !== ListingStatus.ACTIVE) {
     throw new AppError(400, "VALIDATION_ERROR", "Buyers can only query ACTIVE listings");
@@ -886,6 +904,14 @@ export async function getMarketplaceListings(
   const listings = (facetResult?.data ?? []).map((doc) => mapListingToBuyerCard(doc));
   const total = facetResult?.totalCount?.[0]?.count ?? 0;
 
+  if (buyerUserId && listings.length > 0) {
+    const listingIds = listings.map((l) => l.id);
+    const watchedSet = await getWatchedListingIds(buyerUserId, listingIds);
+    for (const card of listings) {
+      card.isWatched = watchedSet.has(card.id);
+    }
+  }
+
   return { listings, total };
 }
 
@@ -922,15 +948,25 @@ export async function compareListings(
     .map((r) => r._id);
 
   const buyerBidsOnListings = new Set<string>();
+  const watchedListingIds = new Set<string>();
   if (nonActiveIds.length > 0) {
-    const bids = await Bid.find({
-      listingId: { $in: nonActiveIds },
-      buyerId: new ObjectId(ensureObjectId(user.id)),
-    })
-      .select("listingId")
-      .lean();
+    const [bids, watchedSet] = await Promise.all([
+      Bid.find({
+        listingId: { $in: nonActiveIds },
+        buyerId: new ObjectId(ensureObjectId(user.id)),
+      })
+        .select("listingId")
+        .lean(),
+      getWatchedListingIds(
+        user.id,
+        nonActiveIds.map((id) => id.toString()),
+      ),
+    ]);
     for (const b of bids) {
       buyerBidsOnListings.add(b.listingId.toString().toLowerCase());
+    }
+    for (const w of watchedSet) {
+      watchedListingIds.add(w.toLowerCase());
     }
   }
 
@@ -953,8 +989,8 @@ export async function compareListings(
     }
 
     if (record.status !== ListingStatus.ACTIVE) {
-      // Ended listing is only visible if buyer placed a bid on it
-      if (!buyerBidsOnListings.has(idKey)) {
+      // Ended listing is only visible if buyer placed a bid on it or saved to watchlist (Decision D-34)
+      if (!buyerBidsOnListings.has(idKey) && !watchedListingIds.has(idKey)) {
         missingIds.push(requestedId);
         continue;
       }

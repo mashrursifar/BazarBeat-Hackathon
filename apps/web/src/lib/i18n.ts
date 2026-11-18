@@ -36,6 +36,79 @@ void i18n.use(initReactI18next).init({
           myBids: "My Bids",
           watchlist: "Watchlist",
           marketOverview: "Market Overview",
+          notifications: "Notifications",
+        },
+        notifications: {
+          title: "Notifications",
+          markAllRead: "Mark all as read",
+          viewAll: "View all notifications",
+          allTab: "All",
+          unreadTab: "Unread",
+          emptyAll: "No notifications yet",
+          emptyUnread: "No unread notifications",
+          dismiss: "Dismiss",
+          loading: "Loading notifications...",
+          retry: "Retry",
+          types: {
+            NEW_BID: {
+              title: "New bid on {{crop}}",
+              body: "Current bid is {{amount}} per kg with {{count}} bids.",
+            },
+            OUTBID: {
+              title: "You were outbid on {{crop}}",
+              body: "A new bid of {{amount}} per kg was placed.",
+            },
+            AUCTION_SOLD: {
+              title: "Auction sold! {{crop}}",
+              body: "Your listing sold for {{amount}} per kg. Total: {{total}}.",
+            },
+            AUCTION_WON: {
+              title: "You won the auction! {{crop}}",
+              body: "You won {{crop}} at {{amount}} per kg. Please proceed to payment.",
+            },
+            AUCTION_LOST: {
+              title: "Auction ended for {{crop}}",
+              body: "The auction closed at {{amount}} per kg.",
+            },
+            AUCTION_UNSOLD: {
+              title: "Auction ended without bids: {{crop}}",
+              body: "Your listing ended unsold. Consider lowering the floor price and relisting.",
+            },
+            ENDING_SOON: {
+              title: "Auction ending soon for {{crop}}",
+              body: "Auction for {{crop}} ends soon. Check it now!",
+            },
+            ORDER_UPDATE: {
+              CREATED: {
+                title: "Order created for {{crop}}",
+                body: "A buyer purchased your lot. Please confirm the handover schedule.",
+              },
+              CONFIRMED: {
+                title: "Order confirmed for {{crop}}",
+                body: "Farmer confirmed the order. Please make payment to proceed.",
+              },
+              PAID: {
+                title: "Payment received for {{crop}}",
+                body: "Buyer has paid. Please prepare for pickup/delivery.",
+              },
+              DELIVERED: {
+                title: "Order delivered for {{crop}}",
+                body: "Goods delivered. Please verify and confirm receipt.",
+              },
+              COMPLETED: {
+                title: "Order completed for {{crop}}",
+                body: "Order has been successfully completed and settled.",
+              },
+              CANCELLED: {
+                title: "Order cancelled for {{crop}}",
+                body: "The order has been cancelled.",
+              },
+              DISPUTED: {
+                title: "Problem reported on order for {{crop}}",
+                body: "A dispute was opened for this order.",
+              },
+            },
+          },
         },
         form: {
           name: "Full name",
@@ -1165,6 +1238,79 @@ void i18n.use(initReactI18next).init({
           myBids: "আমার দর",
           watchlist: "পছন্দের তালিকা",
           marketOverview: "বাজারের সারাংশ",
+          notifications: "বিজ্ঞপ্তি",
+        },
+        notifications: {
+          title: "বিজ্ঞপ্তি",
+          markAllRead: "সব পঠিত চিহ্নিত করুন",
+          viewAll: "সব বিজ্ঞপ্তি দেখুন",
+          allTab: "সব",
+          unreadTab: "অপঠিত",
+          emptyAll: "এখনও কোনো বিজ্ঞপ্তি নেই",
+          emptyUnread: "কোনো অপঠিত বিজ্ঞপ্তি নেই",
+          dismiss: "বাতিল করুন",
+          loading: "বিজ্ঞপ্তি লোড হচ্ছে...",
+          retry: "পুনরায় চেষ্টা করুন",
+          types: {
+            NEW_BID: {
+              title: "{{crop}}-এ নতুন বিড",
+              body: "বর্তমান বিড কেজি প্রতি {{amount}}, মোট বিড {{count}}টি।",
+            },
+            OUTBID: {
+              title: "{{crop}}-এ আপনার বিড ছাড়িয়ে গেছে",
+              body: "কেজি প্রতি {{amount}} মূল্যে নতুন বিড দেওয়া হয়েছে।",
+            },
+            AUCTION_SOLD: {
+              title: "নিলাম সম্পন্ন! {{crop}}",
+              body: "আপনার ফসল কেজি প্রতি {{amount}} মূল্যে বিক্রি হয়েছে। মোট: {{total}}।",
+            },
+            AUCTION_WON: {
+              title: "আপনি নিলাম জিতেছেন! {{crop}}",
+              body: "কেজি প্রতি {{amount}} মূল্যে আপনি {{crop}} জিতেছেন। অনুগ্রহ করে পেমেন্ট করুন।",
+            },
+            AUCTION_LOST: {
+              title: "{{crop}}-এর নিলাম সমাপ্ত হয়েছে",
+              body: "নিলাম কেজি প্রতি {{amount}} মূল্যে সমাপ্ত হয়েছে।",
+            },
+            AUCTION_UNSOLD: {
+              title: "কোনো বিড ছাড়াই নিলাম সমাপ্ত: {{crop}}",
+              body: "আপনার লটটি অবিক্রিত রয়েছে। ফ্লোর মূল্য কমিয়ে পুনরায় তালিকাভুক্ত করতে পারেন।",
+            },
+            ENDING_SOON: {
+              title: "{{crop}}-এর নিলাম শীঘ্রই শেষ হচ্ছে",
+              body: "{{crop}}-এর নিলামের সময় প্রায় শেষ। এখনই যাচাই করুন!",
+            },
+            ORDER_UPDATE: {
+              CREATED: {
+                title: "{{crop}}-এর জন্য নতুন অর্ডার",
+                body: "একজন ক্রেতা আপনার লট কিনেছেন। অনুগ্রহ করে হ্যান্ডওভারের সময় নিশ্চিত করুন।",
+              },
+              CONFIRMED: {
+                title: "{{crop}}-এর অর্ডার নিশ্চিত হয়েছে",
+                body: "কৃষক অর্ডার নিশ্চিত করেছেন। অনুগ্রহ করে পেমেন্ট করুন।",
+              },
+              PAID: {
+                title: "{{crop}}-এর পেমেন্ট সম্পন্ন হয়েছে",
+                body: "ক্রেতা পেমেন্ট পরিশোধ করেছেন। ফসল সরবরাহের জন্য প্রস্তুত করুন।",
+              },
+              DELIVERED: {
+                title: "{{crop}} সরবরাহ করা হয়েছে",
+                body: "পণ্য সরবরাহ হয়েছে। যাচাই করে ডেলিভারি নিশ্চিত করুন।",
+              },
+              COMPLETED: {
+                title: "{{crop}}-এর অর্ডার সফলভাবে সম্পন্ন হয়েছে",
+                body: "অর্ডারটি সফলভাবে সম্পন্ন হয়েছে।",
+              },
+              CANCELLED: {
+                title: "{{crop}}-এর অর্ডার বাতিল করা হয়েছে",
+                body: "অর্ডারটি বাতিল করা হয়েছে।",
+              },
+              DISPUTED: {
+                title: "{{crop}}-এর অর্ডারে সমস্যা রিপোর্ট করা হয়েছে",
+                body: "এই অর্ডারের জন্য একটি সমস্যা রিপোর্ট করা হয়েছে।",
+              },
+            },
+          },
         },
         form: {
           name: "পুরো নাম",

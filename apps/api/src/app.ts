@@ -18,6 +18,8 @@ import { ordersRouter } from "./modules/orders/order.routes.js";
 import { earningsRouter, salesRouter } from "./modules/orders/sales-earnings.routes.js";
 import { dashboardsRouter } from "./modules/dashboards/dashboards.routes.js";
 import { marketPricesRouter } from "./modules/market-prices/market-prices.routes.js";
+import { notificationsRouter } from "./modules/notifications/notification.routes.js";
+import { watchlistRouter } from "./modules/watchlist/watchlist.routes.js";
 
 export const app = express();
 app.use(
@@ -49,6 +51,8 @@ app.use("/api/v1/sales", salesRouter);
 app.use("/api/v1/earnings", earningsRouter);
 app.use("/api/v1/dashboards", dashboardsRouter);
 app.use("/api/v1/market-prices", marketPricesRouter);
+app.use("/api/v1/notifications", notificationsRouter);
+app.use("/api/v1/watchlist", watchlistRouter);
 
 app.get("/api/v1/health", (_req, res) => {
   res.status(200).json({ data: { status: "ok", database: getDatabaseStatus() } });

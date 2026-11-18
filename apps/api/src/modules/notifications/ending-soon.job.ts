@@ -12,6 +12,7 @@ import { type Clock, getClock } from "../../shared/clock.js";
 import { logger } from "../../shared/logger.js";
 import { Bid } from "../bids/bid.model.js";
 import { Listing } from "../listings/listing.model.js";
+import { WatchlistItem } from "../watchlist/watchlist.model.js";
 import { createOrCoalesceNotification } from "./notification.service.js";
 
 
@@ -104,16 +105,14 @@ export async function runEndingSoonJob(
         logger.error({ err: bidErr, listingId: listingIdStr }, "Failed to lookup bidders for ending-soon alert");
       }
 
-      // 3. Watchers (if watchlist collection exists)
+      // 3. Watchers
       try {
-        if (mongoose.models.WatchlistItem) {
-          const watcherIds = await mongoose.models.WatchlistItem.find({
-            listingId: new ObjectId(listingIdStr),
-          }).distinct("userId");
+        const watcherIds = await WatchlistItem.find({
+          listingId: new ObjectId(listingIdStr),
+        }).distinct("userId");
 
-          for (const watcherId of watcherIds) {
-            recipients.add(watcherId.toString());
-          }
+        for (const watcherId of watcherIds) {
+          recipients.add(watcherId.toString());
         }
       } catch (watchErr: unknown) {
         logger.debug({ err: watchErr, listingId: listingIdStr }, "No watchlist items found or watchlist query skipped");

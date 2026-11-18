@@ -40,6 +40,7 @@ const FarmerDashboardPage = lazy(() => import("../features/dashboards/farmer-das
 const BuyerDashboardPage = lazy(() => import("../features/dashboards/buyer-dashboard-page.js"));
 const FarmerMarketPricesPage = lazy(() => import("../features/market-prices/farmer-market-prices-page.js"));
 const BuyerMarketOverviewPage = lazy(() => import("../features/market-prices/buyer-market-overview-page.js"));
+const NotificationsPage = lazy(() => import("../features/notifications/notifications-page.js"));
 
 const FARMER_PAGES = [
   ["dashboard", "dashboard"],
@@ -170,6 +171,7 @@ export const router = createBrowserRouter([
           { index: true, element: <Navigate to="dashboard" replace /> },
           { path: "bidding", element: <Navigate to="/farmer/crop-bidding" replace /> },
           { path: "orders/:id", element: <FarmerOrderDetailPage /> },
+          { path: "notifications", element: <NotificationsPage /> },
           ...FARMER_PAGES.map(([path, pageKey]) => farmerPage(path, pageKey)),
         ],
       },
@@ -185,6 +187,7 @@ export const router = createBrowserRouter([
           { path: "listings/:id", element: <BuyerListingDetailPage /> },
           { path: "marketplace/:id", element: <BuyerListingDetailPage /> },
           { path: "orders/:id", element: <BuyerOrderDetailPage /> },
+          { path: "notifications", element: <NotificationsPage /> },
           ...BUYER_PAGES.map(([path, pageKey]) => buyerPage(path, pageKey)),
         ],
       },

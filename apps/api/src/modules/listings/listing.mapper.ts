@@ -156,7 +156,7 @@ export function mapListingToBuyerCard(doc: RawMarketplaceListingDoc): BuyerListi
       doc.endsAt instanceof Date
         ? doc.endsAt.toISOString()
         : new Date(doc.endsAt).toISOString(),
-    status: ListingStatus.ACTIVE,
+    status: (doc.status as ListingStatus) ?? ListingStatus.ACTIVE,
     location: {
       division: doc.location.division,
       district: doc.location.district,
