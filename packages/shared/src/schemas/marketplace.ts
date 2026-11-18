@@ -166,6 +166,7 @@ export const buyerListingCardSchema = z
     thumbnailUrl: z.string().optional().nullable(),
     images: z.array(listingImageSchema).min(1).max(4).optional(),
     aiExpectedPricePerKg: poishaSchema.optional(),
+    isWatched: z.boolean().optional(),
   })
   .strict();
 
@@ -241,6 +242,7 @@ export const buyerListingDetailSchema = z
     highestBidPerKg: poishaSchema.nullable().optional(),
     closedAt: z.iso.datetime().optional(),
     createdAt: z.iso.datetime(),
+    isWatched: z.boolean().optional(),
   })
   .strict();
 

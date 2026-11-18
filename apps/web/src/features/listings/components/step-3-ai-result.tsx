@@ -281,7 +281,7 @@ export function Step3AiResult(): ReactElement {
             {assessmentResult.qualityNotes.map((note, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <span className="text-emerald-600 font-bold mt-0.5">✓</span>
-                <span>{note}</span>
+                <span>{typeof note === "string" ? note : t(`ai.gradingReasons.${note.code}`, note.code)}</span>
               </li>
             ))}
           </ul>

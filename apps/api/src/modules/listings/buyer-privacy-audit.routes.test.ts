@@ -651,6 +651,7 @@ describe("Task 5.11 — Buyer Privacy Audit & Exact Allowed Key Assertions", () 
 
       expect(Object.keys(bidPlacedPatch).sort()).toEqual(ALLOWED_BID_PLACED_PATCH_KEYS);
       expect(Object.keys(bidPlacedPatch)).not.toContain("buyerId");
+      expect(Object.keys(bidPlacedPatch)).not.toContain("previousBidderId");
       expect(Object.keys(bidPlacedPatch)).not.toContain("userId");
 
       // 6c. Auction Extended Patch payload (emitted on auction.extended)

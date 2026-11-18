@@ -5,10 +5,15 @@ import {
   startScheduler,
   stopScheduler,
 } from "./modules/auctions/scheduler.service.js";
+import { registerNotificationSubscribers } from "./modules/notifications/notification.subscribers.js";
 import { connectDatabase } from "./shared/db.js";
 import { logger } from "./shared/logger.js";
 
+// Register notification subscribers for domain events (Task 8.2)
+registerNotificationSubscribers();
+
 const server = app.listen(env.PORT, () =>
+
   logger.info({ port: env.PORT }, "BazarBeat API listening"),
 );
 

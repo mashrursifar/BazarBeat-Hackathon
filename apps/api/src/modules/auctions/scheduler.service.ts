@@ -8,7 +8,9 @@ import {
   completeDueDeliveredOrders,
   runOrderTimerJobs,
 } from "../orders/order-timer.service.js";
+import { runEndingSoonJob } from "../notifications/ending-soon.job.js";
 import { Listing } from "../listings/listing.model.js";
+
 import * as closingService from "./closing.service.js";
 import { type CloseAuctionOptions, type CloseAuctionResult } from "./closing.service.js";
 
@@ -196,6 +198,10 @@ export async function runStartupCatchUp(
     clock: options?.clock,
     isDemoMode: env.DEMO_MODE,
   });
+  await runEndingSoonJob({
+    clock: options?.clock,
+    isDemoMode: env.DEMO_MODE,
+  });
   logger.info(
     {
       found: summary.found,
@@ -263,6 +269,12 @@ export class AuctionScheduler {
 
       // Task 6.5: Run order timers in the scheduler
       await runOrderTimerJobs({
+        clock: this.clock,
+        isDemoMode: env.DEMO_MODE,
+      });
+
+      // Task 8.3: Run ending-soon notification job in the scheduler
+      await runEndingSoonJob({
         clock: this.clock,
         isDemoMode: env.DEMO_MODE,
       });

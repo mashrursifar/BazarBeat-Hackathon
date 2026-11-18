@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { buyerOrderCardSchema } from "./orders.js";
-import { cropGradeSchema } from "./ai-listings.js";
+import { cropGradeSchema, priceExplanationSchema } from "./ai-listings.js";
 
 /**
  * Standardized dashboard range presets.
@@ -290,7 +290,7 @@ export const marketGradeGuideItemSchema = z.object({
   suggestedFloorPerKg: z.number().int().positive().optional(),
   trend: marketPriceTrendSchema.optional(),
   confidence: z.number().optional(),
-  explanation: z.array(z.string()).optional(),
+  explanation: z.array(priceExplanationSchema).optional(),
   modelVersion: z.string().optional(),
   provider: z.string().optional(),
   degraded: z.boolean().optional(),

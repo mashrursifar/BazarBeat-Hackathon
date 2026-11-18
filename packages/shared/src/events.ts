@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { DomainEventName, ListingStatus, PaymentMethod } from "./enums.js";
+import type { NotificationItem } from "./schemas/notifications.js";
 
 /**
  * Payload for the 'bid.placed' domain event.
@@ -15,6 +16,7 @@ export const bidPlacedEventPayloadSchema = z.object({
   bidCount: z.number().int().positive(),
   currentBidPerKg: z.number().int().positive(),
   placedAt: z.string().datetime(),
+  previousBidderId: z.string().optional(),
 });
 
 export type BidPlacedEventPayload = z.infer<typeof bidPlacedEventPayloadSchema>;
@@ -165,6 +167,18 @@ export const paymentPaidEventPayloadSchema = z.object({
 
 export type PaymentPaidEventPayload = z.infer<typeof paymentPaidEventPayloadSchema>;
 
+export interface NotificationCreatedEventPayload {
+  userId: string;
+  notification: NotificationItem;
+  unreadCount: number;
+}
+
+export interface NotificationUpdatedEventPayload {
+  userId: string;
+  notification: NotificationItem;
+  unreadCount: number;
+}
+
 /**
  * Type-safe mapping between DomainEventName and its respective payload type.
  */
@@ -179,6 +193,8 @@ export interface DomainEventPayloadMap {
   [DomainEventName.ORDER_CANCELLED]: OrderCancelledEventPayload;
   [DomainEventName.ORDER_DISPUTED]: OrderDisputedEventPayload;
   [DomainEventName.PAYMENT_PAID]: PaymentPaidEventPayload;
+  [DomainEventName.NOTIFICATION_CREATED]: NotificationCreatedEventPayload;
+  [DomainEventName.NOTIFICATION_UPDATED]: NotificationUpdatedEventPayload;
 }
 
 /**

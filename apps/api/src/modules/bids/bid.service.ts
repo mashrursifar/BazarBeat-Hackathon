@@ -165,6 +165,7 @@ export interface PlaceBidExecutionResult {
   newEndsAt?: Date;
   newExtensionCount?: number;
   seq: number;
+  previousBidderId?: string;
   isReplay?: boolean;
 }
 
@@ -341,6 +342,9 @@ export async function placeBid(
 
       const seq = previousListing.bidCount + 1;
       const totalAmount = Math.round(input.amountPerKg * previousListing.quantityKg);
+      const previousBidderId = previousListing.currentBidderId
+        ? previousListing.currentBidderId.toString()
+        : undefined;
       const wasExtended =
         previousListing.extensionCount < maxExtensions &&
         previousListing.endsAt.getTime() < triggerThreshold.getTime();
@@ -385,6 +389,7 @@ export async function placeBid(
         newEndsAt,
         newExtensionCount,
         seq,
+        previousBidderId,
       };
 
       if (idempotencyKey) {
@@ -437,6 +442,9 @@ export async function placeBid(
 
     const seq = previousListing.bidCount + 1;
     const totalAmount = Math.round(input.amountPerKg * previousListing.quantityKg);
+    const previousBidderId = previousListing.currentBidderId
+      ? previousListing.currentBidderId.toString()
+      : undefined;
     const wasExtended =
       previousListing.extensionCount < maxExtensions &&
       previousListing.endsAt.getTime() < triggerThreshold.getTime();
@@ -520,6 +528,7 @@ export async function placeBid(
       newEndsAt,
       newExtensionCount,
       seq,
+      previousBidderId,
     };
 
     if (idempotencyKey) {
@@ -565,6 +574,7 @@ export async function placeBid(
     bidCount: executionResult.seq,
     currentBidPerKg: executionResult.bid.amountPerKg,
     placedAt: executionResult.bid.placedAt,
+    ...(executionResult.previousBidderId ? { previousBidderId: executionResult.previousBidderId } : {}),
   });
 
   if (executionResult.wasExtended && executionResult.newEndsAt && executionResult.newExtensionCount) {

@@ -1,6 +1,13 @@
 import { z } from "zod";
 
-import { AIErrorCode, AIProvider, CropGrade, ListingStatus } from "../enums.js";
+import {
+  AIErrorCode,
+  AIProvider,
+  CropGrade,
+  GradingReasonCode,
+  ListingStatus,
+  PriceReasonCode,
+} from "../enums.js";
 import { databaseIdSchema, inventoryQuantityKgSchema } from "./catalog-inventory.js";
 
 const probabilitySchema = z.number().min(0).max(1);
@@ -16,6 +23,38 @@ export const aiErrorCodeSchema = z.enum([
 export const priceTrendSchema = z.enum(["UP", "FLAT", "DOWN"]);
 export const confidenceBandSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);
 
+export const gradingReasonCodeSchema = z.nativeEnum(GradingReasonCode);
+export const priceReasonCodeSchema = z.nativeEnum(PriceReasonCode);
+
+export const gradingReasonItemSchema = z
+  .object({
+    code: gradingReasonCodeSchema,
+    params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+  })
+  .strict();
+
+export type GradingReasonItem = z.infer<typeof gradingReasonItemSchema>;
+
+export const priceReasonItemSchema = z
+  .object({
+    code: priceReasonCodeSchema,
+    params: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
+  })
+  .strict();
+
+export type PriceReasonItem = z.infer<typeof priceReasonItemSchema>;
+
+export const qualityNoteSchema = z.union([
+  z.string().trim().min(1),
+  gradingReasonItemSchema,
+]);
+
+export const priceExplanationSchema = z.union([
+  z.string().trim().min(1),
+  priceReasonItemSchema,
+]);
+
+
 export const classProbabilitiesSchema = z
   .object({
     A: probabilitySchema,
@@ -30,7 +69,7 @@ export const aiAssessmentSchema = z
     confidence: probabilitySchema,
     confidenceBand: confidenceBandSchema.optional(),
     classProbabilities: classProbabilitiesSchema,
-    qualityNotes: z.array(z.string().trim().min(1)),
+    qualityNotes: z.array(qualityNoteSchema),
     cropMatch: z.boolean(),
     modelVersion: z.string().trim().min(1),
     provider: aiProviderSchema,
@@ -52,7 +91,7 @@ export const priceGuidanceSchema = z
     highPerKg: poishaSchema,
     trend: priceTrendSchema,
     confidence: probabilitySchema,
-    explanation: z.array(z.string().trim().min(1)),
+    explanation: z.array(priceExplanationSchema),
     modelVersion: z.string().trim().min(1),
     provider: aiProviderSchema,
     degraded: z.boolean(),

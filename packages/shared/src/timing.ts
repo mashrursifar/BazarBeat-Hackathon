@@ -70,6 +70,33 @@ export const AUCTION_TIMING = {
 } as const;
 
 /**
+ * Notification timing and retention constants.
+ * Sources: DATA_MODEL (Notification), docs/phase-8.md (Matrix & Gaps).
+ */
+export const NOTIFICATION_TIMING = {
+  RETENTION_DAYS: 60,
+  RETENTION_MS: 60 * 24 * 60 * 60 * 1000,
+  ENDING_SOON_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
+  DEMO_ENDING_SOON_WINDOW_MS: 30 * 1000, // 30 seconds
+  MAX_CONCURRENT_USER_STREAMS: 6,
+} as const;
+
+/**
+ * Watchlist limits.
+ * Source: docs/phase-8.md (Gap 7 / D-34).
+ */
+export const WATCHLIST_LIMITS = {
+  MAX_ITEMS: 50,
+} as const;
+
+export function getEndingSoonWindowMs(isDemoMode: boolean): number {
+  return isDemoMode
+    ? NOTIFICATION_TIMING.DEMO_ENDING_SOON_WINDOW_MS
+    : NOTIFICATION_TIMING.ENDING_SOON_WINDOW_MS;
+}
+
+
+/**
  * Order timing constants and presets.
  * Sources: AUCTION_RULES §11, API_SPEC (Orders).
  */

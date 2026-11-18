@@ -180,7 +180,9 @@ export function ListingDetailDrawer({
                         </span>
                         <ul className="list-disc pl-4 space-y-0.5 text-stone-600">
                           {listing.aiAssessment.qualityNotes.map((note, idx) => (
-                            <li key={idx}>{note}</li>
+                            <li key={idx}>
+                              {typeof note === "string" ? note : t(`ai.gradingReasons.${note.code}`, note.code)}
+                            </li>
                           ))}
                         </ul>
                       </div>

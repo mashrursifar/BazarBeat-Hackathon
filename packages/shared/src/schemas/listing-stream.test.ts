@@ -50,11 +50,18 @@ describe("Listing Stream Schemas (Task 4.7 contracts)", () => {
     };
     expect(listingStreamBidPlacedPatchSchema.parse(validPatch)).toEqual(validPatch);
 
-    // Strict schema rejects leakage of buyerId
+    // Strict schema rejects leakage of buyerId and previousBidderId
     expect(() =>
       listingStreamBidPlacedPatchSchema.parse({
         ...validPatch,
         buyerId: "507f1f77bcf86cd799439012",
+      }),
+    ).toThrow();
+
+    expect(() =>
+      listingStreamBidPlacedPatchSchema.parse({
+        ...validPatch,
+        previousBidderId: "507f1f77bcf86cd799439014",
       }),
     ).toThrow();
   });

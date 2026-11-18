@@ -258,6 +258,71 @@ export const DomainEventName = {
   ORDER_CANCELLED: "order.cancelled",
   ORDER_DISPUTED: "order.disputed",
   PAYMENT_PAID: "payment.paid",
+  NOTIFICATION_CREATED: "notification.created",
+  NOTIFICATION_UPDATED: "notification.updated",
 } as const;
 
 export type DomainEventName = (typeof DomainEventName)[keyof typeof DomainEventName];
+
+export const NotificationType = {
+  NEW_BID: "NEW_BID",
+  OUTBID: "OUTBID",
+  AUCTION_SOLD: "AUCTION_SOLD",
+  AUCTION_WON: "AUCTION_WON",
+  AUCTION_LOST: "AUCTION_LOST",
+  AUCTION_UNSOLD: "AUCTION_UNSOLD",
+  ORDER_UPDATE: "ORDER_UPDATE",
+  ENDING_SOON: "ENDING_SOON",
+} as const;
+
+export type NotificationType = (typeof NotificationType)[keyof typeof NotificationType];
+
+export const OrderSubEvent = {
+  CREATED: "CREATED",
+  CONFIRMED: "CONFIRMED",
+  PAID: "PAID",
+  DELIVERED: "DELIVERED",
+  COMPLETED: "COMPLETED",
+  CANCELLED: "CANCELLED",
+  DISPUTED: "DISPUTED",
+} as const;
+
+export type OrderSubEvent = (typeof OrderSubEvent)[keyof typeof OrderSubEvent];
+
+export const NotificationEventName = {
+  NOTIFICATION_CREATED: "notification.created",
+  NOTIFICATION_UPDATED: "notification.updated",
+} as const;
+
+export type NotificationEventName = (typeof NotificationEventName)[keyof typeof NotificationEventName];
+
+export const GradingReasonCode = {
+  COLOR_UNIFORM: "COLOR_UNIFORM",
+  SHAPE_REGULAR: "SHAPE_REGULAR",
+  TEXTURE_FIRM: "TEXTURE_FIRM",
+  SKIN_INTACT: "SKIN_INTACT",
+  MINOR_BLEMISHES: "MINOR_BLEMISHES",
+  SIZE_VARIATION: "SIZE_VARIATION",
+  SURFACE_DEFECTS: "SURFACE_DEFECTS",
+  MATURITY_OPTIMAL: "MATURITY_OPTIMAL",
+  FRESH_HARVEST: "FRESH_HARVEST",
+  MOISTURE_COMPLIANT: "MOISTURE_COMPLIANT",
+  VISUAL_AI_EVALUATED: "VISUAL_AI_EVALUATED",
+} as const;
+
+export type GradingReasonCode = (typeof GradingReasonCode)[keyof typeof GradingReasonCode];
+
+export const PriceReasonCode = {
+  TREND_UP: "TREND_UP",
+  TREND_DOWN: "TREND_DOWN",
+  TREND_FLAT: "TREND_FLAT",
+  DEMAND_HIGH: "DEMAND_HIGH",
+  DEMAND_STABLE: "DEMAND_STABLE",
+  SUPPLY_SURPLUS: "SUPPLY_SURPLUS",
+  HISTORICAL_BENCHMARK: "HISTORICAL_BENCHMARK",
+  DIVISION_PREMIUM: "DIVISION_PREMIUM",
+  GRADE_PREMIUM: "GRADE_PREMIUM",
+} as const;
+
+export type PriceReasonCode = (typeof PriceReasonCode)[keyof typeof PriceReasonCode];
+

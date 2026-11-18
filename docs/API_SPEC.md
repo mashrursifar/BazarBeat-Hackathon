@@ -114,13 +114,20 @@ All inventory responses are scoped to the authenticated farmer; clients cannot s
 
 ## Notifications
 
-| GET | /notifications | A | Paginated |
-| POST | /notifications/read | A | Mark ids or all as read |
-| GET | /me/stream | A | SSE: notification.created |
+| Method | Path | Role | Purpose & Contract |
+| --- | --- | --- | --- |
+| GET | /notifications | A | Role-scoped list with query filters `?unreadOnly=boolean&page=1&limit=20` (max 50). Returns `{ data: NotificationItem[], meta: { serverTime, page, limit, total, totalPages, unreadCount } }` sorted newest first |
+| POST | /notifications/read | A | Mark notifications as read: payload `{ ids?: string[], all?: boolean }`. Ignores IDs belonging to other users. Returns `{ data: { markedCount: number }, meta: { serverTime, unreadCount } }` |
+| GET | /me/stream | A | Authenticated user SSE stream: initial snapshot with `unreadCount`, live events `notification.created` and `notification.updated`. 20s heartbeat, drop-oldest connection when exceeding user stream cap (6) |
 
 ## Watchlist (P1)
 
-| GET/POST/DELETE | /watchlist | B | |
+| Method | Path | Role | Purpose & Contract |
+| --- | --- | --- | --- |
+| GET | /watchlist | B | Buyer saved listings: paginated list `?page=1&limit=20`. Returns `{ data: BuyerListingCard[], meta: { serverTime, page, limit, total, totalPages } }` with `isWatched: true`, newest saved first |
+| POST | /watchlist | B | Add listing to watchlist: payload `{ listingId }`. Idempotent (409 avoided, returns success). Enforces ACTIVE listings only (400 if ended/draft) and maximum cap of 50 items (400 WATCHLIST_CAP_EXCEEDED). Returns `{ data: { success: true, listingId, isWatched: true }, meta: { serverTime } }` |
+| DELETE | /watchlist/:listingId | B | Remove listing from watchlist. Idempotent (returns success even if not watched). Returns `{ data: { success: true, listingId, isWatched: false }, meta: { serverTime } }` |
+
 
 ## Ops
 

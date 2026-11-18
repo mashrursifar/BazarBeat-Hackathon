@@ -89,6 +89,8 @@ describe("Domain event schemas", () => {
     expect(DomainEventName.ORDER_CANCELLED).toBe("order.cancelled");
     expect(DomainEventName.ORDER_DISPUTED).toBe("order.disputed");
     expect(DomainEventName.PAYMENT_PAID).toBe("payment.paid");
+    expect(DomainEventName.NOTIFICATION_CREATED).toBe("notification.created");
+    expect(DomainEventName.NOTIFICATION_UPDATED).toBe("notification.updated");
   });
 
   it("validates order.confirmed payload", () => {

@@ -230,7 +230,26 @@ Domain events are typed in-process events defined in `@bazarbeat/shared` and emi
 
 ## Notification
 
-userId, type (NEW_BID, OUTBID, ENDING_SOON, AUCTION_WON, AUCTION_LOST, AUCTION_SOLD, AUCTION_UNSOLD, ORDER_UPDATE), title, body, entityRef {kind, id}, isRead, readAt?. Index: (userId, isRead, createdAt desc).
+| Field       | Type                                                                                        | Notes                                                                                                    |
+| ----------- | ------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| userId      | ref User                                                                                    | Recipient user ID (required)                                                                             |
+| type        | enum (NEW_BID \| OUTBID \| AUCTION_SOLD \| AUCTION_WON \| AUCTION_LOST \| AUCTION_UNSOLD \| ORDER_UPDATE \| ENDING_SOON) | Notification type enum                                                        |
+| title       | string                                                                                      | English fallback title                                                                                   |
+| body        | string                                                                                      | English fallback body text                                                                               |
+| params      | Object                                                                                      | Structured type-specific params (crop slug, amounts in poisha, listingId, orderId). NO counterparty PII! |
+| entityRef   | { kind: "listing" \| "order", id: string }                                                  | Primary target entity reference                                                                          |
+| isRead      | boolean                                                                                     | Default: false                                                                                           |
+| readAt      | Date?                                                                                       | Populated when marked read                                                                               |
+| dedupeKey   | string                                                                                      | Deterministic deduplication key per type & entity                                                        |
+| createdAt   | Date                                                                                        | Creation timestamp                                                                                       |
+| updatedAt   | Date                                                                                        | Updated timestamp (refreshed on coalescing)                                                              |
+
+- **Indexes:**
+  - Unique: `(userId, dedupeKey)` — prevents duplicate notifications across repeated events and ticks
+  - Query: `(userId, isRead, createdAt desc)` — optimizes unread and paginated notification queries
+  - TTL: `(createdAt)` with `expireAfterSeconds: 5184000` (60 days) — automatically expires aged notifications
+- **Coalescing:** Unread `NEW_BID` notifications for the same listing coalesce onto `NEW_BID:${listingId}`, updating the current amount and bid count.
+- **Ending Soon:** `ENDING_SOON:${listingId}` created once per user per listing.
 
 ## MarketPrice (reference data for AI and charts)
 
@@ -238,7 +257,15 @@ cropId (Crop ref), division, date (UTC day), avgPricePerKg, minPricePerKg, maxPr
 
 ## WatchlistItem (P1)
 
-userId, listingId; unique together.
+| Field     | Type        | Notes                                                        |
+| --------- | ----------- | ------------------------------------------------------------ |
+| userId    | ref User    | Authenticated buyer ID                                       |
+| listingId | ref Listing | Active listing ID saved to watchlist                         |
+| createdAt | Date        | Added timestamp                                              |
+
+- **Indexes:** Unique `(userId, listingId)`.
+- **Rules:** Capped at 50 per buyer. Only ACTIVE listings can be added. Ended watched listings remain accessible read-only to the watching buyer.
+
 
 ## Derived data (never stored as truth)
 

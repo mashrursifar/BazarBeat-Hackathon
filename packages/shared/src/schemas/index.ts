@@ -11,3 +11,6 @@ export * from "./orders.js";
 export * from "./listing-stream.js";
 export * from "./marketplace.js";
 export * from "./dashboards.js";
+export * from "./notifications.js";
+export * from "./watchlist.js";
+
