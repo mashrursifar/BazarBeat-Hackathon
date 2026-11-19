@@ -13,7 +13,7 @@ import {
   type RelistListingRequest,
 } from "@bazarbeat/shared";
 
-import type { AuthenticatedLocals } from "../auth/auth.middleware.js";
+import type { AuthenticatedLocals, OptionalAuthLocals } from "../auth/auth.middleware.js";
 import type { QueryValidationLocals } from "../../shared/validate-query.js";
 import { getClock } from "../../shared/clock.js";
 import { closeAuction } from "../auctions/closing.service.js";
@@ -69,7 +69,7 @@ export const getMarketplaceListingsController: RequestHandler<
   MarketplaceListingListResponse,
   unknown,
   unknown,
-  AuthenticatedLocals & QueryValidationLocals<MarketplaceQuery>
+  OptionalAuthLocals & QueryValidationLocals<MarketplaceQuery>
 > = async (_request, response): Promise<void> => {
   const query = response.locals.validatedQuery;
   const result = await getMarketplaceListings(query, response.locals.currentUser?.id);

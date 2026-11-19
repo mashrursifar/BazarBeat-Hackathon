@@ -12,7 +12,7 @@ import {
 import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { validateBody } from "../../shared/validate-body.js";
 import { validateQuery } from "../../shared/validate-query.js";
-import { requireAuthentication, requireRole } from "../auth/auth.middleware.js";
+import { optionalAuthentication, requireAuthentication, requireRole } from "../auth/auth.middleware.js";
 import { bidsRateLimit } from "../bids/bid.rate-limit.js";
 import { getListingBidsController, placeBidController } from "../bids/bid.controller.js";
 import {
@@ -31,8 +31,7 @@ export const listingsRouter = Router();
 
 listingsRouter.get(
   "/",
-  requireAuthentication,
-  requireRole(UserRole.BUYER),
+  optionalAuthentication,
   validateQuery(marketplaceQuerySchema),
   getMarketplaceListingsController,
 );

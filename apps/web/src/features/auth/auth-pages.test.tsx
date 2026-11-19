@@ -44,7 +44,71 @@ describe("authentication pages", () => {
     document.cookie = "bazarbeat-session=; Path=/; Max-Age=0";
     render(<AppProviders><MemoryRouter initialEntries={["/login"]}><Routes><Route path="/login" element={<LoginPage />} /></Routes></MemoryRouter></AppProviders>);
     expect(screen.getByRole("heading", { name: "Log in" })).toBeInTheDocument();
-    expect(fetch).not.toHaveBeenCalled();
+    const authCalls = vi.mocked(fetch).mock.calls.filter(([url]) =>
+      typeof url === "string" && (url.includes("/me") || url.includes("/auth")),
+    );
+    expect(authCalls).toHaveLength(0);
+  });
+
+  it("registers, signs in automatically, and navigates directly to dashboard", async () => {
+    document.cookie = "bazarbeat-session=; Path=/; Max-Age=0";
+    const fetchMock = vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("/auth/register")) {
+        return new Response(JSON.stringify({ data: { id: "user-id", role: "FARMER" } }), {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (url.includes("/auth/login")) {
+        return new Response(
+          JSON.stringify({
+            data: {
+              id: "user-id",
+              role: "FARMER",
+              name: "New Farmer",
+              division: "barishal",
+              district: "barguna",
+              language: "en",
+            },
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url.includes("/me")) {
+        return new Response(JSON.stringify({ error: { code: "UNAUTHENTICATED" } }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response(JSON.stringify({ data: {} }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <AppProviders>
+        <MemoryRouter initialEntries={["/register"]}>
+          <Routes>
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/farmer/dashboard" element={<h1>Farmer Dashboard</h1>} />
+          </Routes>
+        </MemoryRouter>
+      </AppProviders>,
+    );
+
+    fireEvent.change(screen.getByLabelText("Full name"), { target: { value: "New Farmer" } });
+    fireEvent.change(screen.getByLabelText("Bangladesh mobile number"), {
+      target: { value: "01712345678" },
+    });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "StrongPass!123" } });
+    fireEvent.change(screen.getByLabelText("Division"), { target: { value: "barishal" } });
+    fireEvent.change(screen.getByLabelText("District"), { target: { value: "barguna" } });
+    fireEvent.click(screen.getByRole("button", { name: "Create account" }));
+
+    expect(await screen.findByRole("heading", { name: "Farmer Dashboard" })).toBeInTheDocument();
   });
 
   it("lets a registrant choose a role and shows the buyer organization field", async () => {

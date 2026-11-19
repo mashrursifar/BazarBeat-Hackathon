@@ -166,18 +166,22 @@ describe("GET /api/v1/listings (Marketplace list endpoint)", () => {
   }
 
   describe("Authentication & Role Authorization", () => {
-    it("blocks anonymous unauthenticated users with 401 UNAUTHENTICATED", async () => {
+    it("allows anonymous unauthenticated users with 200 OK", async () => {
       const response = await request(app).get("/api/v1/listings");
-      expect(response.status).toBe(401);
-      expect(response.body.error.code).toBe("UNAUTHENTICATED");
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.meta.total).toBe(0);
+      expect(response.body.meta.serverTime).toBe(baseTime.toISOString());
     });
 
-    it("blocks farmers with 403 FORBIDDEN", async () => {
+    it("allows farmers with 200 OK", async () => {
       const response = await request(app)
         .get("/api/v1/listings")
         .set("Cookie", "accessToken=farmer");
-      expect(response.status).toBe(403);
-      expect(response.body.error.code).toBe("FORBIDDEN");
+      expect(response.status).toBe(200);
+      expect(response.body.data).toEqual([]);
+      expect(response.body.meta.total).toBe(0);
+      expect(response.body.meta.serverTime).toBe(baseTime.toISOString());
     });
 
     it("allows authenticated buyers with 200 OK", async () => {

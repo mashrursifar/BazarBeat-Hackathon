@@ -1,4 +1,7 @@
+import { useContext, useMemo } from "react";
 import {
+  QueryClient,
+  QueryClientContext,
   type UseMutationResult,
   type UseQueryResult,
   useMutation,
@@ -53,11 +56,16 @@ export function useCrops(): UseQueryResult<CropResponse[], Error> {
 }
 
 export function usePublicConfig(): UseQueryResult<PublicConfig, Error> {
-  return useQuery({
-    queryKey: listingKeys.config,
-    queryFn: getConfig,
-    staleTime: 10 * 60 * 1000,
-  });
+  const hasClient = Boolean(useContext(QueryClientContext));
+  const fallbackClient = useMemo(() => new QueryClient(), []);
+  return useQuery(
+    {
+      queryKey: listingKeys.config,
+      queryFn: getConfig,
+      staleTime: 10 * 60 * 1000,
+    },
+    hasClient ? undefined : fallbackClient,
+  );
 }
 
 export interface AssessQualityInput {

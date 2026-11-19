@@ -188,9 +188,14 @@ export function LoginPage(): ReactElement {
 
 export function RegisterPage(): ReactElement {
   const { t, i18n } = useTranslation();
-  const { user } = useAuth();
+  const { user, signIn } = useAuth();
   const navigate = useNavigate();
-  const [role, setRole] = useState<UserRole>(UserRole.FARMER);
+  const [searchParams] = useSearchParams();
+  const initialRole =
+    searchParams.get("role")?.toUpperCase() === UserRole.BUYER
+      ? UserRole.BUYER
+      : UserRole.FARMER;
+  const [role, setRole] = useState<UserRole>(initialRole);
   const [division, setDivision] = useState("");
   const [district, setDistrict] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -256,7 +261,10 @@ export function RegisterPage(): ReactElement {
     setFieldErrors({});
     try {
       await authApi.register(parsed.data);
-      await navigate("/login?registered=1");
+      const signedInUser = await signIn(parsed.data.phone, parsed.data.password);
+      await navigate(
+        signedInUser.role === UserRole.FARMER ? "/farmer/dashboard" : "/buyer/dashboard",
+      );
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "NETWORK_ERROR");
     } finally {

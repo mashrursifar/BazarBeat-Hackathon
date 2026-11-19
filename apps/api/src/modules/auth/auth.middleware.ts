@@ -11,6 +11,32 @@ export interface AuthenticatedLocals {
   currentUser: PublicUser;
 }
 
+export interface OptionalAuthLocals {
+  currentUser?: PublicUser;
+}
+
+export const optionalAuthentication: RequestHandler<
+  ParamsDictionary,
+  unknown,
+  unknown,
+  ParsedQs,
+  OptionalAuthLocals
+> = (request, response, next): void => {
+  const cookies = authenticationCookiesSchema.safeParse(request.cookies);
+  if (!cookies.success) {
+    next();
+    return;
+  }
+  void authenticateAccessToken(cookies.data.accessToken)
+    .then((currentUser) => {
+      response.locals.currentUser = currentUser;
+      next();
+    })
+    .catch(() => {
+      next();
+    });
+};
+
 export const requireAuthentication: RequestHandler<
   ParamsDictionary,
   unknown,

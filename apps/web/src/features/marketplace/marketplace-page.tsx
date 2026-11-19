@@ -1,6 +1,6 @@
 import { type ReactElement, useMemo } from "react";
 import { useTranslation } from "react-i18next";
-import { useSearchParams } from "react-router-dom";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   ListingStatus,
@@ -11,7 +11,10 @@ import {
 
 import { CompareTray } from "../../components/shared/compare-tray.js";
 import { DemoAiChip } from "../../components/shared/demo-ai-chip.js";
+import { DemoModeBadge } from "../../components/demo-mode-badge.js";
+import { LanguageSwitcher } from "../../components/language-switcher.js";
 import { ListingCard } from "../../components/shared/listing-card.js";
+import { useOptionalAuth } from "../auth/auth-context.js";
 import { getCrops } from "../listings/api/listing-api.js";
 import { getMarketplaceListings } from "./api/marketplace-api.js";
 import {
@@ -46,6 +49,10 @@ function ListingCardSkeleton(): ReactElement {
 
 export function MarketplaceContent(): ReactElement {
   const { t } = useTranslation();
+  const location = useLocation();
+  const auth = useOptionalAuth();
+  const user = auth?.user ?? null;
+  const isStandaloneMarket = location.pathname === "/market";
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Validate URL search params against shared marketplaceQuerySchema
@@ -227,6 +234,48 @@ export function MarketplaceContent(): ReactElement {
       data-testid="marketplace-page"
       className="mx-auto flex w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8 pb-32 min-w-0"
     >
+      {isStandaloneMarket && (
+        <header className="border-b border-stone-200 bg-white/95 backdrop-blur-sm sticky top-0 z-20 -mx-4 -mt-6 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <Link to="/" className="flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-base shadow-sm">
+                B
+              </span>
+              <span className="text-lg font-bold tracking-tight text-foreground">
+                {t("appName")}
+              </span>
+            </Link>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3">
+            <DemoModeBadge />
+            <LanguageSwitcher />
+            {user ? (
+              <Link
+                to={user.role === "FARMER" ? "/farmer/dashboard" : "/buyer/dashboard"}
+                className="inline-flex min-h-[40px] items-center justify-center rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                {t("dashboard.title", "Dashboard")}
+              </Link>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Link
+                  to="/login"
+                  className="inline-flex min-h-[40px] items-center justify-center rounded-lg border border-stone-300 bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-stone-700 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {t("landing.loginLink", "Log In")}
+                </Link>
+                <Link
+                  to="/register"
+                  className="inline-flex min-h-[40px] items-center justify-center rounded-lg bg-primary px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white shadow-xs hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary"
+                >
+                  {t("login.createAccount", "Sign Up")}
+                </Link>
+              </div>
+            )}
+          </div>
+        </header>
+      )}
+
       {/* Page Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-stone-200 pb-5">
         <div>
