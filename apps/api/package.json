@@ -15,7 +15,8 @@
     "demo:reset": "tsx src/seed/seed-demo.ts --reset",
     "demo:spawn-auctions": "tsx src/seed/demo-spawn-auctions.ts",
     "dev:bid": "tsx scripts/dev-bid.ts",
-    "resolve-dispute": "tsx scripts/resolve-dispute.ts"
+    "resolve-dispute": "tsx scripts/resolve-dispute.ts",
+    "preflight": "tsx scripts/preflight.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1172.0",

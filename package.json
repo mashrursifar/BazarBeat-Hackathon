@@ -27,7 +27,8 @@
     "demo:reset": "npm run demo:reset -w @bazarbeat/api",
     "demo:spawn-auctions": "npm run demo:spawn-auctions -w @bazarbeat/api",
     "dev:bid": "npm run dev:bid -w @bazarbeat/api --",
-    "resolve-dispute": "npm run resolve-dispute -w @bazarbeat/api --"
+    "resolve-dispute": "npm run resolve-dispute -w @bazarbeat/api --",
+    "preflight": "npm run preflight -w @bazarbeat/api --"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

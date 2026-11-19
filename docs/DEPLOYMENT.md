@@ -179,7 +179,44 @@ The smoke suite verifies:
 
 ---
 
-## 11. Security & Credential Hygiene
+## 11. Preflight Verification Suite (`npm run preflight -- --url <base-url>`)
+
+Task 9.5 provides an automated preflight suite that runs against any target deployment or local instance to verify operational readiness before hackathon rehearsals and reviewer demos.
+
+### Running Preflight
+
+```bash
+# Against a deployed instance:
+npm run preflight -- --url https://<your-app>.onrender.com
+
+# Against a local development / staging instance:
+npm run preflight -- --url http://localhost:4000
+```
+
+On Windows PowerShell:
+```powershell
+npm run preflight -- --url https://<your-app>.onrender.com
+```
+
+### Verification Checks
+
+The suite executes 8 checks, printing a clear `[PASS]` or `[FAIL]` status for each:
+1. **health (deep)**: Confirms `GET /api/v1/health?deep=true` reports overall status `ok`, build version `GIT_SHA`, and uptime.
+2. **AI service reachable and warm**: Validates AI provider operational status and responsiveness.
+3. **database latency**: Confirms MongoDB Atlas connection is healthy and measures query roundtrip latency in ms.
+4. **storage write and read**: Uploads a real produce sample photo to verify storage writes (Cloudinary / S3 / local disk) and fetches the stored URL over HTTP to verify storage reads. If credentials (such as `CLOUDINARY_URL` or S3 keys) are wrong, the check fails with a clear, readable error message.
+5. **the demo badge state**: Verifies `GET /api/v1/config` has `demoMode: true` so the "Demo mode: timers are shortened" badge renders on the UI.
+6. **logins for both demo roles**: Signs in demo farmer (`01700000001` / `farmerpassword123`) and demo buyer (`01712345678` / `buyerpassword123`), verifying session cookies.
+7. **scheduler alive (a short auction actually closes)**: Publishes a fast demo listing with a real sample photo, places a competitive buyer bid above floor price, waits for `endsAt` expiration, and verifies the background scheduler automatically triggers closing and transitions status to `CLOSED_SOLD`.
+8. **a full mini journey & cleanup**: Validates that an order was generated from the closed auction with matching buyer, farmer, and total amounts, followed by automated cleanup (cancelling the test order) to avoid polluting demo state.
+
+### Exit Codes
+- Exits with code `0` if and only if all 8 checks pass.
+- Exits with non-zero exit code (`1`) on any failure.
+
+---
+
+## 12. Security & Credential Hygiene
 
 - **No Secrets in Logs or Responses**: The storage providers and database clients redact secrets, passwords, and tokens from all log streams and API error payloads.
 - **Fail-Fast Boot Checks**: In production mode (`NODE_ENV=production`), server startup fails immediately if secrets are weak, missing, or use local placeholders.
