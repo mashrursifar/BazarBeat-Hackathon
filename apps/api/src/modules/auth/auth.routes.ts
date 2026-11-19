@@ -3,10 +3,16 @@ import rateLimit from "express-rate-limit";
 
 import { loginSchema, refreshCookieSchema, registerSchema } from "@bazarbeat/shared";
 
+import { env } from "../../config/env.js";
 import { requireCsrfProtection } from "../../shared/csrf-middleware.js";
 import { AppError } from "../../shared/errors.js";
 import { requireAuthentication } from "./auth.middleware.js";
-import { loginController, logoutController, refreshController, registerController } from "./auth.controller.js";
+import {
+  loginController,
+  logoutController,
+  refreshController,
+  registerController,
+} from "./auth.controller.js";
 import { validateBody } from "../../shared/validate-body.js";
 
 const registrationRateLimit = createAuthRateLimit("registration");
@@ -24,17 +30,42 @@ const validateRefreshCookie: RequestHandler = (request, _response, next): void =
 };
 
 export const authRouter = Router();
-authRouter.post("/register", registrationRateLimit, requireCsrfProtection, validateBody(registerSchema), registerController);
-authRouter.post("/login", loginRateLimit, requireCsrfProtection, validateBody(loginSchema), loginController);
-authRouter.post("/refresh", refreshRateLimit, requireCsrfProtection, validateRefreshCookie, refreshController);
-authRouter.post("/logout", logoutRateLimit, requireAuthentication, requireCsrfProtection, logoutController);
+authRouter.post(
+  "/register",
+  registrationRateLimit,
+  requireCsrfProtection,
+  validateBody(registerSchema),
+  registerController,
+);
+authRouter.post(
+  "/login",
+  loginRateLimit,
+  requireCsrfProtection,
+  validateBody(loginSchema),
+  loginController,
+);
+authRouter.post(
+  "/refresh",
+  refreshRateLimit,
+  requireCsrfProtection,
+  validateRefreshCookie,
+  refreshController,
+);
+authRouter.post(
+  "/logout",
+  logoutRateLimit,
+  requireAuthentication,
+  requireCsrfProtection,
+  logoutController,
+);
 
 function createAuthRateLimit(action: string): ReturnType<typeof rateLimit> {
   return rateLimit({
     windowMs: 60_000,
-    limit: 10,
+    limit: env.RATE_LIMIT_AUTH_PER_MIN,
     standardHeaders: true,
     legacyHeaders: false,
+    validate: { trustProxy: false },
     handler: (_request, response): void => {
       response.status(429).json({
         error: { code: "RATE_LIMITED", message: `Too many ${action} attempts. Try again shortly.` },

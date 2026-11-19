@@ -1,19 +1,19 @@
+import type { Server } from "node:http";
+
 import { app } from "./app.js";
 import { env } from "./config/env.js";
-import {
-  runStartupCatchUp,
-  startScheduler,
-  stopScheduler,
-} from "./modules/auctions/scheduler.service.js";
+import { runStartupCatchUp, startScheduler } from "./modules/auctions/scheduler.service.js";
 import { registerNotificationSubscribers } from "./modules/notifications/notification.subscribers.js";
 import { connectDatabase } from "./shared/db.js";
 import { logger } from "./shared/logger.js";
+import { performGracefulShutdown } from "./shared/shutdown.js";
+
+export { performGracefulShutdown };
 
 // Register notification subscribers for domain events (Task 8.2)
 registerNotificationSubscribers();
 
-const server = app.listen(env.PORT, () =>
-
+export const server: Server = app.listen(env.PORT, () =>
   logger.info({ port: env.PORT }, "BazarBeat API listening"),
 );
 
@@ -34,14 +34,13 @@ void connectDatabase()
     );
   });
 
-function shutdown(): void {
-  logger.info("Gracefully shutting down BazarBeat API server...");
-  stopScheduler();
-  server.close(() => {
-    logger.info("HTTP server closed");
-    process.exit(0);
-  });
+let isShuttingDown = false;
+function onSignal(signal: string): void {
+  if (isShuttingDown) return;
+  isShuttingDown = true;
+  logger.info({ signal }, "Received termination signal");
+  void performGracefulShutdown(server, { exitProcess: true });
 }
 
-process.on("SIGINT", shutdown);
-process.on("SIGTERM", shutdown);
+process.on("SIGINT", () => onSignal("SIGINT"));
+process.on("SIGTERM", () => onSignal("SIGTERM"));

@@ -11,6 +11,7 @@
   "scripts": {
     "dev": "concurrently -k -n api,web -c blue,green \"npm run dev -w @bazarbeat/api\" \"npm run dev -w @bazarbeat/web\"",
     "build": "npm run build -w @bazarbeat/shared && npm run build -w @bazarbeat/api && npm run build -w @bazarbeat/web",
+    "start": "npm run start -w @bazarbeat/api",
     "typecheck": "npm run typecheck -w @bazarbeat/shared && npm run typecheck -w @bazarbeat/api && npm run typecheck -w @bazarbeat/web",
     "lint": "eslint .",
     "format": "prettier --write .",

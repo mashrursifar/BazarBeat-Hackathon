@@ -1,6 +1,7 @@
 # Architecture — BazarBeat
 
 ## 1. Overview
+
 A TypeScript monorepo (npm workspaces) with a React SPA, an Express REST API, a shared contracts package, and MongoDB. Real-time bid updates use Server-Sent Events. A background scheduler closes auctions. AI, file storage, and payments are behind adapters.
 
 ```
@@ -12,6 +13,7 @@ A TypeScript monorepo (npm workspaces) with a React SPA, an Express REST API, a 
 ```
 
 ## 2. Monorepo structure
+
 ```
 apps/
   api/src/
@@ -55,19 +57,22 @@ packages/shared/src/
 e2e/                   # Playwright specs
 docs/
 ```
+
 Each API module contains: `*.routes.ts`, `*.controller.ts`, `*.service.ts`, `*.model.ts`, `*.schemas.ts` (re-export from shared when possible), `*.test.ts`.
 
 ## 3. Backend layering
-| Layer | Responsibility | Must not |
-|---|---|---|
-| Route | Map path + method to middleware chain + controller | Contain logic |
-| Middleware | AuthN, role guard, validation, rate limiting, error handling | Touch models directly |
+
+| Layer      | Responsibility                                                 | Must not               |
+| ---------- | -------------------------------------------------------------- | ---------------------- |
+| Route      | Map path + method to middleware chain + controller             | Contain logic          |
+| Middleware | AuthN, role guard, validation, rate limiting, error handling   | Touch models directly  |
 | Controller | Parse validated input, call a service, shape the HTTP response | Contain business rules |
-| Service | Business rules, orchestration, transactions, state machines | Know about req/res |
-| Model | Mongoose schema, indexes, static helpers | Contain business flow |
-| Adapter | Wrap an external capability behind an interface | Leak vendor types |
+| Service    | Business rules, orchestration, transactions, state machines    | Know about req/res     |
+| Model      | Mongoose schema, indexes, static helpers                       | Contain business flow  |
+| Adapter    | Wrap an external capability behind an interface                | Leak vendor types      |
 
 ## 4. Cross-cutting concerns
+
 - **Validation:** zod schemas from `packages/shared` used by both API middleware and web forms.
 - **Errors:** custom `AppError` hierarchy mapped to the error envelope in `API_SPEC.md`.
 - **Logging:** structured JSON logger with request IDs; never log secrets, tokens, or full phone numbers.
@@ -77,6 +82,7 @@ Each API module contains: `*.routes.ts`, `*.controller.ts`, `*.service.ts`, `*.m
 - **Idempotency:** auction closing and order creation must be safe to run twice.
 
 ## 5. Real-time design
+
 - SSE endpoint per listing (`/listings/:id/stream`) broadcasting `bid.placed`, `auction.extended`, `auction.closed`.
   - On connect: sends an initial `snapshot` event (`listingId`, `currentPrice`, `currentBidPerKg`, `floorPricePerKg`, `bidCount`, `endTime`, `endsAt`, `status`, `serverTime`).
   - Real-time updates: forwards `bid.placed`, `auction.extended`, and `auction.closed` as small state patches.
@@ -90,36 +96,52 @@ Each API module contains: `*.routes.ts`, `*.controller.ts`, `*.service.ts`, `*.m
 - The client never decides outcomes: it displays server state and server time offset.
 
 ## 6. Scheduler
+
 An interval job (every 10 seconds; every 2 seconds in demo mode) selects listings whose `endsAt` has passed and `status = ACTIVE`, and closes each through the auction service. Closing is idempotent and uses a conditional status transition so two ticks cannot double-close.
 
 ## 7. File uploads
+
 Multipart upload through the storage adapter; validated for type and size; images re-encoded server-side and EXIF stripped. Local disk adapter by default; cloud adapter is a drop-in (see `AI_INTEGRATION.md` for how images flow to the grader).
 
 ## 8. Environments and config
+
 Required variable names (values in `.env`, never committed):
-`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`, `CORS_ORIGINS`, `AI_PROVIDER` (mock|http), `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `STORAGE_PROVIDER` (local|cloud), `UPLOAD_DIR`, `DEMO_MODE` (true|false), `PLATFORM_FEE_BPS`, `VITE_API_URL`.
+`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`, `CORS_ORIGINS`, `AI_PROVIDER` (mock|http), `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `STORAGE_PROVIDER` (local|cloud), `UPLOAD_DIR`, `DEMO_MODE` (true|false), `PLATFORM_FEE_BPS`, `VITE_API_URL`, `TRUST_PROXY`, `SERVE_WEB`, `WEB_DIST_PATH`, `RATE_LIMIT_AUTH_PER_MIN`, `GIT_SHA`.
 Maintain `.env.example` with every name and a safe placeholder.
 
+Production hardening and single-service deployment (Task 9.1):
+
+- **Single-origin static serving with SPA fallback:** When `SERVE_WEB=true` or in production, Express serves the built React app from `apps/web/dist`. `/assets/*` bundles carry long-term immutable caching (`public, max-age=31536000, immutable`), while client route fallback serves `index.html` with strict no-cache headers (`no-cache, no-store, must-revalidate`). Nonexistent API paths under `/api/*` strictly return 404 JSON, preventing SPA fallback pollution.
+- **Reverse proxy trust:** `TRUST_PROXY` configures Express `trust proxy` (supporting booleans, hop counts, or CIDRs) so rate limiters and loggers evaluate the true client IP via `X-Forwarded-For`.
+- **HTTP hardening:** Helmet enforces `nosniff`, `SAMEORIGIN` framing, and a custom Content Security Policy (CSP) tailored to Google Fonts (`fonts.googleapis.com`, `fonts.gstatic.com`), local Vite scripts (`'self'`), styles, and secure API connections.
+- **Selective compression:** `compression` middleware compresses responses but explicitly bypasses Server-Sent Events / live streams (`text/event-stream`, `Cache-Control: no-transform`) to prevent buffer stalls.
+- **Graceful shutdown:** `performGracefulShutdown` intercepts `SIGINT`/`SIGTERM` to halt the auction/order scheduler, destroy all active SSE client streams in `ListingStreamHub` and `UserStreamHub`, close the HTTP server, and disconnect Mongoose cleanly.
+- **Deep health check:** `GET /api/v1/health?deep=true` reports database connection status and query latency in milliseconds, storage provider status, AI provider status, version/commit `GIT_SHA`, and process uptime.
+- **Boot check & secret hygiene:** Boot fails fast if JWT secrets in production are shorter than 32 characters, contain default/placeholder strings, or match each other. Logging redacts passwords, tokens, phone numbers, and cloud secrets with ISO timestamps.
+
 ## 9. Stack additions (pre-approved)
-| Package | Purpose | Where |
-|---|---|---|
-| zod | Validation and shared contracts | shared, api, web |
-| @tanstack/react-query | Server state and caching | web |
-| react-hook-form + @hookform/resolvers | Forms with zod | web |
-| recharts (via shadcn charts) | Dashboard charts | web |
-| react-i18next | Localization (en, bn) | web |
-| date-fns | Date handling | web, api |
-| helmet, cors, cookie-parser, express-rate-limit | HTTP hardening | api |
-| bcrypt or argon2 | Password hashing | api |
-| multer + sharp | Upload parsing, image re-encode, EXIF strip | api |
-| pino (+ pino-http) | Logging | api |
-| supertest + mongodb-memory-server | API integration tests | api tests |
-| @testing-library/react + msw | Component tests | web tests |
-| browser-image-compression | Client-side image shrinking | web |
-Anything else needs a `DECISIONS.md` entry first.
+
+| Package                                           | Purpose                                     | Where            |
+| ------------------------------------------------- | ------------------------------------------- | ---------------- |
+| zod                                               | Validation and shared contracts             | shared, api, web |
+| @tanstack/react-query                             | Server state and caching                    | web              |
+| react-hook-form + @hookform/resolvers             | Forms with zod                              | web              |
+| recharts (via shadcn charts)                      | Dashboard charts                            | web              |
+| react-i18next                                     | Localization (en, bn)                       | web              |
+| date-fns                                          | Date handling                               | web, api         |
+| helmet, cors, cookie-parser, express-rate-limit   | HTTP hardening                              | api              |
+| bcrypt or argon2                                  | Password hashing                            | api              |
+| multer + sharp                                    | Upload parsing, image re-encode, EXIF strip | api              |
+| pino (+ pino-http)                                | Logging                                     | api              |
+| supertest + mongodb-memory-server                 | API integration tests                       | api tests        |
+| @testing-library/react + msw                      | Component tests                             | web tests        |
+| browser-image-compression                         | Client-side image shrinking                 | web              |
+| Anything else needs a `DECISIONS.md` entry first. |
 
 ## 10. Deployment (hackathon)
+
 Frontend on a static host, API on a Node host, MongoDB Atlas free tier. One shared `DEMO_MODE` seed command prepares the demo database. Health check at `/api/v1/health`.
 
 ## 11. Known limitations (state them honestly in the pitch)
+
 Single API instance; simulated payments; AI models are prototypes; no logistics integration.
