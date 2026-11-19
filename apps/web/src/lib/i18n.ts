@@ -72,6 +72,8 @@ void i18n.use(initReactI18next).init({
           watchlist: "Watchlist",
           marketOverview: "Market Overview",
           notifications: "Notifications",
+          openMenu: "Open navigation menu",
+          closeMenu: "Close navigation menu",
         },
         notifications: {
           title: "Notifications",
@@ -1398,6 +1400,8 @@ void i18n.use(initReactI18next).init({
           watchlist: "পছন্দের তালিকা",
           marketOverview: "বাজারের সারাংশ",
           notifications: "বিজ্ঞপ্তি",
+          openMenu: "নেভিগেশন মেনু খুলুন",
+          closeMenu: "নেভিগেশন মেনু বন্ধ করুন",
         },
         notifications: {
           title: "বিজ্ঞপ্তি",
