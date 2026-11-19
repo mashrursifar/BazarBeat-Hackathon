@@ -35,42 +35,32 @@ export function getCookieSecurityOptions(): {
   };
 }
 
-export const loginController: RequestHandler<
-  Record<string, string>,
-  { data: PublicUser },
-  LoginInput
-> = async (request, response): Promise<void> => {
-  const session = await loginUser(request.body);
-  setSessionCookies(response, session);
-  response.status(200).json({ data: session.user });
-};
+export const loginController: RequestHandler<Record<string, string>, { data: PublicUser }, LoginInput> =
+  async (request, response): Promise<void> => {
+    const session = await loginUser(request.body);
+    setSessionCookies(response, session);
+    response.status(200).json({ data: session.user });
+  };
 
-export const refreshController: RequestHandler<
-  Record<string, string>,
-  { data: PublicUser }
-> = async (request, response): Promise<void> => {
-  const refreshToken = request.cookies?.refreshToken;
-  if (refreshToken === undefined) {
-    throw new AppError(401, "UNAUTHENTICATED", "Refresh session is missing");
-  }
-  const session = await refreshUserSession(refreshToken);
-  setSessionCookies(response, session);
-  response.status(200).json({ data: session.user });
-};
+export const refreshController: RequestHandler<Record<string, string>, { data: PublicUser }> =
+  async (request, response): Promise<void> => {
+    const refreshToken = request.cookies?.refreshToken;
+    if (refreshToken === undefined) {
+      throw new AppError(401, "UNAUTHENTICATED", "Refresh session is missing");
+    }
+    const session = await refreshUserSession(refreshToken);
+    setSessionCookies(response, session);
+    response.status(200).json({ data: session.user });
+  };
 
-export const logoutController: RequestHandler<
-  ParamsDictionary,
-  unknown,
-  unknown,
-  ParsedQs,
-  AuthenticatedLocals
-> = async (request, response): Promise<void> => {
-  await logoutUser(response.locals.currentUser.id, request.cookies?.refreshToken);
-  const options = getCookieSecurityOptions();
-  response.clearCookie("accessToken", { ...options, path: "/" });
-  response.clearCookie("refreshToken", { ...options, path: "/api/v1/auth" });
-  response.status(204).end();
-};
+export const logoutController: RequestHandler<ParamsDictionary, unknown, unknown, ParsedQs, AuthenticatedLocals> =
+  async (request, response): Promise<void> => {
+    await logoutUser(response.locals.currentUser.id, request.cookies?.refreshToken);
+    const options = getCookieSecurityOptions();
+    response.clearCookie("accessToken", { ...options, path: "/" });
+    response.clearCookie("refreshToken", { ...options, path: "/api/v1/auth" });
+    response.status(204).end();
+  };
 
 function setSessionCookies(
   response: Response,

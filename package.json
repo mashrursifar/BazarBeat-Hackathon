@@ -20,6 +20,7 @@
     "test:api": "npm run test -w @bazarbeat/api",
     "test:web": "npm run test -w @bazarbeat/web",
     "test:e2e": "playwright test",
+    "test:smoke": "playwright test e2e/smoke-deployment.spec.ts",
     "seed": "npm run seed -w @bazarbeat/api",
     "seed:dev-listings": "npm run seed:dev-listings -w @bazarbeat/api",
     "seed:demo": "npm run seed:demo -w @bazarbeat/api",

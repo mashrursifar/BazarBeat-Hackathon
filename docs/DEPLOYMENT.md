@@ -1,132 +1,186 @@
 # Deployment & Cloud Infrastructure Guide — BazarBeat
 
-This guide covers deployment setup, cloud configuration, and production infrastructure for BazarBeat.
+This guide covers deployment setup, cloud configuration, and production infrastructure for BazarBeat on **Render**, **MongoDB Atlas**, and **Cloud Storage (Cloudinary or Cloudflare R2 / S3)**.
 
 ---
 
-## 1. Storage Architecture & Cloud Provider Setup
+## 1. Production Architecture Overview (Single-Service Model)
 
-BazarBeat uses an S3-compatible storage adapter (`S3StorageProvider`), selectable via `STORAGE_PROVIDER=cloud`. It works with any S3-compatible object store (Cloudflare R2, AWS S3, Backblaze B2, MinIO, Wasabi, Supabase Storage).
-
-The default local development provider (`STORAGE_PROVIDER=local`) saves images to disk under `UPLOAD_DIR` (`./uploads`). For production deployments where instances may be ephemeral or autoscaling, cloud storage prevents uploaded crop photos from vanishing on server restarts (addresses Decision D-40).
-
----
-
-## 2. Setting Up a Free S3-Compatible Bucket (Recommended: Cloudflare R2)
-
-Cloudflare R2 offers **10 GB of free storage per month** with **zero egress (bandwidth) fees**, making it ideal for hackathon demos, prototyping, and production hosting without cost risk.
-
-### Step 1: Create a Cloudflare Account
-1. Sign up for a free Cloudflare account at [dash.cloudflare.com](https://dash.cloudflare.com/).
-2. Navigate to **R2 Object Storage** in the left-hand navigation menu.
-
-### Step 2: Create an R2 Bucket
-1. Click **Create bucket**.
-2. Bucket name: `bazarbeat-uploads` (or any unique name).
-3. Location: Select **Automatic** or your closest region.
-4. Click **Create bucket**.
-
-### Step 3: Enable Public Read Access
-Photos uploaded by farmers must be publicly viewable by buyers on listing cards:
-1. In your bucket dashboard, go to the **Settings** tab.
-2. Scroll to **Public Access** -> **R2.dev subdomain**.
-3. Click **Allow Access** and type `allow` to confirm.
-4. Copy the generated public URL (e.g., `https://pub-xxxxxxxxxxxxxxxx.r2.dev`).
-   *(Optional: You can also connect a custom domain like `cdn.bazarbeat.com` under "Custom Domains").*
-
-### Step 4: Generate S3 API Credentials
-1. In the R2 home page (outside the bucket), click **Manage R2 API Tokens** on the right side.
-2. Click **Create API token**.
-3. Configuration:
-   - **Token name**: `bazarbeat-storage`
-   - **Permissions**: **Object Read & Write**
-   - **Bucket scope**: Select `bazarbeat-uploads` (or all buckets)
-   - **TTL**: Forever (or as required)
-4. Click **Create API Token**.
-5. Copy the following credentials immediately (they will not be shown again):
-   - **Access Key ID**
-   - **Secret Access Key**
-   - **Endpoint URL**: `https://<account-id>.r2.cloudflarestorage.com`
-
-### Step 5: Configure Environment Variables
-Set the following environment variables in your deployment host or `.env`:
-
-```env
-# Activate Cloud Storage Provider
-STORAGE_PROVIDER=cloud
-
-# S3 / R2 Connection Details
-S3_ENDPOINT=https://<account-id>.r2.cloudflarestorage.com
-S3_BUCKET=bazarbeat-uploads
-S3_ACCESS_KEY_ID=<your-access-key-id>
-S3_SECRET_ACCESS_KEY=<your-secret-access-key>
-S3_REGION=auto
-S3_PUBLIC_URL=https://pub-xxxxxxxxxxxxxxxx.r2.dev
-S3_FORCE_PATH_STYLE=false
-```
+Per Decision **D-37**, BazarBeat deploys as a **single service**:
+- The Express server serves both:
+  1. The REST API and real-time Server-Sent Events (SSE) live auction streams (`/api/v1/*`)
+  2. The production-compiled React SPA frontend (`apps/web/dist`) with client route fallback
+- **Single Origin**: Avoids CORS issues, cookie drop across different domains (`SameSite=Lax`), and proxy buffering of live event streams.
+- **Stateless Server**: All persistent data lives in **MongoDB Atlas** and media files live in cloud storage (**Cloudinary** or S3-compatible **R2**).
 
 ---
 
-## 3. Alternative Free / Low-Cost Options
+## 2. Cloud Storage Providers
 
-### Option B: Backblaze B2 (10 GB Free)
-1. Sign up at [backblaze.com](https://www.backblaze.com/b2/cloud-storage.html) (10 GB free storage).
-2. Create a Bucket with **Files in Bucket are Public**.
-3. Create an Application Key with Read and Write permissions.
-4. Environment variables:
+BazarBeat's storage adapter (`apps/api/src/modules/storage`) automatically selects the provider based on environment variables:
+
+1. **Cloudinary** (`STORAGE_PROVIDER=cloud` with `CLOUDINARY_URL` or discrete keys): Uploads processed image buffers to Cloudinary via direct signed REST API. Zero egress fees and generous free tier.
+2. **S3-Compatible (Cloudflare R2, AWS S3, Backblaze B2, MinIO)** (`STORAGE_PROVIDER=cloud` with `S3_BUCKET`, `S3_ACCESS_KEY_ID`, etc.): 10 GB free on R2 with zero egress fees.
+3. **Local Disk** (`STORAGE_PROVIDER=local`): Default for local offline development.
+
+---
+
+## 3. Setting Up Cloudinary
+
+If you are using Cloudinary for image uploads:
+
+1. Log into your [Cloudinary Console](https://cloudinary.com/).
+2. On the Dashboard, find your **Product Environment Credentials**:
+   - **Cloud Name**
+   - **API Key**
+   - **API Secret**
+   - **API Environment variable**: `cloudinary://<api_key>:<api_secret>@<cloud_name>`
+3. Configure your deployment with either the single `CLOUDINARY_URL` or the three individual variables:
    ```env
    STORAGE_PROVIDER=cloud
-   S3_ENDPOINT=https://s3.<region>.backblazeb2.com
-   S3_BUCKET=your-b2-bucket
-   S3_ACCESS_KEY_ID=<keyID>
-   S3_SECRET_ACCESS_KEY=<applicationKey>
-   S3_REGION=<region>
-   S3_PUBLIC_URL=https://f000.backblazeb2.com/file/your-b2-bucket
-   S3_FORCE_PATH_STYLE=false
+   CLOUDINARY_URL=cloudinary://<api_key>:<api_secret>@<cloud_name>
    ```
+   *(Alternatively: `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`)*
 
-### Option C: Local MinIO (Free & Self-Hosted for Development)
-To test S3-compatible cloud storage locally without external accounts:
-1. Run MinIO via Docker:
-   ```bash
-   docker run -d -p 9000:9000 -p 9001:9001 --name minio \
-     -e "MINIO_ROOT_USER=minioadmin" \
-     -e "MINIO_ROOT_PASSWORD=minioadmin" \
-     minio/minio server /data --console-address ":9001"
+---
+
+## 4. Setting Up MongoDB Atlas
+
+1. Create a free shared cluster (M0) on [MongoDB Atlas](https://www.mongodb.com/atlas).
+2. **Database Access**: Under *Security -> Database Access*, create a database user with read and write permissions (e.g. `bazarbeat-admin`).
+3. **Network Access**: Under *Security -> Network Access*, add IP address `0.0.0.0/0` (Allow Access from Anywhere). This is required because cloud hosting platforms like Render assign dynamic outbound IPs to web services.
+4. **Connection String**: Click **Connect** -> **Drivers** (Node.js) and copy the connection string:
    ```
-2. Open `http://localhost:9001`, create a bucket named `bazarbeat-uploads`, and set its Access Policy to `Public`.
-3. Configure `.env`:
-   ```env
-   STORAGE_PROVIDER=cloud
-   S3_ENDPOINT=http://127.0.0.1:9000
-   S3_BUCKET=bazarbeat-uploads
-   S3_ACCESS_KEY_ID=minioadmin
-   S3_SECRET_ACCESS_KEY=minioadmin
-   S3_REGION=auto
-   S3_FORCE_PATH_STYLE=true
-   S3_PUBLIC_URL=http://127.0.0.1:9000/bazarbeat-uploads
+   mongodb+srv://<username>:<password>@<cluster>.mongodb.net/BazarBeat?retryWrites=true&w=majority
    ```
 
 ---
 
-## 4. Seeding Sample Photos Under Active Provider
+## 5. Seeding MongoDB Atlas from your Local Machine
 
-When `STORAGE_PROVIDER=cloud`, running the seed scripts uploads the sample photos directly to the configured bucket:
+Before deploying (or whenever resetting the demo data), populate your Atlas cluster with the 5 crops, demo farmers, demo buyers, and active listings with real sample photos uploaded to your cloud storage:
 
 ```bash
-# Seed development listings and history using active storage provider
+# Set your Atlas URI and Cloudinary credentials, then run:
+MONGODB_URI="mongodb+srv://<username>:<password>@<cluster>.mongodb.net/BazarBeat?retryWrites=true&w=majority" \
+STORAGE_PROVIDER=cloud \
+CLOUDINARY_URL="cloudinary://<api_key>:<api_secret>@<cloud_name>" \
 npm run seed:dev-listings
 ```
 
-- Each sample crop image is loaded from `apps/api/src/seed/assets/samples/`.
-- Processed by Sharp (EXIF stripped, resized, content hash computed).
-- Stored through the active `StorageProvider` (`S3StorageProvider` for cloud, `LocalDiskStorageProvider` for local).
-- Stored listings point directly to the cloud public URL (`https://pub-xxxx.r2.dev/crops/<uuid>.jpg`).
+On Windows PowerShell:
+```powershell
+$env:MONGODB_URI="mongodb+srv://<username>:<password>@<cluster>.mongodb.net/BazarBeat?retryWrites=true&w=majority"
+$env:STORAGE_PROVIDER="cloud"
+$env:CLOUDINARY_URL="cloudinary://<api_key>:<api_secret>@<cloud_name>"
+npm run seed:dev-listings
+```
+
+The script will:
+- Insert the 5 crops into Atlas.
+- Create 12 farmers and 8 buyers (including demo accounts).
+- Strip EXIF data and resize sample images, upload them to Cloudinary, and save HTTPS image URLs to Atlas.
+- Verify inventory ledger reconciliation across all crops.
 
 ---
 
-## 5. Security & Credential Hygiene
+## 6. Deploying to Render
 
-- **No Secrets in Logs or Responses**: The `S3StorageProvider` redacts `secretAccessKey` and error details so credentials never leak into server stdout, log streams, or API error responses.
-- **Fail-Fast Boot Checks**: In production mode (`NODE_ENV=production`), server startup fails immediately if `STORAGE_PROVIDER=cloud` is set without valid credentials.
-- **Deep Health Check**: `/api/v1/health?deep=true` reports the active storage provider (`local` or `cloud`) and its operational status without exposing bucket credentials.
+You can deploy to Render either using the multi-stage `Dockerfile` (recommended) or as a native Node Web Service.
+
+### Option A: Deploy via Docker (Recommended)
+1. In the [Render Dashboard](https://dashboard.render.com/), click **New +** -> **Web Service**.
+2. Connect your Git repository.
+3. Select **Docker** as the Runtime (Render automatically detects the repository root `Dockerfile`).
+4. Select your Region (e.g., Oregon or Frankfurt).
+5. Instance Type: **Free** (or Starter).
+6. Under **Advanced**, set **Health Check Path** to: `/api/v1/health`
+7. Add the Environment Variables from the table below.
+8. Click **Deploy Web Service**.
+
+### Option B: Deploy via Native Node Environment
+If you prefer Render's native Node environment:
+- **Runtime**: `Node`
+- **Build Command**: `npm install && npm run build`
+- **Start Command**: `npm run start`
+- **Health Check Path**: `/api/v1/health`
+
+---
+
+## 7. Complete Environment Variables Table for Render
+
+| Variable | Recommended / Required Value | Description |
+| :--- | :--- | :--- |
+| `NODE_ENV` | `production` | Enables production security checks and optimization |
+| `SERVE_WEB` | `true` | Serves the built React SPA frontend from Express |
+| `TRUST_PROXY` | `true` | Allows rate-limiter and logger to read `X-Forwarded-For` from Render proxy |
+| `PORT` | `10000` | Port for Express (Render injects `PORT` automatically) |
+| `MONGODB_URI` | `mongodb+srv://...` | Your MongoDB Atlas connection string |
+| `COOKIE_DOMAIN` | `<your-app>.onrender.com` | Cookie domain matching your Render URL |
+| `CORS_ORIGINS` | `https://<your-app>.onrender.com` | Allowed CORS origins (matches the single origin) |
+| `STORAGE_PROVIDER` | `cloud` | Enables cloud storage adapter |
+| `CLOUDINARY_URL` | `cloudinary://<key>:<secret>@<cloud>` | Your Cloudinary credentials |
+| `JWT_ACCESS_SECRET` | *(Random 32+ character string)* | Secret for auth access tokens (must not be default) |
+| `JWT_REFRESH_SECRET` | *(Random 32+ character distinct string)* | Secret for auth refresh tokens (must differ from access) |
+| `AI_PROVIDER` | `mock` | Default offline mock adapter (until Part C real AI) |
+| `RATE_LIMIT_AUTH_PER_MIN` | `60` | Relaxed auth rate limit to avoid venue IP lockout (Decision D-41) |
+| `DEMO_MODE` | `false` | `true` enables shortened 2-minute auction timers |
+
+---
+
+## 8. Rollback Procedure on Render
+
+If a newly deployed commit introduces an issue or fails the smoke test:
+1. Go to your Web Service in the [Render Dashboard](https://dashboard.render.com/).
+2. Click the **Deploys** tab in the left sidebar.
+3. Locate the previous working deploy (marked with green checkmark).
+4. Click the three dots `...` on that deploy row and select **Rollback to this deploy**.
+5. Render immediately stops the current build and spins up the previous working container within ~30 seconds.
+
+---
+
+## 9. Keep-Warm Setup (Preventing Cold Starts)
+
+Render free instances spin down after 15 minutes of inactivity. When asleep, incoming requests take 30–50 seconds to wake up, and auction close timers pause during sleep.
+
+To keep the instance awake during hackathon demos and rehearsals:
+1. Sign up for a free uptime monitor such as [UptimeRobot](https://uptimerobot.com/) or [cron-job.org](https://cron-job.org/).
+2. Create an **HTTP monitor**:
+   - **URL**: `https://<your-app>.onrender.com/api/v1/health`
+   - **Interval**: Every **10 minutes**
+   - **Expected Status**: `200`
+3. This guarantees the service stays warm in memory and the auction scheduler continues ticking.
+
+---
+
+## 10. Running the Production Smoke Test
+
+Once your Render app is live, verify the entire deployment end-to-end with the Playwright smoke suite:
+
+```bash
+# Run against the public live URL:
+BASE_URL=https://<your-app>.onrender.com npm run test:smoke
+```
+
+On Windows PowerShell:
+```powershell
+$env:BASE_URL="https://<your-app>.onrender.com"
+npm run test:smoke
+```
+
+The smoke suite verifies:
+1. `GET /api/v1/health?deep=true`: Confirms database connectivity, query latency, and operational storage.
+2. Landing page loads branding, navigation, and links.
+3. Demo farmer (`01700000001` / `farmerpassword123`) can log in and view the farmer dashboard.
+4. Demo buyer (`01712345678` / `buyerpassword123`) can log in and access the marketplace.
+5. Marketplace listing cards render with valid photos without broken images.
+6. A listing detail page opens showing price, timer, and grade badge.
+7. Real-time Server-Sent Events (SSE) live auction stream connects and receives the initial `snapshot`.
+
+---
+
+## 11. Security & Credential Hygiene
+
+- **No Secrets in Logs or Responses**: The storage providers and database clients redact secrets, passwords, and tokens from all log streams and API error payloads.
+- **Fail-Fast Boot Checks**: In production mode (`NODE_ENV=production`), server startup fails immediately if secrets are weak, missing, or use local placeholders.
+- **Deep Health Check**: `/api/v1/health?deep=true` reports provider health and database latency without exposing connection strings or API keys.

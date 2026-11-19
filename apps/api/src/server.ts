@@ -2,7 +2,10 @@ import type { Server } from "node:http";
 
 import { app } from "./app.js";
 import { env } from "./config/env.js";
-import { runStartupCatchUp, startScheduler } from "./modules/auctions/scheduler.service.js";
+import {
+  runStartupCatchUp,
+  startScheduler,
+} from "./modules/auctions/scheduler.service.js";
 import { registerNotificationSubscribers } from "./modules/notifications/notification.subscribers.js";
 import { connectDatabase } from "./shared/db.js";
 import { logger } from "./shared/logger.js";
