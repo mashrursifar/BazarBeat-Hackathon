@@ -40,6 +40,27 @@ describe("environment validation", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts valid S3 cloud storage credentials in production when STORAGE_PROVIDER=cloud", () => {
+    const result = envSchema.safeParse({
+      NODE_ENV: "production",
+      JWT_ACCESS_SECRET: "a".repeat(40),
+      JWT_REFRESH_SECRET: "b".repeat(40),
+      COOKIE_DOMAIN: "AgriBid.example",
+      STORAGE_PROVIDER: "cloud",
+      S3_BUCKET: "bazarbeat-uploads",
+      S3_ACCESS_KEY_ID: "sample-access-key",
+      S3_SECRET_ACCESS_KEY: "sample-secret-key",
+      S3_ENDPOINT: "https://account.r2.cloudflarestorage.com",
+      S3_PUBLIC_URL: "https://pub-sample.r2.dev",
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.S3_BUCKET).toBe("bazarbeat-uploads");
+      expect(result.data.S3_REGION).toBe("auto");
+      expect(result.data.S3_PUBLIC_URL).toBe("https://pub-sample.r2.dev");
+    }
+  });
+
   it("accepts strong production secrets and a configured cookie domain", () => {
     const result = envSchema.safeParse({
       NODE_ENV: "production",

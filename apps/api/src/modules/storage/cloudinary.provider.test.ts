@@ -6,6 +6,7 @@ import {
 import { createStorageProvider } from "./storage.factory.js";
 import { LocalDiskStorageProvider } from "./local-disk.provider.js";
 import { AppError } from "../../shared/errors.js";
+import { env } from "../../config/env.js";
 
 describe("Cloudinary Configuration Parsing", () => {
   it("parses valid CLOUDINARY_URL format correctly", () => {
@@ -155,7 +156,13 @@ describe("CloudinaryStorageProvider.store", () => {
 
 describe("Storage Factory", () => {
   it("creates LocalDiskStorageProvider by default when no cloud credentials", () => {
-    const provider = createStorageProvider();
-    expect(provider).toBeInstanceOf(LocalDiskStorageProvider);
+    const originalProvider = env.STORAGE_PROVIDER;
+    try {
+      env.STORAGE_PROVIDER = "local";
+      const provider = createStorageProvider();
+      expect(provider).toBeInstanceOf(LocalDiskStorageProvider);
+    } finally {
+      env.STORAGE_PROVIDER = originalProvider;
+    }
   });
 });

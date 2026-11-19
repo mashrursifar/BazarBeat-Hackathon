@@ -59,11 +59,14 @@ export async function healthCheckController(
       storageStatus = "degraded";
     }
   } else if (env.STORAGE_PROVIDER === "cloud") {
+    const hasS3Config = Boolean(
+      env.S3_BUCKET && env.S3_ACCESS_KEY_ID && env.S3_SECRET_ACCESS_KEY,
+    );
     const hasCloudinaryUrl = Boolean(env.CLOUDINARY_URL);
     const hasCloudinaryKeys = Boolean(
       env.CLOUDINARY_CLOUD_NAME && env.CLOUDINARY_API_KEY && env.CLOUDINARY_API_SECRET,
     );
-    if (!hasCloudinaryUrl && !hasCloudinaryKeys) {
+    if (!hasS3Config && !hasCloudinaryUrl && !hasCloudinaryKeys) {
       storageStatus = "degraded";
     }
   }

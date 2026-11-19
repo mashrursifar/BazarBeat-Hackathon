@@ -101,12 +101,12 @@ An interval job (every 10 seconds; every 2 seconds in demo mode) selects listing
 
 ## 7. File uploads
 
-Multipart upload through the storage adapter; validated for type and size; images re-encoded server-side and EXIF stripped. Local disk adapter by default; cloud adapter is a drop-in (see `AI_INTEGRATION.md` for how images flow to the grader).
+Multipart upload through the storage adapter; validated for type and size; images re-encoded server-side and EXIF stripped. Local disk adapter (`LocalDiskStorageProvider`) by default; cloud adapter (`S3StorageProvider`, S3-compatible, e.g. Cloudflare R2) is selected by `STORAGE_PROVIDER=cloud` (see `AI_INTEGRATION.md` for how images flow to the grader and `DEPLOYMENT.md` for S3 bucket setup).
 
 ## 8. Environments and config
 
 Required variable names (values in `.env`, never committed):
-`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`, `CORS_ORIGINS`, `AI_PROVIDER` (mock|http), `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `STORAGE_PROVIDER` (local|cloud), `UPLOAD_DIR`, `DEMO_MODE` (true|false), `PLATFORM_FEE_BPS`, `VITE_API_URL`, `TRUST_PROXY`, `SERVE_WEB`, `WEB_DIST_PATH`, `RATE_LIMIT_AUTH_PER_MIN`, `GIT_SHA`.
+`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`, `CORS_ORIGINS`, `AI_PROVIDER` (mock|http), `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `STORAGE_PROVIDER` (local|cloud), `UPLOAD_DIR`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION`, `S3_PUBLIC_URL`, `S3_FORCE_PATH_STYLE`, `DEMO_MODE` (true|false), `PLATFORM_FEE_BPS`, `VITE_API_URL`, `TRUST_PROXY`, `SERVE_WEB`, `WEB_DIST_PATH`, `RATE_LIMIT_AUTH_PER_MIN`, `GIT_SHA`.
 Maintain `.env.example` with every name and a safe placeholder.
 
 Production hardening and single-service deployment (Task 9.1):
@@ -136,6 +136,7 @@ Production hardening and single-service deployment (Task 9.1):
 | supertest + mongodb-memory-server                 | API integration tests                       | api tests        |
 | @testing-library/react + msw                      | Component tests                             | web tests        |
 | browser-image-compression                         | Client-side image shrinking                 | web              |
+| @aws-sdk/client-s3                                | S3-compatible cloud storage adapter (R2, S3)| api              |
 | Anything else needs a `DECISIONS.md` entry first. |
 
 ## 10. Deployment (hackathon)

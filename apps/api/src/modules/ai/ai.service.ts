@@ -17,12 +17,16 @@ import type { GradingProvider, PricePredictionProvider } from "./interfaces.js";
 import { createGradingProvider, createPricePredictionProvider } from "./provider.factory.js";
 import { AiAssessmentRecord, type AiAssessmentRecordDoc } from "./ai-assessment-record.model.js";
 
-const storageProvider = createStorageProvider();
+let customStorageProvider: StorageProvider | null = null;
 const gradingProvider = createGradingProvider();
 const pricePredictionProvider = createPricePredictionProvider();
 
 export function getStorageProvider(): StorageProvider {
-  return storageProvider;
+  return customStorageProvider ?? createStorageProvider();
+}
+
+export function setStorageProvider(provider: StorageProvider | null): void {
+  customStorageProvider = provider;
 }
 
 export function getGradingProvider(): GradingProvider {
@@ -73,9 +77,10 @@ export async function assessCropQuality(
   }
 
   // 2. Store processed images
+  const provider = getStorageProvider();
   const storedImages: { url: string; width: number; height: number; hash: string }[] = [];
   for (const processed of processedImages) {
-    const url = await storageProvider.store(processed.buffer, `image.${processed.format}`);
+    const url = await provider.store(processed.buffer, `image.${processed.format}`);
     storedImages.push({
       url,
       width: processed.width,

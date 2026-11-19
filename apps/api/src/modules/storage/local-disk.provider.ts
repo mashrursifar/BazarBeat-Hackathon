@@ -21,8 +21,12 @@ export class LocalDiskStorageProvider implements StorageProvider {
   async store(buffer: Buffer, originalName: string): Promise<string> {
     await fs.mkdir(this.baseDir, { recursive: true });
     let ext = extname(originalName).toLowerCase();
-    if (!ext && originalName.length > 0 && !originalName.includes(".")) {
-      ext = `.${originalName.toLowerCase()}`;
+    if (!ext && originalName.length > 0) {
+      if (["jpg", "jpeg", "png", "webp"].includes(originalName.toLowerCase())) {
+        ext = `.${originalName.toLowerCase()}`;
+      } else {
+        ext = ".jpg";
+      }
     }
     const filename = `${randomUUID()}${ext || ".jpg"}`;
     const filePath = join(this.baseDir, filename);

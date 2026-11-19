@@ -20,6 +20,7 @@ import { InventoryItem } from "../modules/inventory/inventory-item.model.js";
 import { StockMovement } from "../modules/inventory/stock-movement.model.js";
 import type { UserRecord } from "../modules/users/user.model.js";
 import { MARKET_PRICE_BASE_PRICES } from "../modules/market-prices/market-price-seed.js";
+import { env } from "../config/env.js";
 
 export interface SeedDevHistoryResult {
   listingsCount: number;
@@ -561,7 +562,12 @@ export async function seedDevHistory(
       },
       images: [
         {
-          url: `/uploads/crops/${plan.cropSlug}/${plan.grade}.jpg`,
+          url:
+            env.STORAGE_PROVIDER === "cloud" && env.S3_PUBLIC_URL
+              ? `${env.S3_PUBLIC_URL.replace(/\/+$/, "")}/crops/${plan.cropSlug}/${plan.grade}.jpg`
+              : env.STORAGE_PROVIDER === "cloud" && env.S3_BUCKET
+                ? `https://${env.S3_BUCKET}.s3.${env.S3_REGION || "auto"}.amazonaws.com/crops/${plan.cropSlug}/${plan.grade}.jpg`
+                : `/uploads/crops/${plan.cropSlug}/${plan.grade}.jpg`,
           width: 800,
           height: 600,
         },
