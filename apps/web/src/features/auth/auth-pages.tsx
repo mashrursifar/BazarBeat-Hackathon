@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next";
 import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../components/language-switcher.js";
+import { DemoModeBadge } from "../../components/demo-mode-badge.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Select } from "../../components/ui/select.js";
@@ -58,9 +59,12 @@ function AuthFrame({ children }: { children: React.ReactNode }): ReactElement {
   return (
     <main className="min-h-screen px-4 py-6 sm:px-8">
       <header className="mx-auto flex max-w-6xl items-center justify-between">
-        <Link className="text-lg font-extrabold tracking-tight text-primary" to="/">
-          {t("appName")}
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link className="text-lg font-extrabold tracking-tight text-primary" to="/">
+            {t("appName")}
+          </Link>
+          <DemoModeBadge />
+        </div>
         <LanguageSwitcher />
       </header>
       <section className="mx-auto my-8 max-w-xl rounded-xl border border-stone-200 bg-white p-5 shadow-sm sm:my-12 sm:p-9">

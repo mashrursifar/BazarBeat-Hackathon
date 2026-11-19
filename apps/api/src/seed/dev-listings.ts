@@ -40,6 +40,11 @@ export interface SeedDevListingsOptions {
   sampleDir?: string;
   nodeEnv?: string;
   history?: boolean;
+  farmers?: readonly UserSeedDefinition[];
+  buyers?: readonly UserSeedDefinition[];
+  listingPlan?: readonly ListingSeedPlanItem[];
+  refreshMarketPrices?: boolean;
+  allowDemoSeed?: boolean;
 }
 
 export interface SeedDevListingsResult {
@@ -158,6 +163,49 @@ export const SEED_FARMER_DEFINITIONS: readonly UserSeedDefinition[] = [
 ];
 
 /**
+ * 12 farmers spanning all 8 administrative divisions of Bangladesh (>= 6 divisions required for demo seed).
+ */
+export const DEMO_FARMER_DEFINITIONS: readonly UserSeedDefinition[] = [
+  ...SEED_FARMER_DEFINITIONS,
+  {
+    phone: "01700000009",
+    password: "farmerpassword123",
+    role: UserRole.FARMER,
+    name: "Selim Reza",
+    division: "rajshahi",
+    district: "natore",
+    upazila: "Sadar",
+  },
+  {
+    phone: "01700000010",
+    password: "farmerpassword123",
+    role: UserRole.FARMER,
+    name: "Habibur Rahman",
+    division: "rangpur",
+    district: "rangpur",
+    upazila: "Sadar",
+  },
+  {
+    phone: "01700000011",
+    password: "farmerpassword123",
+    role: UserRole.FARMER,
+    name: "Nurul Islam",
+    division: "dhaka",
+    district: "narsingdi",
+    upazila: "Sadar",
+  },
+  {
+    phone: "01700000012",
+    password: "farmerpassword123",
+    role: UserRole.FARMER,
+    name: "Shamsul Alam",
+    division: "chattogram",
+    district: "chattogram",
+    upazila: "Hathazari",
+  },
+];
+
+/**
  * Seed buyers for placing competitive bids across active auctions.
  */
 export const SEED_BUYER_DEFINITIONS: readonly UserSeedDefinition[] = [
@@ -184,7 +232,64 @@ export const SEED_BUYER_DEFINITIONS: readonly UserSeedDefinition[] = [
   },
 ];
 
-interface ListingSeedPlanItem {
+/**
+ * 8 buyers with distinct locations and organizations for rich demo interactions.
+ */
+export const DEMO_BUYER_DEFINITIONS: readonly UserSeedDefinition[] = [
+  ...SEED_BUYER_DEFINITIONS,
+  {
+    phone: "01800000004",
+    password: "buyerpassword123",
+    role: UserRole.BUYER,
+    name: "Meghna Agro Foods",
+    division: "dhaka",
+    district: "dhaka",
+    upazila: "Mirpur",
+    organization: "Meghna Agro Foods Ltd",
+  },
+  {
+    phone: "01800000005",
+    password: "buyerpassword123",
+    role: UserRole.BUYER,
+    name: "Barishal Produce Hub",
+    division: "barishal",
+    district: "barishal",
+    upazila: "Sadar",
+    organization: "Barishal Produce Hub",
+  },
+  {
+    phone: "01800000006",
+    password: "buyerpassword123",
+    role: UserRole.BUYER,
+    name: "Sylhet Fresh Supplies",
+    division: "sylhet",
+    district: "sylhet",
+    upazila: "Sadar",
+    organization: "Sylhet Fresh Supplies",
+  },
+  {
+    phone: "01800000007",
+    password: "buyerpassword123",
+    role: UserRole.BUYER,
+    name: "Khulna Agri Distributors",
+    division: "khulna",
+    district: "khulna",
+    upazila: "Sadar",
+    organization: "Khulna Agri Distributors",
+  },
+  {
+    phone: "01800000008",
+    password: "buyerpassword123",
+    role: UserRole.BUYER,
+    name: "Mymensingh Agro Mart",
+    division: "mymensingh",
+    district: "mymensingh",
+    upazila: "Sadar",
+    organization: "Mymensingh Agro Mart",
+  },
+];
+
+export interface ListingSeedPlanItem {
   cropSlug: string;
   grade: CropGrade;
   farmerIndex: number;
@@ -456,6 +561,257 @@ export const LISTING_SEED_PLAN: readonly ListingSeedPlanItem[] = [
 ];
 
 /**
+ * 25 curated listings for demo seeding, spanning all 12 farmers and bids across 8 buyers.
+ */
+export const DEMO_LISTING_SEED_PLAN: readonly ListingSeedPlanItem[] = [
+  // --- Onion (5 listings: 2 A, 2 B, 1 C) ---
+  {
+    cropSlug: "onion",
+    grade: CropGrade.A,
+    farmerIndex: 0, // Dhaka (Demo Farmer Rahim)
+    quantityKg: 100,
+    floorPricePerKg: 6400,
+    durationMinutes: 45, // Ending soon (< 1h)
+    bids: [{ buyerIndex: 0, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "onion",
+    grade: CropGrade.A,
+    farmerIndex: 1, // Rajshahi (Abul Hossain)
+    quantityKg: 250,
+    floorPricePerKg: 6200,
+    durationMinutes: 180,
+    bids: [
+      { buyerIndex: 0, markupPerKg: 0 },
+      { buyerIndex: 1, markupPerKg: 100 },
+    ],
+  },
+  {
+    cropSlug: "onion",
+    grade: CropGrade.B,
+    farmerIndex: 8, // Rajshahi (Selim Reza)
+    quantityKg: 50,
+    floorPricePerKg: 5800,
+    durationMinutes: 360,
+  },
+  {
+    cropSlug: "onion",
+    grade: CropGrade.B,
+    farmerIndex: 3, // Chattogram (Kamal Uddin)
+    quantityKg: 500,
+    floorPricePerKg: 6000,
+    durationMinutes: 720,
+    bids: [{ buyerIndex: 3, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "onion",
+    grade: CropGrade.C,
+    farmerIndex: 4, // Khulna (Anisur Rahman)
+    quantityKg: 800,
+    floorPricePerKg: 5100,
+    durationMinutes: 1440,
+  },
+
+  // --- Green Chilli (5 listings: 2 A, 2 B, 1 C) ---
+  {
+    cropSlug: "green-chilli",
+    grade: CropGrade.A,
+    farmerIndex: 5, // Barishal (Mizanur Rahman)
+    quantityKg: 25,
+    floorPricePerKg: 15000,
+    durationMinutes: 45, // Ending soon
+    bids: [
+      { buyerIndex: 0, markupPerKg: 0 },
+      { buyerIndex: 1, markupPerKg: 100 },
+      { buyerIndex: 4, markupPerKg: 200 },
+    ],
+  },
+  {
+    cropSlug: "green-chilli",
+    grade: CropGrade.A,
+    farmerIndex: 6, // Sylhet (Jamil Ahmed)
+    quantityKg: 50,
+    floorPricePerKg: 14600,
+    durationMinutes: 180,
+    bids: [{ buyerIndex: 5, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "green-chilli",
+    grade: CropGrade.B,
+    farmerIndex: 7, // Mymensingh (Fazlul Haque)
+    quantityKg: 15,
+    floorPricePerKg: 13800,
+    durationMinutes: 360,
+  },
+  {
+    cropSlug: "green-chilli",
+    grade: CropGrade.B,
+    farmerIndex: 9, // Rangpur (Habibur Rahman)
+    quantityKg: 100,
+    floorPricePerKg: 13400,
+    durationMinutes: 720,
+    bids: [
+      { buyerIndex: 1, markupPerKg: 0 },
+      { buyerIndex: 0, markupPerKg: 100 },
+    ],
+  },
+  {
+    cropSlug: "green-chilli",
+    grade: CropGrade.C,
+    farmerIndex: 1, // Rajshahi
+    quantityKg: 150,
+    floorPricePerKg: 11800,
+    durationMinutes: 1440,
+  },
+
+  // --- Bitter Gourd (5 listings: 2 A, 2 B, 1 C) ---
+  {
+    cropSlug: "bitter-gourd",
+    grade: CropGrade.A,
+    farmerIndex: 2, // Rangpur (Tariqul Islam)
+    quantityKg: 50,
+    floorPricePerKg: 8600,
+    durationMinutes: 45, // Ending soon
+    bids: [{ buyerIndex: 0, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "bitter-gourd",
+    grade: CropGrade.A,
+    farmerIndex: 11, // Chattogram (Shamsul Alam)
+    quantityKg: 100,
+    floorPricePerKg: 8800,
+    durationMinutes: 180,
+  },
+  {
+    cropSlug: "bitter-gourd",
+    grade: CropGrade.B,
+    farmerIndex: 4, // Khulna
+    quantityKg: 30,
+    floorPricePerKg: 7900,
+    durationMinutes: 360,
+    bids: [
+      { buyerIndex: 6, markupPerKg: 0 },
+      { buyerIndex: 0, markupPerKg: 100 },
+    ],
+  },
+  {
+    cropSlug: "bitter-gourd",
+    grade: CropGrade.B,
+    farmerIndex: 5, // Barishal
+    quantityKg: 200,
+    floorPricePerKg: 8100,
+    durationMinutes: 720,
+  },
+  {
+    cropSlug: "bitter-gourd",
+    grade: CropGrade.C,
+    farmerIndex: 6, // Sylhet
+    quantityKg: 350,
+    floorPricePerKg: 6900,
+    durationMinutes: 1440,
+    bids: [{ buyerIndex: 1, markupPerKg: 0 }],
+  },
+
+  // --- Eggplant (5 listings: 2 A, 2 B, 1 C) ---
+  {
+    cropSlug: "eggplant",
+    grade: CropGrade.A,
+    farmerIndex: 7, // Mymensingh
+    quantityKg: 40,
+    floorPricePerKg: 6500,
+    durationMinutes: 45, // Ending soon
+    bids: [
+      { buyerIndex: 0, markupPerKg: 0 },
+      { buyerIndex: 7, markupPerKg: 100 },
+    ],
+  },
+  {
+    cropSlug: "eggplant",
+    grade: CropGrade.A,
+    farmerIndex: 10, // Dhaka (Nurul Islam)
+    quantityKg: 120,
+    floorPricePerKg: 6300,
+    durationMinutes: 180,
+  },
+  {
+    cropSlug: "eggplant",
+    grade: CropGrade.B,
+    farmerIndex: 1, // Rajshahi
+    quantityKg: 80,
+    floorPricePerKg: 5900,
+    durationMinutes: 360,
+    bids: [{ buyerIndex: 2, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "eggplant",
+    grade: CropGrade.B,
+    farmerIndex: 2, // Rangpur
+    quantityKg: 250,
+    floorPricePerKg: 5800,
+    durationMinutes: 720,
+  },
+  {
+    cropSlug: "eggplant",
+    grade: CropGrade.C,
+    farmerIndex: 3, // Chattogram
+    quantityKg: 400,
+    floorPricePerKg: 4900,
+    durationMinutes: 1440,
+    bids: [{ buyerIndex: 2, markupPerKg: 0 }],
+  },
+
+  // --- Potato (5 listings: 2 A, 2 B, 1 C) ---
+  {
+    cropSlug: "potato",
+    grade: CropGrade.A,
+    farmerIndex: 4, // Khulna
+    quantityKg: 200,
+    floorPricePerKg: 4300,
+    durationMinutes: 45, // Ending soon
+    bids: [
+      { buyerIndex: 0, markupPerKg: 0 },
+      { buyerIndex: 1, markupPerKg: 100 },
+      { buyerIndex: 2, markupPerKg: 200 },
+    ],
+  },
+  {
+    cropSlug: "potato",
+    grade: CropGrade.A,
+    farmerIndex: 5, // Barishal
+    quantityKg: 500,
+    floorPricePerKg: 4400,
+    durationMinutes: 180,
+    bids: [{ buyerIndex: 4, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "potato",
+    grade: CropGrade.B,
+    farmerIndex: 6, // Sylhet
+    quantityKg: 150,
+    floorPricePerKg: 3900,
+    durationMinutes: 360,
+    bids: [{ buyerIndex: 5, markupPerKg: 0 }],
+  },
+  {
+    cropSlug: "potato",
+    grade: CropGrade.B,
+    farmerIndex: 7, // Mymensingh
+    quantityKg: 1000,
+    floorPricePerKg: 4000,
+    durationMinutes: 720,
+  },
+  {
+    cropSlug: "potato",
+    grade: CropGrade.C,
+    farmerIndex: 0, // Dhaka (Rahim)
+    quantityKg: 1500,
+    floorPricePerKg: 3300,
+    durationMinutes: 1440,
+    bids: [{ buyerIndex: 3, markupPerKg: 0 }],
+  },
+];
+
+/**
  * Resolves the directory holding sample crop photos.
  */
 function resolveSampleBaseDir(customDir?: string): string {
@@ -477,10 +833,18 @@ function resolveSampleBaseDir(customDir?: string): string {
   return path.resolve(dirname, "assets/samples");
 }
 
+const sampleImageCache = new Map<string, Buffer>();
+
 /**
  * Loads a real sample photo buffer for the specified crop slug and grade.
  */
-function loadSampleImageBuffer(baseDir: string, cropSlug: string, grade: CropGrade): Buffer {
+export function loadSampleImageBuffer(baseDir: string, cropSlug: string, grade: CropGrade): Buffer {
+  const cacheKey = `${baseDir}:${cropSlug}:${grade}`;
+  const cached = sampleImageCache.get(cacheKey);
+  if (cached) {
+    return cached;
+  }
+
   const cropDirCandidates = [cropSlug];
   if (cropSlug === "bitter-gourd") {
     cropDirCandidates.push("bitter-groud");
@@ -500,16 +864,20 @@ function loadSampleImageBuffer(baseDir: string, cropSlug: string, grade: CropGra
     for (const fileName of fileCandidates) {
       const filePath = path.join(cropPath, fileName);
       if (fs.existsSync(filePath)) {
-        return fs.readFileSync(filePath);
+        const buffer = fs.readFileSync(filePath);
+        sampleImageCache.set(cacheKey, buffer);
+        return buffer;
       }
     }
   }
 
   // Fallback 1x1 JPEG buffer if disk fixtures are unreachable in isolated test runs
-  return Buffer.from(
+  const fallback = Buffer.from(
     "/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=",
     "base64",
   );
+  sampleImageCache.set(cacheKey, fallback);
+  return fallback;
 }
 
 /**
@@ -612,14 +980,18 @@ export async function seedDevListings(
   options: SeedDevListingsOptions = {},
 ): Promise<SeedDevListingsResult> {
   const nodeEnv = options.nodeEnv ?? process.env.NODE_ENV;
-  if (nodeEnv === "production") {
+  const allowDemoSeed = options.allowDemoSeed ?? process.env.ALLOW_DEMO_SEED === "true";
+  if (nodeEnv === "production" && !allowDemoSeed) {
     const errorMsg =
-      "Refusing to run seed:dev-listings in production environment (NODE_ENV=production)";
+      "Refusing to run seed in production environment without explicit ALLOW_DEMO_SEED=true";
     logger.error(errorMsg);
     throw new Error(errorMsg);
   }
 
   const sampleBaseDir = resolveSampleBaseDir(options.sampleDir);
+  const farmerDefs = options.farmers ?? SEED_FARMER_DEFINITIONS;
+  const buyerDefs = options.buyers ?? SEED_BUYER_DEFINITIONS;
+  const listingPlan = options.listingPlan ?? LISTING_SEED_PLAN;
 
   // 1. Ensure Crop catalog and base MarketPrice reference data are present
   await Crop.updateOne({ slug: "tomato" }, { $set: { isActive: false } });
@@ -641,7 +1013,7 @@ export async function seedDevListings(
   const cropMap = new Map(crops.map((c) => [c.slug, c]));
 
   const marketPriceCount = await MarketPrice.countDocuments();
-  if (marketPriceCount === 0) {
+  if (marketPriceCount === 0 || options.refreshMarketPrices) {
     await seedMarketPriceHistory(
       crops.map(({ _id, slug }) => ({ id: _id, slug })),
       new Date(),
@@ -650,13 +1022,13 @@ export async function seedDevListings(
 
   // 2. Ensure farmers and buyers exist
   const farmers: PublicUser[] = [];
-  for (const def of SEED_FARMER_DEFINITIONS) {
+  for (const def of farmerDefs) {
     const farmer = await getOrCreateUser(def);
     farmers.push(farmer);
   }
 
   const buyers: PublicUser[] = [];
-  for (const def of SEED_BUYER_DEFINITIONS) {
+  for (const def of buyerDefs) {
     const buyer = await getOrCreateUser(def);
     buyers.push(buyer);
   }
@@ -677,6 +1049,8 @@ export async function seedDevListings(
     await Listing.deleteMany({ _id: { $in: existingListingIds } });
   }
 
+  await Bid.deleteMany({ buyerId: { $in: buyerIds } });
+  await IdempotencyRecord.deleteMany({ buyerId: { $in: buyerIds } });
   await Order.deleteMany({
     $or: [{ farmerId: { $in: farmerIds } }, { buyerId: { $in: buyerIds } }],
   });
@@ -686,7 +1060,7 @@ export async function seedDevListings(
 
   // 4. Calculate stock needs per (farmer, crop) and add harvested stock
   const stockRequirements = new Map<string, number>();
-  for (const plan of LISTING_SEED_PLAN) {
+  for (const plan of listingPlan) {
     const farmer = farmers[plan.farmerIndex];
     if (!farmer) continue;
     const crop = cropMap.get(plan.cropSlug);
@@ -711,12 +1085,12 @@ export async function seedDevListings(
     });
   }
 
-  // 5. Publish the 25 listings using the real services
+  // 5. Publish the planned listings using the real services
   const publishedListings: FarmerListing[] = [];
   const grader = getGradingProvider() as MockGradingProvider;
 
-  for (let index = 0; index < LISTING_SEED_PLAN.length; index += 1) {
-    const plan = LISTING_SEED_PLAN[index];
+  for (let index = 0; index < listingPlan.length; index += 1) {
+    const plan = listingPlan[index];
     if (!plan) continue;
 
     const farmer = farmers[plan.farmerIndex];
@@ -770,8 +1144,8 @@ export async function seedDevListings(
 
   // 6. Place bids on planned listings using the real bid service
   let bidsCount = 0;
-  for (let index = 0; index < LISTING_SEED_PLAN.length; index += 1) {
-    const plan = LISTING_SEED_PLAN[index];
+  for (let index = 0; index < listingPlan.length; index += 1) {
+    const plan = listingPlan[index];
     const listing = publishedListings[index];
     if (!plan || !listing || !plan.bids || plan.bids.length === 0) continue;
 

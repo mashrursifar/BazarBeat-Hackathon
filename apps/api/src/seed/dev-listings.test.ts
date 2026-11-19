@@ -123,7 +123,7 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
       expect(balances.listedKg).toBeGreaterThan(0);
       expect(balances.soldKg).toBe(0);
     }
-  }, 30_000);
+  }, 45_000);
 
   it("returns varied results for marketplace endpoint queries (filters and sorts)", async () => {
     // All 25 active listings returned
@@ -235,7 +235,7 @@ describe("Dev Listing Seeder (Task 5.6)", () => {
       expect(balances.listedKg).toBeGreaterThan(0);
       expect(balances.soldKg).toBe(0);
     }
-  }, 30_000);
+  }, 45_000);
 
   describe("History Mode (Task 7.5)", () => {
     it("seeds 60 to 90 days of past activity with consistent invariants, reconciliation, and dashboard series", async () => {

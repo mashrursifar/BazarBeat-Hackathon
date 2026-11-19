@@ -33,6 +33,7 @@ export const envSchema = z.object({
   CLOUDINARY_API_KEY: z.string().optional(),
   CLOUDINARY_API_SECRET: z.string().optional(),
   DEMO_MODE: z.stringbool().default(false),
+  ALLOW_DEMO_SEED: z.stringbool().default(false),
   PLATFORM_FEE_BPS: z.coerce.number().int().min(0).max(10_000).default(200),
   // Production hardening & environment configuration (Task 9.1)
   TRUST_PROXY: z.string().default("false"),

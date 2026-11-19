@@ -8,6 +8,7 @@ void i18n.use(initReactI18next).init({
     en: {
       translation: {
         appName: "BazarBeat",
+        demoModeBadge: "Demo mode: timers are shortened",
         tagline: "Better price. Stronger farmer.",
         introduction: "A fairer way for farmers and buyers to meet.",
         landing: {
@@ -1334,6 +1335,7 @@ void i18n.use(initReactI18next).init({
     bn: {
       translation: {
         appName: "বাজারবিট",
+        demoModeBadge: "ডেমো মোড: সময়সীমা সংক্ষিপ্ত করা হয়েছে",
         tagline: "ন্যায্য দাম, শক্তিশালী কৃষক",
         introduction: "কৃষক ও ক্রেতাদের মিলিত হওয়ার আরও ন্যায্য উপায়।",
         landing: {

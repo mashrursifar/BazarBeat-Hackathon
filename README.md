@@ -81,21 +81,54 @@ npm run dev
 
 The web app runs at <http://localhost:5173> and the API at <http://localhost:4000>. Check API and MongoDB status at <http://localhost:4000/api/v1/health>.
 
-### Seed data and demo listings
+### Seed data and demo dataset
 
-To populate crops and realistic dev listings:
+#### Quick Start (Consolidated Demo Dataset)
+
+For demo presentations, staging reviews, and full deterministic local testing:
+
+```sh
+# 1. Populate the full deterministic demo dataset:
+ALLOW_DEMO_SEED=true npm run seed:demo
+
+# 2. Reset back to the initial deterministic state in under 30 seconds (runnable repeatedly):
+ALLOW_DEMO_SEED=true npm run demo:reset
+
+# 3. Spawn fresh 2-minute auctions for live demo closing / bidding:
+ALLOW_DEMO_SEED=true npm run demo:spawn-auctions
+```
+
+> [!CAUTION]
+> **Safety Guard (`ALLOW_DEMO_SEED=true`):** All demo seed, reset, and spawn commands refuse to run unless the target database is explicitly permitted by setting `ALLOW_DEMO_SEED=true` in your shell or `.env`. This prevents accidental modification of production or non-demo databases.
+>
+> **Credentials Warning:** Demo user accounts and credentials exist strictly in the demo database for local testing and demonstration. Never reuse real personal passwords.
+
+#### Demo Credentials
+
+| Role | Name | Phone | Password | Location / Org |
+|---|---|---|---|---|
+| **Demo Farmer** | Rahim Uddin | `01700000001` | `farmerpassword123` | Savar, Dhaka |
+| **Demo Buyer** | Karim Traders | `01712345678` | `buyerpassword123` | Dhanmondi, Dhaka |
+| **Buyer 2** | Hafiz Enterprises | `01800000002` | `buyerpassword123` | Kotwali, Chattogram |
+
+The demo seed includes:
+- **Catalog:** 5 active MVP crops (Onion, Green Chilli, Bitter Gourd, Eggplant, Potato).
+- **Farmers:** 12 farmers spanning all 8 divisions of Bangladesh (>= 6 divisions required).
+- **Buyers:** 8 buyers across major districts with distinct organizations.
+- **Market Prices:** 60 days of historical daily prices per crop per division.
+- **Listings:** 25 active listings (5 per crop, grades A/B/C) with sample crop photos and competitive bids.
+- **Orders & History:** 60 to 90 days of completed, cancelled, and in-progress orders with verified ledger reconciliation.
+
+#### Development Seeding (Legacy / Granular)
+
+You can also seed granular subsets for development:
 ```sh
 npm run seed              # Seeds the 5 crops catalog
 npm run seed:dev-listings # Seeds 25 listings (5 per crop), 8 farmers across 8 divisions, 5 buyers, inventory reservations and bids
 ```
 
 > [!NOTE]
-> **Reseeding Notice (Phase 8):** AI quality notes and price guidance explanations have transitioned to structured reason codes (`GradingReasonCode` and `PriceReasonCode`) with client-side i18n translation. Existing development databases should be reseeded via `npm run seed:dev-listings`.
-
-Demo user accounts created by the seeder:
-- **Demo Farmer:** `01700000001` / `farmerpassword123` (Rahim Uddin, Dhaka / Savar)
-- **Demo Buyer:** `01712345678` / `buyerpassword123` (Demo Buyer — Karim Traders, Dhaka / Dhanmondi)
-- **Demo Buyer 2:** `01800000002` / `buyerpassword123` (Hafiz Enterprises, Chattogram / Kotwali)
+> **Reseeding Notice (Phase 8):** AI quality notes and price guidance explanations use structured reason codes (`GradingReasonCode` and `PriceReasonCode`) with client-side i18n translation. Existing development databases should be reseeded via `ALLOW_DEMO_SEED=true npm run demo:reset`.
 
 ### Quality checks
 
@@ -189,4 +222,8 @@ You can test the full bidding flow across roles in development:
 *(Alternatively, you can test via Postman or Bruno by sending a `POST /api/v1/auth/login` with `{ "phone": "...", "password": "..." }`, followed by `POST /api/v1/listings/:id/bids` with `{ "amountPerKg": 4600 }`, header `X-CSRF-Protection: 1`, and the received `accessToken` cookie).*
 
 ## Demo mode
-A configuration flag shortens auction durations to a couple of minutes and loads seeded farmers, buyers, listings, and bids so the full story can be shown live in a few minutes.
+
+When `DEMO_MODE=true` is set in your environment:
+1. **Shortened Timers:** Auction timers in the listing wizard use a fast 2-minute duration preset (`DEMO_LISTING_DURATION_PRESET_MINUTES = 2`) instead of standard multi-hour durations, allowing live bidding, expiration, and order conversion to complete during a brief presentation.
+2. **Visual Indicator:** A prominent amber badge ("Demo mode: timers are shortened" / "ডেমো মোড: সময়সীমা সংক্ষিপ্ত করা হয়েছে") appears in the navigation bar across farmer, buyer, auth, and landing views to ensure presenters and reviewers are always aware that rapid timers are active.
+3. **Spawning Live Auctions:** You can run `ALLOW_DEMO_SEED=true npm run demo:spawn-auctions` at any point to inject fresh 2-minute auctions with real crop photos and automated initial bids from the demo buyer, ready to demonstrate live outbidding or auction close into orders.

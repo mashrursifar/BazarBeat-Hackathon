@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { LanguageSwitcher } from "../components/language-switcher.js";
+import { DemoModeBadge } from "../components/demo-mode-badge.js";
 import { useAuth } from "../features/auth/auth-context.js";
 import { CompareTrayProvider } from "../features/marketplace/context/compare-tray-context.js";
 import { NotificationBell } from "../features/notifications/components/notification-bell.js";
@@ -116,7 +117,11 @@ function RoleLayout({ role }: { role: UserRoleType }): ReactElement {
       </aside>
       <div className="min-w-0 flex-1">
         <header className="flex min-h-16 flex-wrap items-center justify-between gap-2 border-b border-stone-200 bg-white px-4 py-2 sm:px-6">
-          <div><span className="font-semibold">{user.name}</span><span className="ml-2 text-sm text-muted-foreground">{title}</span></div>
+          <div className="flex items-center gap-2">
+            <span className="font-semibold">{user.name}</span>
+            <span className="ml-2 text-sm text-muted-foreground">{title}</span>
+            <DemoModeBadge />
+          </div>
           <div className="flex items-center gap-2"><NotificationBell /><LanguageSwitcher /><button className="min-h-11 rounded px-3 text-sm font-semibold text-primary underline" onClick={() => void handleSignOut()}>{t("auth.logout")}</button></div>
         </header>
         {signOutError && <p role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-sm text-red-800">{t("auth.logoutError")}</p>}

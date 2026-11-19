@@ -283,21 +283,26 @@ Dashboard statistics are computed dynamically from Orders, Bids, and Listings vi
 ## Seed data requirements
 
 - Crop catalog (5 crops: Onion, Green Chilli, Bitter Gourd, Eggplant, Potato) seeded via `npm run seed`.
-- **Development & Demo Listings Seeder** (`npm run seed:dev-listings` via `apps/api/src/seed/dev-listings.ts`):
-  - 8 farmers spanning all 8 administrative divisions of Bangladesh (>= 6 divisions required).
-  - 5 buyers with distinct locations and organizations.
-  - Demo credentials:
+- **Consolidated Demo Seed & Reset (Task 9.4 — `npm run seed:demo` / `npm run demo:reset` via `apps/api/src/seed/demo-seeder.ts`):**
+  - **Safety Guard:** Mandatory `ALLOW_DEMO_SEED=true` environment flag; refuses execution and prints blocking banner if omitted.
+  - **Farmers:** 12 farmers spanning all 8 administrative divisions of Bangladesh (>= 6 divisions required).
+  - **Buyers:** 8 buyers with distinct locations and organizations.
+  - **Demo credentials:**
     - Demo Farmer: `01700000001` / `farmerpassword123` (Rahim Uddin, Savar, Dhaka)
     - Demo Buyer: `01712345678` / `buyerpassword123` (Demo Buyer — Karim Traders, Dhanmondi, Dhaka)
     - Demo Buyer 2: `01800000002` / `buyerpassword123` (Hafiz Enterprises, Kotwali, Chattogram)
-  - 25 published listings (exactly 5 per crop across all 5 crops: 2 Grade A, 2 Grade B, 1 Grade C each).
-  - Mixed states: ending soon (< 1h), medium duration (3h, 6h, 12h), long duration (24h).
-  - Seeded bids on select listings to simulate active auctions, winning states, and price competition.
-  - Full inventory ledger reconciliation: adds harvest stock, executes `reserveStockForListing` (`LIST` movements), and verifies that available + listed = harvest stock with zero discrepancy.
-- **Historical Orders & Dashboard Seeding (`dev-history-seeder.ts`):**
-  - Enabled by default in `npm run seed:dev-listings` (or via `--history` flag / `SEED_HISTORY=true`; bypass with `--no-history`).
-  - Seeds 15 historical listings across 30 days (12 SOLD into orders, 2 EXPIRED_UNSOLD, 1 CANCELLED).
-  - Generates 12 completed/in-progress orders across 3 buyers and 2 farmers with realistic timelines, simulated wallet and COD payments, handover notes, and status histories.
-  - Grounds the dashboard golden dataset: Demo Farmer 30d booked sales = 13,113.90 BDT (1,311,390 poisha), settled net = 6,546.79 BDT (654,679 poisha), expected net = 6,304.82 BDT (630,482 poisha); Demo Buyer 30d booked spend = 11,280.40 BDT (1,128,040 poisha).
-- 60 days of MarketPrice history per crop per division.
-- Demo mode creates a few auctions that end within minutes.
+    - *Note:* Demo accounts exist strictly in the demo database; never reuse real passwords.
+  - **Listings:** 25 published listings (exactly 5 per crop: 2 Grade A, 2 Grade B, 1 Grade C each) with sample crop photos loaded from disk fixtures via active storage provider.
+  - **Mixed states & Bids:** Ending soon (< 1h), medium (3h, 6h, 12h), and long (24h) durations with competitive bids placed by seed buyers.
+  - **Market Prices:** 60 days of historical daily prices per crop per division.
+  - **Orders & History:** 60 to 90 days of completed, cancelled, and in-progress orders (reusing Phase 5.6 and 7.5 golden datasets).
+  - **Ledger Reconciliation:** Automated consistency assertion ensuring `availableKg + listedKg = totalKg` with zero leakage.
+  - **Reset SLA:** `npm run demo:reset` runs repeatedly in under 30 seconds to return the database to the deterministic initial state.
+- **Demo Auction Spawner (Task 9.4 — `npm run demo:spawn-auctions`):**
+  - Spawns fresh live auctions with 2-minute durations (`DEMO_LISTING_DURATION_PRESET_MINUTES = 2`) using demo farmer Rahim Uddin.
+  - Places an automated opening bid from Demo Buyer Karim Traders on one auction so it closes sold into an order on schedule, while unbid auctions expire unsold.
+- **Development & Granular Listings Seeder** (`npm run seed:dev-listings` via `apps/api/src/seed/dev-listings.ts`):
+  - 8 farmers spanning all 8 administrative divisions of Bangladesh.
+  - 5 buyers with distinct locations and organizations.
+  - 25 published listings with inventory reservations and bids.
+  - Historical orders toggleable via `--history` / `--no-history`.

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Link, Navigate } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../components/language-switcher.js";
+import { DemoModeBadge } from "../../components/demo-mode-badge.js";
 import { useOptionalAuth } from "../auth/auth-context.js";
 
 export function LandingPage(): ReactElement {
@@ -35,6 +36,7 @@ export function LandingPage(): ReactElement {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <DemoModeBadge />
             <LanguageSwitcher />
             <Link
               to="/login"
