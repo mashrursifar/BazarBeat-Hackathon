@@ -107,10 +107,13 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
 
     // Check DB statusHistory
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.CONFIRMED);
-    expect(dbOrder!.statusHistory).toHaveLength(2);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.CONFIRMED);
+    expect(dbOrder?.statusHistory).toHaveLength(2);
 
-    const historyEntry = dbOrder!.statusHistory[1];
+    const historyEntry = dbOrder?.statusHistory[1];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.CONFIRMED);
     expect(historyEntry.byUserId?.toString()).toBe(farmerId);
     expect(historyEntry.note).toBe("Ready tomorrow 10am");
@@ -154,16 +157,19 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
     });
 
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.DELIVERED);
-    expect(dbOrder!.statusHistory).toHaveLength(3);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.DELIVERED);
+    expect(dbOrder?.statusHistory).toHaveLength(3);
 
-    const historyEntry = dbOrder!.statusHistory[2];
+    const historyEntry = dbOrder?.statusHistory[2];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.DELIVERED);
     expect(historyEntry.byUserId?.toString()).toBe(farmerId);
     expect(historyEntry.note).toBe("Handed over to buyer directly");
 
     // COD transitioned to PAID on delivery
-    expect(dbOrder!.payment.status).toBe(PaymentStatus.PAID);
+    expect(dbOrder?.payment.status).toBe(PaymentStatus.PAID);
 
     expect(deliveredEvents).toHaveLength(1);
     expect(deliveredEvents[0]).toMatchObject({
@@ -237,10 +243,13 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
     });
 
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.COMPLETED);
-    expect(dbOrder!.statusHistory).toHaveLength(4);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.COMPLETED);
+    expect(dbOrder?.statusHistory).toHaveLength(4);
 
-    const historyEntry = dbOrder!.statusHistory[3];
+    const historyEntry = dbOrder?.statusHistory[3];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.COMPLETED);
     expect(historyEntry.byUserId?.toString()).toBe(buyerId);
     expect(historyEntry.note).toBe("Goods received in excellent condition");
@@ -277,10 +286,13 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
     });
 
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.DISPUTED);
-    expect(dbOrder!.statusHistory).toHaveLength(4);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.DISPUTED);
+    expect(dbOrder?.statusHistory).toHaveLength(4);
 
-    const historyEntry = dbOrder!.statusHistory[3];
+    const historyEntry = dbOrder?.statusHistory[3];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.DISPUTED);
     expect(historyEntry.byUserId?.toString()).toBe(buyerId);
     expect(historyEntry.note).toBe("GRADE_LOWER_THAN_LISTED: Grade B delivered instead of Grade A");
@@ -321,11 +333,14 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
     });
 
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.CANCELLED);
-    expect(dbOrder!.payment.status).toBe(PaymentStatus.REFUNDED);
-    expect(dbOrder!.statusHistory).toHaveLength(3);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.CANCELLED);
+    expect(dbOrder?.payment.status).toBe(PaymentStatus.REFUNDED);
+    expect(dbOrder?.statusHistory).toHaveLength(3);
 
-    const historyEntry = dbOrder!.statusHistory[2];
+    const historyEntry = dbOrder?.statusHistory[2];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.CANCELLED);
     expect(historyEntry.byUserId?.toString()).toBe(buyerId);
     expect(historyEntry.note).toBe("BUYER_REQUEST: Ordered wrong crop");
@@ -357,10 +372,13 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
     expect(summary.processed).toBe(1);
 
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.CANCELLED);
-    expect(dbOrder!.statusHistory).toHaveLength(2);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.CANCELLED);
+    expect(dbOrder?.statusHistory).toHaveLength(2);
 
-    const historyEntry = dbOrder!.statusHistory[1];
+    const historyEntry = dbOrder?.statusHistory[1];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.CANCELLED);
     expect(historyEntry.note).toContain("NOT_CONFIRMED_IN_TIME");
 
@@ -393,10 +411,13 @@ describe("Task 6.12 — Review: StatusHistory and Domain Events Audit (P0)", () 
     expect(summary.processed).toBe(1);
 
     const dbOrder = await Order.findById(orderId).lean();
-    expect(dbOrder!.status).toBe(OrderStatus.COMPLETED);
-    expect(dbOrder!.statusHistory).toHaveLength(4);
+    expect(dbOrder).toBeDefined();
+    expect(dbOrder?.status).toBe(OrderStatus.COMPLETED);
+    expect(dbOrder?.statusHistory).toHaveLength(4);
 
-    const historyEntry = dbOrder!.statusHistory[3];
+    const historyEntry = dbOrder?.statusHistory[3];
+    expect(historyEntry).toBeDefined();
+    if (!historyEntry) throw new Error("Expected historyEntry to be defined");
     expect(historyEntry.status).toBe(OrderStatus.COMPLETED);
     expect(historyEntry.note).toBe("Auto-completed by system after 24h with no dispute");
 
