@@ -59,9 +59,7 @@ export async function runEndingSoonJob(
     listings = await Listing.find({
       status: ListingStatus.ACTIVE,
       endsAt: { $gt: now, $lte: windowThreshold },
-    })
-      .populate("cropId")
-      .lean();
+    }).populate("cropId");
   } catch (err: unknown) {
     logger.error({ err }, "Failed to query active listings entering ending-soon window");
     return {

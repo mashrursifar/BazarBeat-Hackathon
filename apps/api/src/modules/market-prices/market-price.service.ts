@@ -460,10 +460,11 @@ export class MarketPriceService {
           (sum, l) => sum + l.quantityKg * (l.currentBidPerKg ?? l.floorPricePerKg),
           0,
         );
+        const firstListing = activeListings[0];
         const currentAvgPricePerKg =
           totalQty > 0
             ? Math.round(totalAmount / totalQty)
-            : (activeListings[0].currentBidPerKg ?? activeListings[0].floorPricePerKg);
+            : (firstListing?.currentBidPerKg ?? firstListing?.floorPricePerKg ?? 0);
 
         const prices = activeListings.map((l) => l.currentBidPerKg ?? l.floorPricePerKg);
         const minPricePerKg = Math.min(...prices);
@@ -645,10 +646,11 @@ export class MarketPriceService {
             (sum, l) => sum + l.quantityKg * (l.currentBidPerKg ?? l.floorPricePerKg),
             0,
           );
+          const firstListing = activeListings[0];
           const avgPricePerKg =
             totalQty > 0
               ? Math.round(totalAmount / totalQty)
-              : (activeListings[0].currentBidPerKg ?? activeListings[0].floorPricePerKg);
+              : (firstListing?.currentBidPerKg ?? firstListing?.floorPricePerKg ?? 0);
 
           const prices = activeListings.map((l) => l.currentBidPerKg ?? l.floorPricePerKg);
           const minPricePerKg = Math.min(...prices);

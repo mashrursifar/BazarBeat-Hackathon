@@ -241,7 +241,7 @@ async function applyFallback(command: MovementCommand): Promise<void> {
       farmerId: ensureObjectId(command.farmerId),
       cropId: ensureObjectId(command.cropId),
     }).lean();
-    if (item?.pendingMovementId !== undefined) {
+    if (typeof item?.pendingMovementId === "string" && item.pendingMovementId.length > 0) {
       await finishPendingMovement(command.farmerId, command.cropId, item.pendingMovementId);
       continue;
     }
@@ -254,7 +254,7 @@ async function applyFallback(command: MovementCommand): Promise<void> {
       farmerId: ensureObjectId(command.farmerId),
       cropId: ensureObjectId(command.cropId),
     }).lean();
-    if (latest?.pendingMovementId !== undefined) continue;
+    if (typeof latest?.pendingMovementId === "string" && latest.pendingMovementId.length > 0) continue;
     await StockMovement.deleteOne({ operationId: command.operationId, status: "PENDING" });
     throw insufficientStockError();
   }

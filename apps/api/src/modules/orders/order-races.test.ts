@@ -123,13 +123,19 @@ describe("Task 6.12 — Review: Races (P0)", () => {
 
         // Verify database document
         const dbOrder = await Order.findById(orderId).lean();
-        expect(dbOrder).not.toBeNull();
-        expect([OrderStatus.CONFIRMED, OrderStatus.CANCELLED]).toContain(dbOrder!.status);
+        expect(dbOrder).toBeDefined();
+        if (!dbOrder) throw new Error("Order not found");
+        expect([OrderStatus.CONFIRMED, OrderStatus.CANCELLED]).toContain(dbOrder.status);
 
         // Verify statusHistory integrity
-        expect(dbOrder!.statusHistory).toHaveLength(2);
-        expect(dbOrder!.statusHistory[0].status).toBe(OrderStatus.PENDING);
-        expect(dbOrder!.statusHistory[1].status).toBe(dbOrder!.status);
+        expect(dbOrder.statusHistory).toHaveLength(2);
+        const history0 = dbOrder.statusHistory[0];
+        const history1 = dbOrder.statusHistory[1];
+        expect(history0).toBeDefined();
+        expect(history1).toBeDefined();
+        if (!history0 || !history1) throw new Error("Expected status history entries to be defined");
+        expect(history0.status).toBe(OrderStatus.PENDING);
+        expect(history1.status).toBe(dbOrder.status);
       });
     }
   });
@@ -173,15 +179,16 @@ describe("Task 6.12 — Review: Races (P0)", () => {
         expect((failure.reason as AppError).statusCode).toBe(409);
 
         const dbOrder = await Order.findById(orderId).lean();
-        expect(dbOrder).not.toBeNull();
+        expect(dbOrder).toBeDefined();
+        if (!dbOrder) throw new Error("Order not found");
 
-        if (dbOrder!.status === OrderStatus.CONFIRMED) {
+        if (dbOrder.status === OrderStatus.CONFIRMED) {
           // Mark-paid won
-          expect(dbOrder!.payment.status).toBe(PaymentStatus.PAID);
+          expect(dbOrder.payment.status).toBe(PaymentStatus.PAID);
         } else {
           // Cancel won
-          expect(dbOrder!.status).toBe(OrderStatus.CANCELLED);
-          expect(dbOrder!.payment.status).not.toBe(PaymentStatus.PAID);
+          expect(dbOrder.status).toBe(OrderStatus.CANCELLED);
+          expect(dbOrder.payment.status).not.toBe(PaymentStatus.PAID);
         }
       });
     }
@@ -225,12 +232,13 @@ describe("Task 6.12 — Review: Races (P0)", () => {
 
         // Verify final order state in DB
         const dbOrder = await Order.findById(orderId).lean();
-        expect(dbOrder).not.toBeNull();
-        expect(dbOrder!.status).toBe(OrderStatus.COMPLETED);
-        expect(dbOrder!.completedAt).toBeDefined();
+        expect(dbOrder).toBeDefined();
+        if (!dbOrder) throw new Error("Order not found");
+        expect(dbOrder.status).toBe(OrderStatus.COMPLETED);
+        expect(dbOrder.completedAt).toBeDefined();
 
         // Exactly one COMPLETED entry in statusHistory
-        const completedEntries = dbOrder!.statusHistory.filter(
+        const completedEntries = dbOrder.statusHistory.filter(
           (h: { status: OrderStatus }) => h.status === OrderStatus.COMPLETED,
         );
         expect(completedEntries).toHaveLength(1);
