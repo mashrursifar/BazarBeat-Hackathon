@@ -1,11 +1,7 @@
 import { type ReactElement, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import {
-  BuyerListingStatus,
-  ListingStatus,
-  formatPoisha,
-} from "@bazarbeat/shared";
+import { BuyerListingStatus, ListingStatus, formatPoisha } from "@bazarbeat/shared";
 
 import { CountdownTimer } from "../../components/shared/countdown-timer.js";
 import { DemoAiChip } from "../../components/shared/demo-ai-chip.js";
@@ -30,12 +26,7 @@ export function BuyerListingDetailPage(): ReactElement {
 
   const [liveAnnouncement, setLiveAnnouncement] = useState<string>("");
 
-  const {
-    data: detailResponse,
-    isLoading,
-    isError,
-    refetch,
-  } = useBuyerListingDetail(id);
+  const { data: detailResponse, isLoading, isError, refetch } = useBuyerListingDetail(id);
 
   const { data: bidsResponse, isLoading: isBidsLoading, refetch: refetchBids } = useListingBids(id);
 
@@ -92,9 +83,7 @@ export function BuyerListingDetailPage(): ReactElement {
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100 text-red-600 text-2xl font-bold">
           ⚠️
         </div>
-        <h1 className="text-2xl font-bold text-stone-900">
-          {t("listingDetail.errorTitle")}
-        </h1>
+        <h1 className="text-2xl font-bold text-stone-900">{t("listingDetail.errorTitle")}</h1>
         <p className="text-sm text-stone-600">{t("listingDetail.errorSubtitle")}</p>
         <div className="flex justify-center gap-3 pt-2">
           <Button onClick={() => void refetch()}>{t("listingDetail.retry")}</Button>
@@ -161,7 +150,7 @@ export function BuyerListingDetailPage(): ReactElement {
             size="md"
             className="border border-stone-200 px-3 bg-white"
           />
-          <DemoAiChip size="md" />
+          <DemoAiChip size="md" provider={listing.provider} degraded={listing.degraded} />
         </div>
       </div>
 
@@ -184,11 +173,19 @@ export function BuyerListingDetailPage(): ReactElement {
                 {/* AI-assessed Tooltip */}
                 <div
                   data-testid="ai-assessed-tooltip"
-                  title={t("listingDetail.aiAssessedTooltip")}
+                  title={
+                    listing.provider?.toLowerCase() === "gemini" && !listing.degraded
+                      ? t("listingDetail.aiAssessedTooltipGemini")
+                      : t("listingDetail.aiAssessedTooltip")
+                  }
                   className="inline-flex items-center gap-1 rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-xs font-semibold text-stone-700 cursor-help select-none"
                 >
                   <span>✨</span>
-                  <span>{t("listingDetail.aiAssessed")}</span>
+                  <span>
+                    {listing.provider?.toLowerCase() === "gemini" && !listing.degraded
+                      ? t("listingDetail.aiAssessedGemini")
+                      : t("listingDetail.aiAssessed")}
+                  </span>
                 </div>
               </div>
 
@@ -245,10 +242,7 @@ export function BuyerListingDetailPage(): ReactElement {
           />
 
           {/* Anonymized Bid History */}
-          <AnonymizedBidHistory
-            bids={bidsResponse?.data ?? []}
-            isLoading={isBidsLoading}
-          />
+          <AnonymizedBidHistory bids={bidsResponse?.data ?? []} isLoading={isBidsLoading} />
         </section>
 
         {/* Right Column: Pricing, Countdown, Lot Details, Bid Panel / Result State */}

@@ -8,13 +8,8 @@ import { useListingWizard } from "../context/listing-wizard-context.js";
 
 export function Step3AiResult(): ReactElement {
   const { t, i18n } = useTranslation();
-  const {
-    selectedCrop,
-    assessmentResult,
-    assessmentError,
-    retakePhotos,
-    setStep,
-  } = useListingWizard();
+  const { selectedCrop, assessmentResult, assessmentError, retakePhotos, setStep } =
+    useListingWizard();
 
   const [showTooltip, setShowTooltip] = useState(false);
 
@@ -41,7 +36,12 @@ export function Step3AiResult(): ReactElement {
             className="rounded-xl border border-red-200 bg-red-50 p-5 sm:p-6 text-red-950 space-y-4 shadow-sm"
           >
             <div className="flex items-center gap-2.5 text-red-700">
-              <svg className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-6 w-6 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -90,7 +90,12 @@ export function Step3AiResult(): ReactElement {
             className="rounded-xl border border-amber-300 bg-amber-50 p-5 sm:p-6 text-amber-950 space-y-4 shadow-sm"
           >
             <div className="flex items-center gap-2.5 text-amber-800">
-              <svg className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-6 w-6 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -114,7 +119,9 @@ export function Step3AiResult(): ReactElement {
               <p className="font-bold">{t("wizard.howToFix", "How to take a gradable photo:")}</p>
               <ul className="list-disc list-inside space-y-0.5 text-stone-700">
                 <li>{t("photoTips.lightTitle", "Use natural daylight, avoid heavy shadows")}</li>
-                <li>{t("photoTips.backgroundTitle", "Place crop on a clean, plain mat or floor")}</li>
+                <li>
+                  {t("photoTips.backgroundTitle", "Place crop on a clean, plain mat or floor")}
+                </li>
                 <li>{t("photoTips.multiTitle", "Show at least 3 pieces together")}</li>
               </ul>
             </div>
@@ -139,7 +146,12 @@ export function Step3AiResult(): ReactElement {
             className="rounded-xl border border-amber-300 bg-amber-50 p-5 sm:p-6 text-amber-950 space-y-4 shadow-sm"
           >
             <div className="flex items-center gap-2.5 text-amber-800">
-              <svg className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="h-6 w-6 shrink-0"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -204,11 +216,7 @@ export function Step3AiResult(): ReactElement {
         <p className="text-sm text-muted-foreground">
           {t("wizard.noAssessment", "No assessment found. Please upload photos first.")}
         </p>
-        <Button
-          type="button"
-          onClick={() => setStep(2)}
-          className="mt-4 w-auto inline-flex"
-        >
+        <Button type="button" onClick={() => setStep(2)} className="mt-4 w-auto inline-flex">
           {t("wizard.backToPhotos", "Upload photos")}
         </Button>
       </div>
@@ -249,9 +257,7 @@ export function Step3AiResult(): ReactElement {
             <h2 className="text-lg sm:text-xl font-bold text-foreground">
               {t("wizard.step3Title", "Quality Assessment Result")}
             </h2>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-              {localizedCropName}
-            </p>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{localizedCropName}</p>
           </div>
 
           {/* AI-assessed badge + tooltip */}
@@ -262,12 +268,31 @@ export function Step3AiResult(): ReactElement {
               onClick={() => setShowTooltip((prev) => !prev)}
               onMouseEnter={() => setShowTooltip(true)}
               onMouseLeave={() => setShowTooltip(false)}
-              aria-label={t("wizard.aiAssessedTooltip", "AI estimate explanation")}
+              aria-label={
+                assessmentResult.provider?.toLowerCase() === "gemini" && !assessmentResult.degraded
+                  ? t("wizard.aiAssessedTooltipGemini")
+                  : t("wizard.aiAssessedTooltip", "AI estimate explanation")
+              }
               className="inline-flex items-center gap-1.5 rounded-full bg-stone-100 hover:bg-stone-200 border border-stone-300 px-3 py-1 text-xs font-semibold text-stone-700 transition cursor-pointer"
             >
-              <span>🤖 {t("wizard.aiAssessed", "AI-assessed")}</span>
-              <svg className="h-3.5 w-3.5 text-stone-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <span>
+                🤖{" "}
+                {assessmentResult.provider?.toLowerCase() === "gemini" && !assessmentResult.degraded
+                  ? t("wizard.aiAssessedGemini")
+                  : t("wizard.aiAssessed", "AI-assessed")}
+              </span>
+              <svg
+                className="h-3.5 w-3.5 text-stone-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
               </svg>
             </button>
 
@@ -278,10 +303,15 @@ export function Step3AiResult(): ReactElement {
                 role="tooltip"
                 className="absolute right-0 top-full z-10 mt-2 w-64 rounded-lg bg-stone-900 p-3 text-xs text-stone-100 shadow-lg"
               >
-                {t(
-                  "wizard.aiAssessedTooltip",
-                  "This grade is generated by our AI model based on visual quality features. It serves as an objective market benchmark.",
-                )}
+                {assessmentResult.provider?.toLowerCase() === "gemini" && !assessmentResult.degraded
+                  ? t(
+                      "wizard.aiAssessedTooltipGemini",
+                      "This grade was evaluated by Google Gemini multimodal AI based on visual quality features. It serves as an objective market benchmark.",
+                    )
+                  : t(
+                      "wizard.aiAssessedTooltip",
+                      "This grade is generated by our AI model based on visual quality features. It serves as an objective market benchmark.",
+                    )}
               </div>
             )}
           </div>
@@ -319,10 +349,7 @@ export function Step3AiResult(): ReactElement {
           <h3 className="text-xs sm:text-sm font-bold text-foreground">
             {t("wizard.reasons", "Quality Observations & Reasons")}
           </h3>
-          <ul
-            data-testid="ai-reasons"
-            className="space-y-1.5 text-xs sm:text-sm text-stone-700"
-          >
+          <ul data-testid="ai-reasons" className="space-y-1.5 text-xs sm:text-sm text-stone-700">
             {assessmentResult.qualityNotes.map((note, idx) => (
               <li key={idx} className="flex items-start gap-2">
                 <span className="text-emerald-600 font-bold mt-0.5">✓</span>

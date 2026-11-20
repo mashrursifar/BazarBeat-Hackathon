@@ -149,7 +149,10 @@ describe("BuyerListingDetailPage Component", () => {
     vi.unstubAllGlobals();
   });
 
-  function renderPage(listingDetail: BuyerListingDetail = mockListing, bids = mockBids): ReturnType<typeof render> {
+  function renderPage(
+    listingDetail: BuyerListingDetail = mockListing,
+    bids = mockBids,
+  ): ReturnType<typeof render> {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (url: string) => {
@@ -208,7 +211,9 @@ describe("BuyerListingDetailPage Component", () => {
     // 4. AI Market Range visual
     expect(screen.getByTestId("ai-market-range-visual")).toBeInTheDocument();
     expect(screen.getByTestId("market-trend-badge")).toHaveTextContent("Rising trend");
-    expect(screen.getByTestId("market-position-badge")).toHaveTextContent("Within expected market range");
+    expect(screen.getByTestId("market-position-badge")).toHaveTextContent(
+      "Within expected market range",
+    );
 
     // 5. Countdown timer with Phase 4 states
     expect(screen.getByRole("timer")).toBeInTheDocument();
@@ -351,6 +356,48 @@ describe("BuyerListingDetailPage Component", () => {
 
       expect(screen.getByTestId("result-cancelled-state")).toBeInTheDocument();
       expect(screen.getByText("Auction Cancelled")).toBeInTheDocument();
+    });
+
+    it("displays Gemini AI branding on chip and tooltip when provider is gemini and not degraded", async () => {
+      const geminiListing: BuyerListingDetail = {
+        ...mockListing,
+        provider: "gemini",
+        degraded: false,
+      };
+
+      renderPage(geminiListing);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("demo-ai-chip")).toBeInTheDocument();
+      });
+
+      const chip = screen.getByTestId("demo-ai-chip");
+      expect(chip).toHaveTextContent("Gemini");
+
+      const tooltip = screen.getByTestId("ai-assessed-tooltip");
+      expect(tooltip).toHaveTextContent("AI-assessed (Gemini)");
+      expect(tooltip).toHaveAttribute(
+        "title",
+        "This grade was evaluated by Google Gemini based on visual quality features. It serves as an objective market benchmark.",
+      );
+    });
+
+    it("displays Demo AI model chip and degraded notice when provider is gemini but degraded is true", async () => {
+      const degradedListing: BuyerListingDetail = {
+        ...mockListing,
+        provider: "gemini",
+        degraded: true,
+      };
+
+      renderPage(degradedListing);
+
+      await waitFor(() => {
+        expect(screen.getByTestId("demo-ai-chip")).toBeInTheDocument();
+      });
+
+      const chip = screen.getByTestId("demo-ai-chip");
+      expect(chip).toHaveTextContent("Demo AI model");
+      expect(screen.getByTestId("degraded-mode-notice")).toBeInTheDocument();
     });
   });
 });

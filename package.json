@@ -22,6 +22,8 @@
     "test:eval": "vitest run ai-eval/src",
     "test:e2e": "playwright test",
     "test:smoke": "playwright test e2e/smoke-deployment.spec.ts",
+    "test:smoke:ai": "playwright test e2e/smoke-live-ai.spec.ts",
+    "curate:demo-photos": "tsx ai-eval/src/curate-demo-photos.ts",
     "eval:dataset": "tsx ai-eval/src/generate-dataset.ts",
     "eval:harness": "tsx ai-eval/src/cli.ts",
     "eval:mock": "tsx ai-eval/src/cli.ts --provider mock --split dev",
