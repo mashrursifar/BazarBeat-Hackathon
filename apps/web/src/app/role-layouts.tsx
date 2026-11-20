@@ -5,6 +5,7 @@ import { Link, NavLink, Navigate, Outlet, useLocation } from "react-router-dom";
 
 import { LanguageSwitcher } from "../components/language-switcher.js";
 import { DemoModeBadge } from "../components/demo-mode-badge.js";
+import { BrandLogo } from "../components/brand-logo.js";
 import { useAuth } from "../features/auth/auth-context.js";
 import { CompareTrayProvider } from "../features/marketplace/context/compare-tray-context.js";
 import { NotificationBell } from "../features/notifications/components/notification-bell.js";
@@ -123,14 +124,12 @@ function RoleLayout({ role }: { role: UserRoleType }): ReactElement {
     <div className="min-h-screen bg-stone-50 md:flex">
       {/* Desktop Sidebar: persistent on md+ */}
       <aside className="hidden md:flex md:w-64 md:shrink-0 md:flex-col md:border-r md:border-stone-200 md:bg-white md:p-5 md:min-h-screen">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold text-lg shadow-sm">
-            B
-          </span>
-          <Link className="text-xl font-extrabold text-primary" to="/">
+        <Link to="/" className="flex items-center gap-2.5">
+          <BrandLogo className="h-9 w-9 rounded-lg object-contain shadow-xs" />
+          <span className="text-xl font-extrabold text-primary">
             {t("appName")}
-          </Link>
-        </div>
+          </span>
+        </Link>
         <div className="mt-4 flex items-center justify-between rounded-lg bg-stone-50 px-3 py-2 border border-stone-200/70">
           <span className="text-sm font-semibold text-stone-800">{title}</span>
           <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
@@ -191,9 +190,7 @@ function RoleLayout({ role }: { role: UserRoleType }): ReactElement {
 
             {/* Mobile Brand Link */}
             <Link to="/" className="flex items-center gap-2 md:hidden">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-base shadow-sm">
-                B
-              </span>
+              <BrandLogo className="h-8 w-8 rounded-lg object-contain shadow-xs" />
               <span className="text-lg font-bold text-primary">{t("appName")}</span>
             </Link>
 
@@ -253,9 +250,7 @@ function RoleLayout({ role }: { role: UserRoleType }): ReactElement {
                 {/* Header in Drawer */}
                 <div className="flex items-center justify-between pb-3 border-b border-stone-200">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-base shadow-sm">
-                      B
-                    </span>
+                    <BrandLogo className="h-8 w-8 rounded-lg object-contain shadow-xs" />
                     <span className="text-lg font-extrabold text-primary">{t("appName")}</span>
                   </div>
                   <button

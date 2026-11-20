@@ -10,6 +10,7 @@ import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../components/language-switcher.js";
 import { DemoModeBadge } from "../../components/demo-mode-badge.js";
+import { BrandLogo } from "../../components/brand-logo.js";
 import { Button } from "../../components/ui/button.js";
 import { Input } from "../../components/ui/input.js";
 import { Select } from "../../components/ui/select.js";
@@ -60,8 +61,9 @@ function AuthFrame({ children }: { children: React.ReactNode }): ReactElement {
     <main className="min-h-screen px-4 py-6 sm:px-8">
       <header className="mx-auto flex max-w-6xl items-center justify-between">
         <div className="flex items-center gap-3">
-          <Link className="text-lg font-extrabold tracking-tight text-primary" to="/">
-            {t("appName")}
+          <Link className="flex items-center gap-2 text-lg font-extrabold tracking-tight text-primary" to="/">
+            <BrandLogo className="h-8 w-8 rounded-lg object-contain shadow-xs" />
+            <span>{t("appName")}</span>
           </Link>
           <DemoModeBadge />
         </div>

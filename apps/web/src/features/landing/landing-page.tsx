@@ -4,6 +4,7 @@ import { Link, Navigate } from "react-router-dom";
 
 import { LanguageSwitcher } from "../../components/language-switcher.js";
 import { DemoModeBadge } from "../../components/demo-mode-badge.js";
+import { BrandLogo } from "../../components/brand-logo.js";
 import { useOptionalAuth } from "../auth/auth-context.js";
 
 export function LandingPage(): ReactElement {
@@ -27,9 +28,7 @@ export function LandingPage(): ReactElement {
       <header className="border-b border-stone-200 bg-white/90 backdrop-blur-sm sticky top-0 z-20">
         <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-3 sm:px-6">
           <div className="flex items-center gap-2 sm:gap-3">
-            <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white font-bold text-lg shadow-sm">
-              B
-            </span>
+            <BrandLogo className="h-9 w-9 rounded-lg object-contain shadow-xs" />
             <span className="text-lg sm:text-xl font-bold tracking-tight text-foreground">
               {t("appName")}
             </span>

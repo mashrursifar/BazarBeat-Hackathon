@@ -13,6 +13,7 @@ import { CompareTray } from "../../components/shared/compare-tray.js";
 import { DemoAiChip } from "../../components/shared/demo-ai-chip.js";
 import { DemoModeBadge } from "../../components/demo-mode-badge.js";
 import { LanguageSwitcher } from "../../components/language-switcher.js";
+import { BrandLogo } from "../../components/brand-logo.js";
 import { ListingCard } from "../../components/shared/listing-card.js";
 import { useOptionalAuth } from "../auth/auth-context.js";
 import { getCrops } from "../listings/api/listing-api.js";
@@ -238,9 +239,7 @@ export function MarketplaceContent(): ReactElement {
         <header className="border-b border-stone-200 bg-white/95 backdrop-blur-sm sticky top-0 z-20 -mx-4 -mt-6 sm:-mx-6 lg:-mx-8 px-4 sm:px-6 lg:px-8 py-3 mb-6 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Link to="/" className="flex items-center gap-2">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-white font-bold text-base shadow-sm">
-                B
-              </span>
+              <BrandLogo className="h-8 w-8 rounded-lg object-contain shadow-xs" />
               <span className="text-lg font-bold tracking-tight text-foreground">
                 {t("appName")}
               </span>
