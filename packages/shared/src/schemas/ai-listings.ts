@@ -28,6 +28,7 @@ export const aiErrorCodeSchema = z.enum([
   AIErrorCode.CROP_MISMATCH,
   AIErrorCode.GRADE_UNAVAILABLE,
   AIErrorCode.GRADE_STALE,
+  AIErrorCode.DAILY_ASSESSMENT_LIMIT_EXCEEDED,
 ]);
 export const priceTrendSchema = z.enum(["UP", "FLAT", "DOWN"]);
 export const confidenceBandSchema = z.enum(["HIGH", "MEDIUM", "LOW"]);

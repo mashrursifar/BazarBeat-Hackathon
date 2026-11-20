@@ -24,10 +24,13 @@ export function Step3AiResult(): ReactElement {
       : selectedCrop.nameEn
     : "";
 
-  // 1. Error state handling: CROP_MISMATCH, GRADE_UNAVAILABLE, or generic
+  // 1. Error state handling: CROP_MISMATCH, GRADE_UNAVAILABLE, DAILY_ASSESSMENT_LIMIT_EXCEEDED, or generic
   if (assessmentError) {
     const isCropMismatch = assessmentError.code === "CROP_MISMATCH";
     const isGradeUnavailable = assessmentError.code === "GRADE_UNAVAILABLE";
+    const isDailyLimitExceeded =
+      assessmentError.code === "DAILY_ASSESSMENT_LIMIT_EXCEEDED" ||
+      assessmentError.code === "RATE_LIMITED";
 
     return (
       <div data-testid="step-3-ai-result" className="space-y-6">
@@ -129,7 +132,48 @@ export function Step3AiResult(): ReactElement {
           </div>
         )}
 
-        {!isCropMismatch && !isGradeUnavailable && (
+        {isDailyLimitExceeded && (
+          <div
+            data-testid="ai-error-daily-limit"
+            role="alert"
+            className="rounded-xl border border-amber-300 bg-amber-50 p-5 sm:p-6 text-amber-950 space-y-4 shadow-sm"
+          >
+            <div className="flex items-center gap-2.5 text-amber-800">
+              <svg className="h-6 w-6 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              <h3 className="text-base sm:text-lg font-bold">
+                {t("wizard.dailyLimitExceededTitle", "Daily assessment limit reached")}
+              </h3>
+            </div>
+
+            <p className="text-sm leading-relaxed text-amber-900">
+              {t(
+                "wizard.dailyLimitExceededDesc",
+                "You have reached your daily limit of AI quality assessments ({{limit}} per day). Please try again tomorrow or contact support.",
+                { limit: 20 },
+              )}
+            </p>
+
+            <div className="pt-2">
+              <Button
+                type="button"
+                data-testid="daily-limit-back-btn"
+                onClick={() => setStep(1)}
+                className="w-full sm:w-auto bg-amber-700 text-white hover:bg-amber-800"
+              >
+                ← {t("wizard.back", "Change crop")}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!isCropMismatch && !isGradeUnavailable && !isDailyLimitExceeded && (
           <div
             data-testid="ai-error-generic"
             role="alert"

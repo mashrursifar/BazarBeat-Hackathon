@@ -1,5 +1,6 @@
 import mongoose, { type InferSchemaType } from "mongoose";
 import {
+  AIProvider,
   CropGrade,
   ListingStatus,
   type PriceExplanation,
@@ -33,7 +34,11 @@ const listingAiAssessmentSchema = new mongoose.Schema(
     qualityNotes: { type: [mongoose.Schema.Types.Mixed], required: true },
     cropMatch: { type: Boolean, required: true },
     modelVersion: { type: String, required: true },
-    provider: { type: String, enum: ["mock", "http"], required: true },
+    provider: {
+      type: String,
+      enum: [AIProvider.MOCK, AIProvider.HTTP, AIProvider.GEMINI, AIProvider.BASELINE],
+      required: true,
+    },
     degraded: { type: Boolean, default: false, required: true },
     assessedAt: { type: Date, required: true },
     imageHashes: { type: [String], required: true },
@@ -50,7 +55,11 @@ const listingAiPriceGuidanceSchema = new mongoose.Schema(
     confidence: { type: Number, required: true, min: 0, max: 1 },
     explanation: { type: [mongoose.Schema.Types.Mixed], required: true },
     modelVersion: { type: String, required: true },
-    provider: { type: String, enum: ["mock", "http"], required: true },
+    provider: {
+      type: String,
+      enum: [AIProvider.MOCK, AIProvider.HTTP, AIProvider.GEMINI, AIProvider.BASELINE],
+      required: true,
+    },
     degraded: { type: Boolean, default: false, required: true },
     generatedAt: { type: Date, required: true },
     suggestedFloorPerKg: { type: Number, required: true, min: 1 },

@@ -1,5 +1,5 @@
 import mongoose, { type InferSchemaType } from "mongoose";
-import { type QualityNote } from "@bazarbeat/shared";
+import { AIProvider, type QualityNote } from "@bazarbeat/shared";
 
 const assessmentImageSchema = new mongoose.Schema(
   {
@@ -32,7 +32,11 @@ const aiAssessmentRecordSchema = new mongoose.Schema(
     qualityNotes: { type: [mongoose.Schema.Types.Mixed], required: true },
     cropMatch: { type: Boolean, required: true },
     modelVersion: { type: String, required: true },
-    provider: { type: String, enum: ["mock", "http"], required: true },
+    provider: {
+      type: String,
+      enum: [AIProvider.MOCK, AIProvider.HTTP, AIProvider.GEMINI, AIProvider.BASELINE],
+      required: true,
+    },
     degraded: { type: Boolean, default: false, required: true },
     assessedAt: { type: Date, default: Date.now, required: true },
     images: { type: [assessmentImageSchema], required: true },

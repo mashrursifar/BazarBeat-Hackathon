@@ -1,0 +1,165 @@
+{
+  "evaluatedAt": "2026-11-20T10:49:51.266Z",
+  "methodology": "Strict chronological time-based split: Day 1-45 warmup history, Day 46-60 held-out test evaluation with zero lookahead.",
+  "timeSplit": {
+    "totalDays": 60,
+    "warmupDays": 45,
+    "testDays": 15,
+    "warmupStartDate": "2026-09-22",
+    "warmupEndDate": "2026-11-05",
+    "testStartDate": "2026-11-06",
+    "testEndDate": "2026-11-20",
+    "totalObservations": 2400,
+    "testObservations": 600
+  },
+  "overall": {
+    "naive7DayMA": {
+      "modelName": "naive-7d-ma",
+      "maePoisha": 80.7,
+      "maeBdt": 0.81,
+      "mapePercent": 1.1,
+      "rmsePoisha": 105.1,
+      "sampleCount": 600
+    },
+    "seasonalBaselineV1": {
+      "modelName": "seasonal-baseline-v1",
+      "maePoisha": 93.1,
+      "maeBdt": 0.93,
+      "mapePercent": 1.27,
+      "rmsePoisha": 123.1,
+      "sampleCount": 600,
+      "bandCoveragePercent": 100
+    },
+    "maeReductionPoisha": -12.4,
+    "maeReductionPercent": -15.4,
+    "mapeReductionPercent": -0.17,
+    "bandCoveragePercent": 100
+  },
+  "perCrop": {
+    "onion": {
+      "cropSlug": "onion",
+      "sampleCount": 120,
+      "naive": {
+        "modelName": "naive-7d-ma",
+        "maePoisha": 58.6,
+        "maeBdt": 0.59,
+        "mapePercent": 1.01,
+        "rmsePoisha": 71.8,
+        "sampleCount": 120
+      },
+      "baseline": {
+        "modelName": "seasonal-baseline-v1",
+        "maePoisha": 70.7,
+        "maeBdt": 0.71,
+        "mapePercent": 1.22,
+        "rmsePoisha": 85.7,
+        "sampleCount": 120,
+        "bandCoveragePercent": 100
+      },
+      "maeReductionPoisha": -12.1,
+      "maeReductionPercent": -20.6,
+      "mapeReductionPercent": -0.21
+    },
+    "green-chilli": {
+      "cropSlug": "green-chilli",
+      "sampleCount": 120,
+      "naive": {
+        "modelName": "naive-7d-ma",
+        "maePoisha": 148.5,
+        "maeBdt": 1.49,
+        "mapePercent": 1.1,
+        "rmsePoisha": 174.2,
+        "sampleCount": 120
+      },
+      "baseline": {
+        "modelName": "seasonal-baseline-v1",
+        "maePoisha": 168.8,
+        "maeBdt": 1.69,
+        "mapePercent": 1.25,
+        "rmsePoisha": 201.8,
+        "sampleCount": 120,
+        "bandCoveragePercent": 100
+      },
+      "maeReductionPoisha": -20.3,
+      "maeReductionPercent": -13.7,
+      "mapeReductionPercent": -0.15
+    },
+    "bitter-gourd": {
+      "cropSlug": "bitter-gourd",
+      "sampleCount": 120,
+      "naive": {
+        "modelName": "naive-7d-ma",
+        "maePoisha": 85.9,
+        "maeBdt": 0.86,
+        "mapePercent": 1.11,
+        "rmsePoisha": 103.3,
+        "sampleCount": 120
+      },
+      "baseline": {
+        "modelName": "seasonal-baseline-v1",
+        "maePoisha": 100.3,
+        "maeBdt": 1,
+        "mapePercent": 1.29,
+        "rmsePoisha": 124.6,
+        "sampleCount": 120,
+        "bandCoveragePercent": 100
+      },
+      "maeReductionPoisha": -14.4,
+      "maeReductionPercent": -16.8,
+      "mapeReductionPercent": -0.18
+    },
+    "eggplant": {
+      "cropSlug": "eggplant",
+      "sampleCount": 120,
+      "naive": {
+        "modelName": "naive-7d-ma",
+        "maePoisha": 69.8,
+        "maeBdt": 0.7,
+        "mapePercent": 1.21,
+        "rmsePoisha": 81.5,
+        "sampleCount": 120
+      },
+      "baseline": {
+        "modelName": "seasonal-baseline-v1",
+        "maePoisha": 77.2,
+        "maeBdt": 0.77,
+        "mapePercent": 1.33,
+        "rmsePoisha": 93.7,
+        "sampleCount": 120,
+        "bandCoveragePercent": 100
+      },
+      "maeReductionPoisha": -7.4,
+      "maeReductionPercent": -10.6,
+      "mapeReductionPercent": -0.12
+    },
+    "potato": {
+      "cropSlug": "potato",
+      "sampleCount": 120,
+      "naive": {
+        "modelName": "naive-7d-ma",
+        "maePoisha": 40.6,
+        "maeBdt": 0.41,
+        "mapePercent": 1.05,
+        "rmsePoisha": 48.7,
+        "sampleCount": 120
+      },
+      "baseline": {
+        "modelName": "seasonal-baseline-v1",
+        "maePoisha": 48.5,
+        "maeBdt": 0.49,
+        "mapePercent": 1.25,
+        "rmsePoisha": 58.9,
+        "sampleCount": 120,
+        "bandCoveragePercent": 100
+      },
+      "maeReductionPoisha": -7.9,
+      "maeReductionPercent": -19.5,
+      "mapeReductionPercent": -0.2
+    }
+  },
+  "provenance": {
+    "dataSource": "Deterministic 60-day historical wholesale market price telemetry across 8 divisions generated per Decision D-38 (Path B: synthetic historical baseline with sinusoidal seasonality and division variance; real agricultural bulletin data integration planned).",
+    "decisionReference": "D-38, D-44, D-98, D-105",
+    "labelingRecommendation": "UI label 'Market-based estimate' or 'AI Market Price Range' is empirically supported; models operate as statistical reference baselines grounded in localized market history."
+  }
+}

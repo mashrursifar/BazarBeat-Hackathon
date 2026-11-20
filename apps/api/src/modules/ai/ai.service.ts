@@ -1,6 +1,5 @@
 import crypto from "node:crypto";
 import mongoose from "mongoose";
-import { ObjectId } from "bson";
 import {
   AIProvider,
   type AssessmentResult,
@@ -16,6 +15,11 @@ import { type ProcessedImage, processImage } from "../storage/image-processor.js
 import type { GradingProvider, PricePredictionProvider } from "./interfaces.js";
 import { createGradingProvider, createPricePredictionProvider } from "./provider.factory.js";
 import { AiAssessmentRecord, type AiAssessmentRecordDoc } from "./ai-assessment-record.model.js";
+import {
+  checkDailyAssessmentLimit,
+  incrementDailyAssessmentCount,
+  toFarmerObjectId,
+} from "./ai-usage.model.js";
 
 let customStorageProvider: StorageProvider | null = null;
 let gradingProvider: GradingProvider | null = null;
@@ -55,6 +59,9 @@ export async function assessCropQuality(
   cropIdentifier: string,
   files: Express.Multer.File[],
 ): Promise<AssessmentResult> {
+  // Check per-user daily assessment limit (Task G6)
+  await checkDailyAssessmentLimit(farmerId);
+
   if (!cropIdentifier || typeof cropIdentifier !== "string" || cropIdentifier.trim().length === 0) {
     throw new AppError(400, "VALIDATION_ERROR", "Valid cropId is required");
   }
@@ -133,7 +140,7 @@ export async function assessCropQuality(
   const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes TTL
 
   const record = await AiAssessmentRecord.create({
-    farmerId: new ObjectId(farmerId),
+    farmerId: toFarmerObjectId(farmerId),
     cropId: crop._id,
     assessmentTokenHash,
     grade: assessment.grade,
@@ -155,6 +162,9 @@ export async function assessCropQuality(
     expiresAt,
   });
 
+  // Increment daily usage count for user on current UTC day
+  await incrementDailyAssessmentCount(farmerId);
+
   return {
     grade: record.grade as "A" | "B" | "C",
     confidence: record.confidence,
@@ -163,7 +173,7 @@ export async function assessCropQuality(
     qualityNotes: record.qualityNotes,
     cropMatch: record.cropMatch,
     modelVersion: record.modelVersion,
-    provider: record.provider as "mock" | "http",
+    provider: record.provider as AIProvider,
     degraded: record.degraded,
     assessedAt: record.assessedAt.toISOString(),
     assessmentToken,

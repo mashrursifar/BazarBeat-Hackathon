@@ -152,4 +152,19 @@ describe("Step3AiResult component", () => {
 
     expect(screen.getByTestId("retake-photos-btn")).toBeInTheDocument();
   });
+
+  it("renders DAILY_ASSESSMENT_LIMIT_EXCEEDED error state with daily limit notice", () => {
+    renderStep3({
+      error: {
+        code: "DAILY_ASSESSMENT_LIMIT_EXCEEDED",
+        message: "You have reached your daily limit of 20 AI quality assessments",
+      },
+    });
+
+    const errorAlert = screen.getByTestId("ai-error-daily-limit");
+    expect(errorAlert).toBeInTheDocument();
+    expect(errorAlert).toHaveTextContent(/Daily assessment limit reached/i);
+    expect(errorAlert).toHaveTextContent(/20 per day/i);
+    expect(screen.getByTestId("daily-limit-back-btn")).toBeInTheDocument();
+  });
 });

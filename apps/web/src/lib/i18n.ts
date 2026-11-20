@@ -380,6 +380,11 @@ void i18n.use(initReactI18next).init({
           back: "Change crop",
           step2Title: "Take or upload photos of your harvest",
           step2Subtitle: "Upload 1 to 4 clear photos for AI grading and price guidance.",
+          photoAiNotice:
+            "Photos are analysed by an AI service for quality grading and price guidance. No personal information is shared.",
+          dailyLimitExceededTitle: "Daily assessment limit reached",
+          dailyLimitExceededDesc:
+            "You have reached your daily limit of AI quality assessments ({{limit}} per day). Please try again tomorrow or contact support.",
           assessQuality: "Assess quality with AI",
           assessing: "Analyzing quality with AI…",
           step3Title: "Quality Assessment Result",
@@ -1705,6 +1710,11 @@ void i18n.use(initReactI18next).init({
           back: "ফসল পরিবর্তন করুন",
           step2Title: "আপনার ফসলের ছবি তুলুন বা আপলোড করুন",
           step2Subtitle: "এআই গ্রেডিং ও দামের নির্দেশনার জন্য ১ থেকে ৪টি স্পষ্ট ছবি আপলোড করুন।",
+          photoAiNotice:
+            "মান নির্ধারণ ও দামের পরামর্শের জন্য ছবিগুলো এআই (AI) সার্ভিসের মাধ্যমে বিশ্লেষণ করা হয়। কোনো ব্যক্তিগত তথ্য শেয়ার করা হয় না।",
+          dailyLimitExceededTitle: "দৈনিক মূল্যায়নের সীমা সমাপ্ত",
+          dailyLimitExceededDesc:
+            "আপনি আজকের জন্য আপনার দৈনিক এআই মান নির্ধারণের সীমা (সর্বোচ্চ {{limit}}টি) পূর্ণ করেছেন। অনুগ্রহ করে আগামীকাল আবার চেষ্টা করুন।",
           assessQuality: "এআই দিয়ে মান যাচাই করুন",
           assessing: "এআই দিয়ে মান বিশ্লেষণ হচ্ছে…",
           step3Title: "মানের মূল্যায়ন ফলাফল",

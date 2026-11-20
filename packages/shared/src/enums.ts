@@ -47,6 +47,7 @@ export const AIErrorCode = {
   CROP_MISMATCH: "CROP_MISMATCH",
   GRADE_UNAVAILABLE: "GRADE_UNAVAILABLE",
   GRADE_STALE: "GRADE_STALE",
+  DAILY_ASSESSMENT_LIMIT_EXCEEDED: "DAILY_ASSESSMENT_LIMIT_EXCEEDED",
 } as const;
 
 export type AIErrorCode = (typeof AIErrorCode)[keyof typeof AIErrorCode];

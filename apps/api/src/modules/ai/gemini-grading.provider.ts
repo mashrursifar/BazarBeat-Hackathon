@@ -11,9 +11,8 @@ import {
 
 import { env } from "../../config/env.js";
 import { logger } from "../../shared/logger.js";
-import type { GradingProvider } from "./interfaces.js";
+import { recordAiCall } from "./ai-telemetry.js";
 import { CircuitBreaker } from "./circuit-breaker.js";
-import { MockGradingProvider } from "./mock-grading.provider.js";
 import { DEMO_SAMPLE_HASHES } from "./demo-fixtures.js";
 import {
   type CropRubricInfo,
@@ -24,6 +23,8 @@ import {
   geminiSampleOutputSchema,
   resolveCropRubric,
 } from "./gemini-prompt.js";
+import type { GradingProvider } from "./interfaces.js";
+import { MockGradingProvider } from "./mock-grading.provider.js";
 
 export interface GeminiModelClient {
   generateContent(params: {
@@ -59,6 +60,15 @@ export interface GeminiGradingProviderOptions {
 export interface DownscaledImagePart {
   data: string;
   mimeType: string;
+}
+
+export interface SampleExecutionResult {
+  output: GeminiSampleOutput;
+  usage?: {
+    promptTokenCount?: number;
+    candidatesTokenCount?: number;
+    totalTokenCount?: number;
+  };
 }
 
 /**
@@ -281,7 +291,7 @@ export class GeminiGradingProvider implements GradingProvider {
     sampleIndex: number,
     rubric: CropRubricInfo,
     imageParts: DownscaledImagePart[],
-  ): Promise<GeminiSampleOutput> {
+  ): Promise<SampleExecutionResult> {
     let attempt = 0;
 
     while (true) {
@@ -319,6 +329,11 @@ export class GeminiGradingProvider implements GradingProvider {
 
         const response = (await Promise.race([callPromise, timeoutPromise])) as {
           text?: string | (() => string);
+          usageMetadata?: {
+            promptTokenCount?: number;
+            candidatesTokenCount?: number;
+            totalTokenCount?: number;
+          };
         };
 
         if (timeoutId) clearTimeout(timeoutId);
@@ -353,7 +368,10 @@ export class GeminiGradingProvider implements GradingProvider {
           );
         }
 
-        return parsedResult.data;
+        return {
+          output: parsedResult.data,
+          usage: response?.usageMetadata,
+        };
       } catch (err) {
         if (timeoutId) clearTimeout(timeoutId);
 
@@ -455,20 +473,27 @@ export class GeminiGradingProvider implements GradingProvider {
     const settled = await Promise.allSettled(samplePromises);
     const durationMs = Date.now() - startTime;
 
-    const successfulSamples: GeminiSampleOutput[] = [];
+    const successfulResults: SampleExecutionResult[] = [];
     const sampleErrors: string[] = [];
 
     for (const res of settled) {
       if (res.status === "fulfilled") {
-        successfulSamples.push(res.value);
+        successfulResults.push(res.value);
       } else {
         sampleErrors.push(res.reason instanceof Error ? res.reason.message : String(res.reason));
       }
     }
 
     // If ALL samples failed: record failure on circuit breaker and fall back to mock
-    if (successfulSamples.length === 0) {
+    if (successfulResults.length === 0) {
       this.circuitBreaker.recordFailure();
+      recordAiCall({
+        provider: AIProvider.GEMINI,
+        modelVersion: this.model,
+        durationMs,
+        success: false,
+        error: sampleErrors.join("; "),
+      });
       logger.warn(
         {
           durationMs,
@@ -483,6 +508,31 @@ export class GeminiGradingProvider implements GradingProvider {
 
     // Record success on circuit breaker if at least one sample succeeded
     this.circuitBreaker.recordSuccess();
+
+    let totalPromptTokens = 0;
+    let totalCandidateTokens = 0;
+    let totalTokens = 0;
+
+    for (const res of successfulResults) {
+      if (res.usage) {
+        totalPromptTokens += res.usage.promptTokenCount ?? 0;
+        totalCandidateTokens += res.usage.candidatesTokenCount ?? 0;
+        totalTokens += res.usage.totalTokenCount ?? 0;
+      }
+    }
+
+    recordAiCall({
+      provider: AIProvider.GEMINI,
+      modelVersion: this.model,
+      durationMs,
+      success: true,
+      promptTokens: totalPromptTokens,
+      candidateTokens: totalCandidateTokens,
+      totalTokens,
+      sampleCount: successfulResults.length,
+    });
+
+    const successfulSamples = successfulResults.map((r) => r.output);
 
     // 5. Aggregate samples (Agreement-based confidence D-45)
     const totalVotes = successfulSamples.length;

@@ -8,6 +8,7 @@ import {
   downscaleImageForGemini,
   isRetryableError,
 } from "./gemini-grading.provider.js";
+import { getAiTelemetry, resetAiTelemetry } from "./ai-telemetry.js";
 import { CircuitBreaker } from "./circuit-breaker.js";
 import { MockGradingProvider } from "./mock-grading.provider.js";
 
@@ -27,11 +28,28 @@ class FakeGeminiClient implements GenAIClientLike {
     };
   }> = [];
 
-  private responsesQueue: Array<() => Promise<{ text: string }>> = [];
+  private responsesQueue: Array<
+    () => Promise<{
+      text: string;
+      usageMetadata?: {
+        promptTokenCount?: number;
+        candidatesTokenCount?: number;
+        totalTokenCount?: number;
+      };
+    }>
+  > = [];
 
-  public enqueueResponse(responseJson: Record<string, unknown>): void {
+  public enqueueResponse(
+    responseJson: Record<string, unknown>,
+    usageMetadata?: {
+      promptTokenCount?: number;
+      candidatesTokenCount?: number;
+      totalTokenCount?: number;
+    },
+  ): void {
     this.responsesQueue.push(async () => ({
       text: JSON.stringify(responseJson),
+      ...(usageMetadata ? { usageMetadata } : {}),
     }));
   }
 
@@ -659,6 +677,40 @@ describe("Task G3 — GeminiGradingProvider Implementation", () => {
       expect(isRetryableError({ status: 403 })).toBe(false);
       expect(isRetryableError({ status: 404 })).toBe(false);
       expect(isRetryableError(null)).toBe(false);
+    });
+  });
+
+  describe("Usage & Token Telemetry (Task G6)", () => {
+    it("records token usage metadata in aiTelemetry on successful assessment", async () => {
+      resetAiTelemetry();
+      const fakeClient = new FakeGeminiClient();
+      fakeClient.enqueueResponse(
+        {
+          cropMatch: true,
+          imageQualityUsable: true,
+          grade: "A",
+          scores: { A: 0.95, B: 0.04, C: 0.01 },
+          reasons: [{ code: GradingReasonCode.SKIN_INTACT }],
+        },
+        { promptTokenCount: 150, candidatesTokenCount: 40, totalTokenCount: 190 },
+      );
+
+      const provider = new GeminiGradingProvider({
+        apiKey: "test-fake-key",
+        client: fakeClient,
+        sampleCount: 1,
+      });
+
+      const result = await provider.assessQuality({ cropId: "onion", images: [dummyImage] });
+      expect(result.grade).toBe("A");
+
+      const snapshot = getAiTelemetry();
+      expect(snapshot.usage.totalRequests).toBe(1);
+      expect(snapshot.usage.totalSuccesses).toBe(1);
+      expect(snapshot.usage.promptTokens).toBe(150);
+      expect(snapshot.usage.candidateTokens).toBe(40);
+      expect(snapshot.usage.totalTokens).toBe(190);
+      expect(typeof snapshot.lastSuccessTime).toBe("string");
     });
   });
 });

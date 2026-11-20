@@ -19,7 +19,7 @@ export const envSchema = z.object({
   AI_GRADING_PROVIDER: z.enum(["mock", "gemini"]).default("mock"),
   AI_PRICE_PROVIDER: z.enum(["mock", "baseline"]).default("mock"),
   GEMINI_API_KEY: z.string().optional(),
-  GEMINI_MODEL: z.string().trim().min(1).default("gemini-2.5-flash"),
+  GEMINI_MODEL: z.string().trim().min(1).default("gemini-3.1-flash-lite"),
   GEMINI_GRADE_SAMPLES: z.coerce.number().int().positive().default(3),
   GEMINI_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
   AI_DAILY_ASSESSMENTS_PER_USER: z.coerce.number().int().positive().default(20),

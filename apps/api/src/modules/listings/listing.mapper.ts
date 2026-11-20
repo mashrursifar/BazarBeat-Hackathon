@@ -1,4 +1,5 @@
 import {
+  AIProvider,
   type BuyerListingCard,
   type BuyerListingDetail,
   type BuyerListingStatus,
@@ -32,7 +33,7 @@ export function mapListingToFarmerListing(
       qualityNotes: [...listing.aiAssessment.qualityNotes],
       cropMatch: listing.aiAssessment.cropMatch,
       modelVersion: listing.aiAssessment.modelVersion,
-      provider: listing.aiAssessment.provider as "mock" | "http",
+      provider: listing.aiAssessment.provider as AIProvider,
       degraded: listing.aiAssessment.degraded,
       assessedAt: listing.aiAssessment.assessedAt.toISOString(),
     },
@@ -44,7 +45,7 @@ export function mapListingToFarmerListing(
       confidence: listing.aiPriceGuidance.confidence,
       explanation: [...listing.aiPriceGuidance.explanation],
       modelVersion: listing.aiPriceGuidance.modelVersion,
-      provider: listing.aiPriceGuidance.provider as "mock" | "http",
+      provider: listing.aiPriceGuidance.provider as AIProvider,
       degraded: listing.aiPriceGuidance.degraded,
       generatedAt: listing.aiPriceGuidance.generatedAt.toISOString(),
       suggestedFloorPerKg: listing.aiPriceGuidance.suggestedFloorPerKg,
@@ -226,7 +227,7 @@ export function mapListingToBuyerDetail(
       highPerKg: listing.aiPriceGuidance.highPerKg,
       trend: listing.aiPriceGuidance.trend as "UP" | "FLAT" | "DOWN",
     },
-    provider: listing.aiAssessment.provider as "mock" | "http",
+    provider: listing.aiAssessment.provider as AIProvider,
     degraded: Boolean(listing.aiAssessment.degraded),
     quantityKg: listing.quantityKg,
     images: listing.images.map((img) => ({

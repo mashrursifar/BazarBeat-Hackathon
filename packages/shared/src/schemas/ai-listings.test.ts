@@ -260,6 +260,9 @@ describe("shared AI and listing schemas", () => {
     expect(aiErrorCodeSchema.parse(AIErrorCode.CROP_MISMATCH)).toBe("CROP_MISMATCH");
     expect(aiErrorCodeSchema.parse(AIErrorCode.GRADE_UNAVAILABLE)).toBe("GRADE_UNAVAILABLE");
     expect(aiErrorCodeSchema.parse(AIErrorCode.GRADE_STALE)).toBe("GRADE_STALE");
+    expect(aiErrorCodeSchema.parse(AIErrorCode.DAILY_ASSESSMENT_LIMIT_EXCEEDED)).toBe(
+      "DAILY_ASSESSMENT_LIMIT_EXCEEDED",
+    );
     expect(aiErrorCodeSchema.safeParse("INTERNAL").success).toBe(false);
     expect(AIProvider.HTTP).toBe("http");
     expect(CropGrade.C).toBe("C");

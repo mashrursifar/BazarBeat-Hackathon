@@ -54,6 +54,10 @@ describe("Preflight Script (Task 9.5)", () => {
       auctionClosesOk?: boolean;
       orderCreatedOk?: boolean;
       orderCleanupOk?: boolean;
+      liveGradingOk?: boolean;
+      liveGradingErrorStatus?: number;
+      liveGradingErrorMessage?: string;
+      liveGradingGrade?: string;
     } = {}): typeof fetch {
       const {
         healthStatus = "ok",
@@ -70,6 +74,10 @@ describe("Preflight Script (Task 9.5)", () => {
         auctionClosesOk = true,
         orderCreatedOk = true,
         orderCleanupOk = true,
+        liveGradingOk = true,
+        liveGradingErrorStatus = 401,
+        liveGradingErrorMessage = "API key not valid. Please pass a valid API key.",
+        liveGradingGrade = "A",
       } = overrides;
 
       return vi.fn().mockImplementation(async (urlInput: string | URL | Request, init?: RequestInit) => {
@@ -205,8 +213,20 @@ describe("Preflight Script (Task 9.5)", () => {
           );
         }
 
-        // 6. AI Assessment (Storage write)
+        // 6. AI Assessment (Storage write & live grading)
         if (url.includes("/api/v1/ai/assess-quality")) {
+          if (!liveGradingOk) {
+            return new Response(
+              JSON.stringify({
+                error: {
+                  code: liveGradingErrorStatus === 429 ? "RATE_LIMITED" : "UNAUTHORIZED",
+                  message: liveGradingErrorMessage,
+                },
+              }),
+              { status: liveGradingErrorStatus, headers: { "Content-Type": "application/json" } },
+            );
+          }
+
           if (!storageWriteOk) {
             return new Response(
               JSON.stringify({
@@ -223,7 +243,10 @@ describe("Preflight Script (Task 9.5)", () => {
             JSON.stringify({
               data: {
                 assessmentToken: "valid-assessment-token-xyz",
-                grade: "A",
+                grade: liveGradingGrade,
+                confidence: 0.95,
+                provider: aiProvider,
+                modelVersion: "gemini-2.5-flash",
                 images: [
                   {
                     url: "https://storage.bazarbeat.com/photos/potato-sample.jpg",
@@ -319,7 +342,7 @@ describe("Preflight Script (Task 9.5)", () => {
       }) as unknown as typeof fetch;
     }
 
-    it("passes all 8 checks on healthy demo deployment and prints clear pass output", async () => {
+    it("passes all 9 checks on healthy demo deployment and prints clear pass output", async () => {
       const output: string[] = [];
       const stdout = (msg: string): void => {
         output.push(msg);
@@ -335,13 +358,14 @@ describe("Preflight Script (Task 9.5)", () => {
       });
 
       expect(summary.success).toBe(true);
-      expect(summary.passedCount).toBe(8);
+      expect(summary.passedCount).toBe(9);
       expect(summary.failedCount).toBe(0);
 
       const printed = output.join("");
       expect(printed).toContain("[PASS] health (deep)");
       expect(printed).toContain("[PASS] AI service reachable and warm");
       expect(printed).toContain("[PASS] database latency");
+      expect(printed).toContain("[PASS] live AI grading with curated photo");
       expect(printed).toContain("[PASS] storage write and read");
       expect(printed).toContain("[PASS] logins for both demo roles");
       expect(printed).toContain("[PASS] the demo badge state");
@@ -504,6 +528,79 @@ describe("Preflight Script (Task 9.5)", () => {
       );
       expect(schedulerCheck?.passed).toBe(false);
       expect(schedulerCheck?.message).toContain("did not close within");
+    });
+
+    it("fails with readable message when Gemini API key is missing or invalid", async () => {
+      const output: string[] = [];
+      const stdout = (msg: string): void => {
+        output.push(msg);
+      };
+
+      const summary = await runPreflight({
+        url: "https://demo.bazarbeat.com",
+        fetchFn: createMockFetch({
+          liveGradingOk: false,
+          liveGradingErrorStatus: 401,
+          liveGradingErrorMessage: "API_KEY_INVALID: The provided Gemini API key is not authorized.",
+        }),
+        stdout,
+        stderr: stdout,
+        auctionPollIntervalMs: 10,
+        maxCloseWaitMs: 50,
+      });
+
+      expect(summary.success).toBe(false);
+      const liveCheck = summary.results.find((r) => r.name === "live AI grading with curated photo");
+      expect(liveCheck?.passed).toBe(false);
+      expect(liveCheck?.message).toContain("Gemini API key is missing, unauthorized, or invalid");
+    });
+
+    it("fails with readable message when Gemini quota is exhausted", async () => {
+      const output: string[] = [];
+      const stdout = (msg: string): void => {
+        output.push(msg);
+      };
+
+      const summary = await runPreflight({
+        url: "https://demo.bazarbeat.com",
+        fetchFn: createMockFetch({
+          liveGradingOk: false,
+          liveGradingErrorStatus: 429,
+          liveGradingErrorMessage: "ResourceExhausted: Quota exceeded for model gemini-2.5-flash",
+        }),
+        stdout,
+        stderr: stdout,
+        auctionPollIntervalMs: 10,
+        maxCloseWaitMs: 50,
+      });
+
+      expect(summary.success).toBe(false);
+      const liveCheck = summary.results.find((r) => r.name === "live AI grading with curated photo");
+      expect(liveCheck?.passed).toBe(false);
+      expect(liveCheck?.message).toContain("Gemini API quota exhausted or rate limit reached");
+    });
+
+    it("fails when curated potato photo returns unexpected grade", async () => {
+      const output: string[] = [];
+      const stdout = (msg: string): void => {
+        output.push(msg);
+      };
+
+      const summary = await runPreflight({
+        url: "https://demo.bazarbeat.com",
+        fetchFn: createMockFetch({
+          liveGradingGrade: "C",
+        }),
+        stdout,
+        stderr: stdout,
+        auctionPollIntervalMs: 10,
+        maxCloseWaitMs: 50,
+      });
+
+      expect(summary.success).toBe(false);
+      const liveCheck = summary.results.find((r) => r.name === "live AI grading with curated photo");
+      expect(liveCheck?.passed).toBe(false);
+      expect(liveCheck?.message).toContain("expected grade 'A', but model returned grade 'C'");
     });
   });
 });

@@ -202,18 +202,19 @@ npm run preflight -- --url https://<your-app>.onrender.com
 
 ### Verification Checks
 
-The suite executes 8 checks, printing a clear `[PASS]` or `[FAIL]` status for each:
-1. **health (deep)**: Confirms `GET /api/v1/health?deep=true` reports overall status `ok`, build version `GIT_SHA`, and uptime.
+The suite executes 9 checks, printing a clear `[PASS]` or `[FAIL]` status for each:
+1. **health (deep)**: Confirms `GET /api/v1/health?deep=true` reports overall status `ok`, build version `GIT_SHA`, circuit breaker status, and uptime.
 2. **AI service reachable and warm**: Validates AI provider operational status and responsiveness.
 3. **database latency**: Confirms MongoDB Atlas connection is healthy and measures query roundtrip latency in ms.
-4. **storage write and read**: Uploads a real produce sample photo to verify storage writes (Cloudinary / S3 / local disk) and fetches the stored URL over HTTP to verify storage reads. If credentials (such as `CLOUDINARY_URL` or S3 keys) are wrong, the check fails with a clear, readable error message.
-5. **the demo badge state**: Verifies `GET /api/v1/config` has `demoMode: true` so the "Demo mode: timers are shortened" badge renders on the UI.
-6. **logins for both demo roles**: Signs in demo farmer (`01700000001` / `farmerpassword123`) and demo buyer (`01712345678` / `buyerpassword123`), verifying session cookies.
-7. **scheduler alive (a short auction actually closes)**: Publishes a fast demo listing with a real sample photo, places a competitive buyer bid above floor price, waits for `endsAt` expiration, and verifies the background scheduler automatically triggers closing and transitions status to `CLOSED_SOLD`.
-8. **a full mini journey & cleanup**: Validates that an order was generated from the closed auction with matching buyer, farmer, and total amounts, followed by automated cleanup (cancelling the test order) to avoid polluting demo state.
+4. **live AI grading with curated photo**: Inspects a curated produce photo (`potato/A.jpg`), verifies that the model returns expected Grade A, and produces readable diagnostic guidance if the Gemini key is unauthorized (401/403) or quota is exhausted (429).
+5. **storage write and read**: Uploads a real produce sample photo to verify storage writes (Cloudinary / S3 / local disk) and fetches the stored URL over HTTP to verify storage reads. If credentials (such as `CLOUDINARY_URL` or S3 keys) are wrong, the check fails with a clear, readable error message.
+6. **the demo badge state**: Verifies `GET /api/v1/config` has `demoMode: true` so the "Demo mode: timers are shortened" badge renders on the UI.
+7. **logins for both demo roles**: Signs in demo farmer (`01700000001` / `farmerpassword123`) and demo buyer (`01712345678` / `buyerpassword123`), verifying session cookies.
+8. **scheduler alive (a short auction actually closes)**: Publishes a fast demo listing with a real sample photo, places a competitive buyer bid above floor price, waits for `endsAt` expiration, and verifies the background scheduler automatically triggers closing and transitions status to `CLOSED_SOLD`.
+9. **a full mini journey & cleanup**: Validates that an order was generated from the closed auction with matching buyer, farmer, and total amounts, followed by automated cleanup (cancelling the test order) to avoid polluting demo state.
 
 ### Exit Codes
-- Exits with code `0` if and only if all 8 checks pass.
+- Exits with code `0` if and only if all 9 checks pass.
 - Exits with non-zero exit code (`1`) on any failure.
 
 ---
@@ -223,3 +224,39 @@ The suite executes 8 checks, printing a clear `[PASS]` or `[FAIL]` status for ea
 - **No Secrets in Logs or Responses**: The storage providers and database clients redact secrets, passwords, and tokens from all log streams and API error payloads.
 - **Fail-Fast Boot Checks**: In production mode (`NODE_ENV=production`), server startup fails immediately if secrets are weak, missing, or use local placeholders.
 - **Deep Health Check**: `/api/v1/health?deep=true` reports provider health and database latency without exposing connection strings or API keys.
+
+---
+
+## 13. Operational AI Kill-Switch Procedure (Task G6 / Decision D-106)
+
+If Google Gemini encounters severe network outages, unexpected quota exhaustion, or degraded performance during a live rehearsal or demo, invoke the **1-minute operational kill switch**:
+
+### Immediate Kill-Switch Action:
+1. **Set Environment Variable**:
+   ```bash
+   AI_GRADING_PROVIDER=mock
+   ```
+2. **On Render / Cloud Deployment**:
+   - Go to your Web Service in the [Render Dashboard](https://dashboard.render.com/).
+   - Click **Environment** in the left sidebar.
+   - Change `AI_GRADING_PROVIDER` from `gemini` to `mock`.
+   - Click **Save Changes**. Render performs an instant rolling restart with zero downtime (~30s).
+3. **On Local / Docker**:
+   ```bash
+   export AI_GRADING_PROVIDER=mock
+   npm run start
+   ```
+
+### What Happens When Switched to Mock:
+- **Instant Deterministic Grading**: Uses the built-in SHA-256 hash fixture registry (`DEMO_SAMPLE_HASHES`). Seeded demo photos grade instantly to their labeled Grade A, B, or C.
+- **Zero External Network Dependencies**: Zero calls to Google GenAI APIs; immunity to upstream rate limits, outages, or invalid keys.
+- **Full Transparency**: The API emits `provider: "mock"` and the UI clearly displays the honest "Demo AI model" chip and advisory notice.
+- **Zero Transaction Disruption**: Existing listings, active auctions, buyer bids, closing timers, and orders proceed without any interruption.
+
+### Recovery Procedure:
+1. Verify Google AI Studio billing status and confirm quota headroom.
+2. Run preflight to verify live grading connectivity:
+   ```bash
+   npm run preflight -- --url https://<your-app>.onrender.com
+   ```
+3. Set `AI_GRADING_PROVIDER=gemini` and restart.

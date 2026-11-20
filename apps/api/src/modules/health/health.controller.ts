@@ -5,6 +5,9 @@ import mongoose from "mongoose";
 
 import { env } from "../../config/env.js";
 import { getDatabaseStatus } from "../../shared/db.js";
+import { getAiTelemetry } from "../ai/ai-telemetry.js";
+import { getGradingProvider } from "../ai/ai.service.js";
+import { GeminiGradingProvider } from "../ai/gemini-grading.provider.js";
 
 export interface HealthCheckResponse {
   data: {
@@ -16,6 +19,18 @@ export interface HealthCheckResponse {
       provider: string;
       gradingProvider?: string;
       priceProvider?: string;
+      circuitBreaker?: string;
+      lastSuccessTime?: string | null;
+      lastFailureTime?: string | null;
+      latencyMs?: number | null;
+      usage?: {
+        totalRequests: number;
+        totalSuccesses: number;
+        totalFailures: number;
+        totalTokens: number;
+        promptTokens: number;
+        candidateTokens: number;
+      };
     };
     version?: string;
     uptime?: number;
@@ -76,10 +91,22 @@ export async function healthCheckController(
     }
   }
 
-  // AI provider status
-  const aiStatus = "ok";
+  // AI provider status & telemetry (Task G6)
+  const aiTelemetry = getAiTelemetry();
+  let circuitBreakerState = "CLOSED";
+  try {
+    const gradingProvider = getGradingProvider();
+    if (gradingProvider instanceof GeminiGradingProvider) {
+      circuitBreakerState = gradingProvider.getCircuitBreaker().getState();
+    }
+  } catch {
+    circuitBreakerState = "CLOSED";
+  }
 
-  const overallStatus = dbStatus === "connected" && storageStatus === "ok" ? "ok" : "degraded";
+  const aiStatus = circuitBreakerState === "OPEN" ? "degraded" : "ok";
+
+  const overallStatus =
+    dbStatus === "connected" && storageStatus === "ok" && aiStatus === "ok" ? "ok" : "degraded";
 
   res.status(200).json({
     data: {
@@ -98,6 +125,18 @@ export async function healthCheckController(
         provider: env.AI_GRADING_PROVIDER,
         gradingProvider: env.AI_GRADING_PROVIDER,
         priceProvider: env.AI_PRICE_PROVIDER,
+        circuitBreaker: circuitBreakerState,
+        lastSuccessTime: aiTelemetry.lastSuccessTime,
+        lastFailureTime: aiTelemetry.lastFailureTime,
+        latencyMs: aiTelemetry.lastLatencyMs,
+        usage: {
+          totalRequests: aiTelemetry.usage.totalRequests,
+          totalSuccesses: aiTelemetry.usage.totalSuccesses,
+          totalFailures: aiTelemetry.usage.totalFailures,
+          totalTokens: aiTelemetry.usage.totalTokens,
+          promptTokens: aiTelemetry.usage.promptTokens,
+          candidateTokens: aiTelemetry.usage.candidateTokens,
+        },
       },
       uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),

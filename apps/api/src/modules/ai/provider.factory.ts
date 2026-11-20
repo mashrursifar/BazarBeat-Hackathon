@@ -2,6 +2,7 @@ import { env } from "../../config/env.js";
 import type { GradingProvider, PricePredictionProvider } from "./interfaces.js";
 import { MockGradingProvider } from "./mock-grading.provider.js";
 import { MockPricePredictionProvider } from "./mock-price.provider.js";
+import { BaselinePricePredictionProvider } from "./baseline-price.provider.js";
 import { GeminiGradingProvider } from "./gemini-grading.provider.js";
 import { DEMO_SAMPLE_HASHES } from "./demo-fixtures.js";
 
@@ -36,10 +37,7 @@ export function createPricePredictionProvider(
     return new MockPricePredictionProvider();
   }
   if (provider === "baseline") {
-    // Scaffolded for Task G5 (Statistical baseline price provider)
-    throw new Error(
-      'Unsupported AI_PRICE_PROVIDER "baseline" – provider implementation arrives in Task G5',
-    );
+    return new BaselinePricePredictionProvider();
   }
   throw new Error(
     `Unsupported AI_PRICE_PROVIDER "${provider}" – only "mock" and "baseline" are supported`,

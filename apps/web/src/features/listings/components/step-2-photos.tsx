@@ -77,6 +77,32 @@ export function Step2Photos(): ReactElement {
       {/* Photo tips card */}
       <PhotoTipsCard />
 
+      {/* AI transparency notice (Task G6 / Gap 7) */}
+      <div
+        data-testid="ai-photo-notice"
+        className="flex items-start gap-2.5 rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-xs text-emerald-950"
+      >
+        <svg
+          className="h-4 w-4 shrink-0 text-emerald-700 mt-0.5"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <p className="leading-relaxed">
+          {t(
+            "wizard.photoAiNotice",
+            "Photos are analysed by an AI service for quality grading and price guidance. No personal information is shared.",
+          )}
+        </p>
+      </div>
+
       {/* Image Uploader */}
       <div className="rounded-xl border border-stone-200 bg-white p-4 sm:p-5 shadow-xs">
         <h3 className="font-bold text-sm text-foreground mb-3">

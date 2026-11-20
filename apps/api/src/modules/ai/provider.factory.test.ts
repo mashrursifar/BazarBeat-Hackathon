@@ -4,6 +4,7 @@ import { env } from "../../config/env.js";
 import { createGradingProvider, createPricePredictionProvider } from "./provider.factory.js";
 import { MockGradingProvider } from "./mock-grading.provider.js";
 import { MockPricePredictionProvider } from "./mock-price.provider.js";
+import { BaselinePricePredictionProvider } from "./baseline-price.provider.js";
 import { GeminiGradingProvider } from "./gemini-grading.provider.js";
 import { DEMO_SAMPLE_HASHES } from "./demo-fixtures.js";
 
@@ -49,9 +50,15 @@ describe("AI Provider Factory Selection", () => {
       );
     });
 
-    it("defaults to mock provider in default environment", () => {
-      const provider = createGradingProvider();
-      expect(provider).toBeInstanceOf(MockGradingProvider);
+    it("defaults to mock provider when AI_GRADING_PROVIDER is 'mock'", () => {
+      const original = env.AI_GRADING_PROVIDER;
+      try {
+        (env as { AI_GRADING_PROVIDER: string }).AI_GRADING_PROVIDER = "mock";
+        const provider = createGradingProvider();
+        expect(provider).toBeInstanceOf(MockGradingProvider);
+      } finally {
+        (env as { AI_GRADING_PROVIDER: string }).AI_GRADING_PROVIDER = original;
+      }
     });
   });
 
@@ -61,10 +68,9 @@ describe("AI Provider Factory Selection", () => {
       expect(provider).toBeInstanceOf(MockPricePredictionProvider);
     });
 
-    it("throws a clear error when 'baseline' is selected (scaffolded for Task G5)", () => {
-      expect(() => createPricePredictionProvider("baseline")).toThrowError(
-        /Unsupported AI_PRICE_PROVIDER "baseline" – provider implementation arrives in Task G5/,
-      );
+    it("returns a BaselinePricePredictionProvider when provider is 'baseline'", () => {
+      const provider = createPricePredictionProvider("baseline");
+      expect(provider).toBeInstanceOf(BaselinePricePredictionProvider);
     });
 
     it("throws a clear error when an unsupported price provider is requested", () => {
@@ -73,9 +79,15 @@ describe("AI Provider Factory Selection", () => {
       );
     });
 
-    it("defaults to mock provider in default environment", () => {
-      const provider = createPricePredictionProvider();
-      expect(provider).toBeInstanceOf(MockPricePredictionProvider);
+    it("defaults to mock provider when AI_PRICE_PROVIDER is 'mock'", () => {
+      const original = env.AI_PRICE_PROVIDER;
+      try {
+        (env as { AI_PRICE_PROVIDER: string }).AI_PRICE_PROVIDER = "mock";
+        const provider = createPricePredictionProvider();
+        expect(provider).toBeInstanceOf(MockPricePredictionProvider);
+      } finally {
+        (env as { AI_PRICE_PROVIDER: string }).AI_PRICE_PROVIDER = original;
+      }
     });
   });
 });

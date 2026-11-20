@@ -82,7 +82,7 @@ describe("environment validation", () => {
       const parsed = envSchema.parse({});
       expect(parsed.AI_GRADING_PROVIDER).toBe("mock");
       expect(parsed.AI_PRICE_PROVIDER).toBe("mock");
-      expect(parsed.GEMINI_MODEL).toBe("gemini-2.5-flash");
+      expect(parsed.GEMINI_MODEL).toBe("gemini-3.1-flash-lite");
       expect(parsed.GEMINI_GRADE_SAMPLES).toBe(3);
       expect(parsed.GEMINI_TIMEOUT_MS).toBe(10_000);
       expect(parsed.AI_DAILY_ASSESSMENTS_PER_USER).toBe(20);

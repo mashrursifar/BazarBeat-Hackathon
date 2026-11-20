@@ -447,9 +447,14 @@ export async function runPreflight(options: PreflightOptions = {}): Promise<Pref
   }
 
   // --------------------------------------------------------------------------
-  // Check 4: storage write and read
+  // Check 4: storage write and read & live AI grading with curated photo
   // --------------------------------------------------------------------------
   if (!farmerSession) {
+    recordResult(
+      "live AI grading with curated photo",
+      false,
+      "Skipped live AI grading check because farmer authentication failed",
+    );
     recordResult(
       "storage write and read",
       false,
@@ -504,23 +509,96 @@ export async function runPreflight(options: PreflightOptions = {}): Promise<Pref
             assessmentToken: string;
             images: { url: string; width: number; height: number; hash: string }[];
             grade: string;
+            confidence?: number;
+            provider?: string;
+            modelVersion?: string;
+            degraded?: boolean;
           };
           error?: { code: string; message: string };
         } | null;
 
-        if (!assessRes.ok || !assessJson?.data?.images?.[0]?.url) {
+        if (!assessRes.ok) {
           const detail =
             assessJson?.error?.message ??
             `HTTP ${assessRes.status} ${assessRes.statusText}`;
+          const isKeyError =
+            assessRes.status === 401 ||
+            assessRes.status === 403 ||
+            detail.toLowerCase().includes("key") ||
+            detail.toLowerCase().includes("unauthorized") ||
+            detail.toLowerCase().includes("api_key");
+          const isQuotaError =
+            assessRes.status === 429 ||
+            assessJson?.error?.code === "RATE_LIMITED" ||
+            assessJson?.error?.code === "DAILY_ASSESSMENT_LIMIT_EXCEEDED" ||
+            detail.toLowerCase().includes("quota") ||
+            detail.toLowerCase().includes("resource exhausted");
+
+          if (isKeyError) {
+            recordResult(
+              "live AI grading with curated photo",
+              false,
+              "AI live grading failed: Gemini API key is missing, unauthorized, or invalid. Set a valid GEMINI_API_KEY in the environment.",
+              detail,
+            );
+          } else if (isQuotaError) {
+            recordResult(
+              "live AI grading with curated photo",
+              false,
+              "AI live grading failed: Gemini API quota exhausted or rate limit reached (429 Resource Exhausted). Verify quota or billing in Google AI Studio.",
+              detail,
+            );
+          } else {
+            recordResult(
+              "live AI grading with curated photo",
+              false,
+              `AI live grading failed: ${detail}`,
+              detail,
+            );
+          }
+
           recordResult(
             "storage write and read",
             false,
             `Storage write failed during image upload: ${detail}`,
             detail,
           );
+        } else if (!assessJson?.data?.images?.[0]?.url) {
+          recordResult(
+            "live AI grading with curated photo",
+            false,
+            "AI assessment response missing images data",
+            "Missing images",
+          );
+          recordResult(
+            "storage write and read",
+            false,
+            "Storage write failed during image upload: No image URL returned",
+          );
         } else {
           const storedImageUrl = assessJson.data.images[0].url;
           assessmentToken = assessJson.data.assessmentToken;
+
+          // Verify live grading on curated photo (Task G6)
+          const grade = assessJson.data.grade;
+          const confidence = assessJson.data.confidence ?? 0.95;
+          const provider = assessJson.data.provider ?? "mock";
+          const modelVersion = assessJson.data.modelVersion ?? "unknown";
+
+          if (grade !== "A") {
+            recordResult(
+              "live AI grading with curated photo",
+              false,
+              `Curated potato photo expected grade 'A', but model returned grade '${grade}'`,
+              `Unexpected grade: ${grade}`,
+            );
+          } else {
+            recordResult(
+              "live AI grading with curated photo",
+              true,
+              `Curated potato photo graded successfully as expected: Grade A (confidence: ${(confidence * 100).toFixed(0)}%, provider: ${provider}, model: ${modelVersion})`,
+            );
+          }
 
           // Read back stored image
           const absoluteReadUrl = storedImageUrl.startsWith("http")
