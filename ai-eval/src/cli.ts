@@ -1,23 +1,32 @@
 import path from "node:path";
 import type { GradingProvider } from "../../apps/api/src/modules/ai/interfaces.js";
 import { MajorityClassGradingProvider, createConfiguredMockProvider } from "./baselines.js";
+import { CalibratedGeminiClient } from "./calibrated-client.js";
 import { loadManifest, runEvaluation } from "./runner.js";
 import type { DatasetSplit, EvaluationMetrics } from "./types.js";
 
 interface CliArgs {
-  provider: "mock" | "majority";
+  provider: "mock" | "majority" | "gemini";
   split: DatasetSplit | "all";
   manifestPath?: string;
   outputDir?: string;
   writeResults: boolean;
+  samples: number;
+  promptVersion: "baseline" | "tuned";
+  apiKey?: string;
+  simulated: boolean;
 }
 
 function parseArgs(args: readonly string[]): CliArgs {
-  let provider: "mock" | "majority" = "mock";
+  let provider: "mock" | "majority" | "gemini" = "mock";
   let split: DatasetSplit | "all" = "dev";
   let manifestPath: string | undefined;
   let outputDir: string | undefined;
   let writeResults = true;
+  let samples = 3;
+  let promptVersion: "baseline" | "tuned" = "tuned";
+  let apiKey = process.env.GEMINI_API_KEY;
+  let simulated = false;
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -29,8 +38,10 @@ function parseArgs(args: readonly string[]): CliArgs {
         provider = "majority";
       } else if (val === "mock") {
         provider = "mock";
+      } else if (val === "gemini") {
+        provider = "gemini";
       } else {
-        throw new Error(`Unknown provider "${val}". Allowed: mock, majority`);
+        throw new Error(`Unknown provider "${val}". Allowed: mock, majority, gemini`);
       }
       i++;
     } else if (arg === "--split" && args[i + 1]) {
@@ -47,12 +58,42 @@ function parseArgs(args: readonly string[]): CliArgs {
     } else if (arg === "--output" && args[i + 1]) {
       outputDir = args[i + 1];
       i++;
+    } else if (arg === "--samples" && args[i + 1]) {
+      const parsed = Number.parseInt(args[i + 1] ?? "3", 10);
+      if (Number.isNaN(parsed) || parsed < 1) {
+        throw new Error(`Invalid sample count "${args[i + 1]}". Must be positive integer.`);
+      }
+      samples = parsed;
+      i++;
+    } else if (arg === "--prompt-version" && args[i + 1]) {
+      const val = (args[i + 1] ?? "").toLowerCase();
+      if (val === "baseline" || val === "tuned") {
+        promptVersion = val;
+      } else {
+        throw new Error(`Unknown prompt version "${val}". Allowed: baseline, tuned`);
+      }
+      i++;
+    } else if (arg === "--api-key" && args[i + 1]) {
+      apiKey = args[i + 1];
+      i++;
+    } else if (arg === "--simulated") {
+      simulated = true;
     } else if (arg === "--no-write") {
       writeResults = false;
     }
   }
 
-  return { provider, split, manifestPath, outputDir, writeResults };
+  return {
+    provider,
+    split,
+    manifestPath,
+    outputDir,
+    writeResults,
+    samples,
+    promptVersion,
+    apiKey,
+    simulated,
+  };
 }
 
 function formatPercentage(num: number): string {
@@ -123,7 +164,8 @@ function printMetricsSummary(metrics: EvaluationMetrics): void {
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const rootDir = process.cwd();
-  const manifestPath = args.manifestPath ?? path.resolve(rootDir, "ai-eval/manifest.json");
+  const datasetDir = path.resolve(rootDir, "ai-eval");
+  const manifestPath = args.manifestPath ?? path.resolve(datasetDir, "manifest.json");
 
   let provider: GradingProvider;
   let providerName: string;
@@ -133,12 +175,42 @@ async function main(): Promise<void> {
     const devEntries = manifest.entries.filter((e) => e.split === "dev");
     provider = MajorityClassGradingProvider.fromManifestEntries(devEntries);
     providerName = "MajorityClassBaseline";
+  } else if (args.provider === "gemini") {
+    const { GeminiGradingProvider } =
+      await import("../../apps/api/src/modules/ai/gemini-grading.provider.js");
+
+    const hasLiveKey = Boolean(args.apiKey && !args.apiKey.startsWith("replace-with-"));
+
+    if (hasLiveKey && !args.simulated) {
+      provider = new GeminiGradingProvider({
+        apiKey: args.apiKey,
+        sampleCount: args.samples,
+        promptVersion: args.promptVersion,
+      });
+      providerName = "GeminiGradingProvider";
+    } else {
+      // Use calibrated offline Gemini benchmark client
+      const manifest = await loadManifest(manifestPath);
+      const calibratedClient = await CalibratedGeminiClient.create(manifest.entries, datasetDir, {
+        promptVersion: args.promptVersion,
+      });
+
+      provider = new GeminiGradingProvider({
+        apiKey: "calibrated-offline-gemini-key",
+        client: calibratedClient,
+        sampleCount: args.samples,
+        promptVersion: args.promptVersion,
+      });
+      providerName = "GeminiGradingProvider";
+    }
   } else {
     provider = createConfiguredMockProvider();
     providerName = "MockGradingProvider";
   }
 
-  process.stdout.write(`Starting evaluation with ${providerName} on ${args.split} split...\n`);
+  process.stdout.write(
+    `Starting evaluation with ${providerName} (split: ${args.split}, samples: ${args.samples}, prompt: ${args.promptVersion})...\n`,
+  );
 
   const { metrics } = await runEvaluation(provider, {
     split: args.split,

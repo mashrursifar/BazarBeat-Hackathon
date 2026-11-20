@@ -1,0 +1,97 @@
+{
+  "provider": "GeminiGradingProvider",
+  "split": "dev",
+  "evaluatedAt": "2026-11-20T09:44:32.797Z",
+  "totalSamples": 61,
+  "standardSamplesCount": 45,
+  "negativeSamplesCount": 12,
+  "adversarialSamplesCount": 4,
+  "overallAccuracy": 0.8367,
+  "macroF1": 0.8402,
+  "perClass": {
+    "A": {
+      "precision": 1,
+      "recall": 0.8667,
+      "f1": 0.9286,
+      "support": 15
+    },
+    "B": {
+      "precision": 0.75,
+      "recall": 0.75,
+      "f1": 0.75,
+      "support": 16
+    },
+    "C": {
+      "precision": 0.8,
+      "recall": 0.8889,
+      "f1": 0.8421,
+      "support": 18
+    }
+  },
+  "confusionMatrix": {
+    "A": {
+      "A": 13,
+      "B": 2,
+      "C": 0,
+      "otherOrNull": 0
+    },
+    "B": {
+      "A": 0,
+      "B": 12,
+      "C": 4,
+      "otherOrNull": 0
+    },
+    "C": {
+      "A": 0,
+      "B": 2,
+      "C": 16,
+      "otherOrNull": 0
+    }
+  },
+  "perCrop": {
+    "onion": {
+      "crop": "onion",
+      "total": 10,
+      "correct": 8,
+      "accuracy": 0.8,
+      "macroF1": 0.7667
+    },
+    "green-chilli": {
+      "crop": "green-chilli",
+      "total": 10,
+      "correct": 8,
+      "accuracy": 0.8,
+      "macroF1": 0.7667
+    },
+    "bitter-gourd": {
+      "crop": "bitter-gourd",
+      "total": 10,
+      "correct": 10,
+      "accuracy": 1,
+      "macroF1": 1
+    },
+    "eggplant": {
+      "crop": "eggplant",
+      "total": 9,
+      "correct": 7,
+      "accuracy": 0.7778,
+      "macroF1": 0.75
+    },
+    "potato": {
+      "crop": "potato",
+      "total": 10,
+      "correct": 8,
+      "accuracy": 0.8,
+      "macroF1": 0.75
+    }
+  },
+  "cropMismatchDetectionRate": 1,
+  "adversarialPassRate": 1,
+  "latency": {
+    "minMs": 0.03,
+    "maxMs": 28.8,
+    "meanMs": 5.97,
+    "medianMs": 5.84,
+    "p95Ms": 11.37
+  }
+}

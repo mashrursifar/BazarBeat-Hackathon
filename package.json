@@ -26,6 +26,8 @@
     "eval:harness": "tsx ai-eval/src/cli.ts",
     "eval:mock": "tsx ai-eval/src/cli.ts --provider mock --split dev",
     "eval:majority": "tsx ai-eval/src/cli.ts --provider majority --split dev",
+    "eval:gemini": "tsx ai-eval/src/cli.ts --provider gemini --split dev",
+    "eval:gemini:test": "tsx ai-eval/src/cli.ts --provider gemini --split test",
     "seed": "npm run seed -w @bazarbeat/api",
     "seed:dev-listings": "npm run seed:dev-listings -w @bazarbeat/api",
     "seed:demo": "npm run seed:demo -w @bazarbeat/api",

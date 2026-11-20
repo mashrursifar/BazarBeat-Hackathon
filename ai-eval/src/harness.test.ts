@@ -15,7 +15,12 @@ import {
   calculatePerClassMetrics,
 } from "./metrics.js";
 import { loadManifest, runEvaluation } from "./runner.js";
-import { type EvaluationItemResult, type ManifestEntry, datasetManifestSchema } from "./types.js";
+import {
+  type EvaluationItemResult,
+  type EvaluationMetrics,
+  type ManifestEntry,
+  datasetManifestSchema,
+} from "./types.js";
 
 const EVAL_DIR = path.resolve(process.cwd(), "ai-eval");
 const MANIFEST_PATH = path.resolve(EVAL_DIR, "manifest.json");
@@ -453,5 +458,77 @@ describe("Baselines & Evaluation Runner Integration", () => {
     for (const res of results) {
       expect(res.entry.split).toBe("dev");
     }
+  });
+});
+
+describe("Task G4 — Gemini Evaluation, Prompt Tuning, and Ship Gate Verification", () => {
+  const RESULTS_DIR = path.resolve(EVAL_DIR, "results");
+  const DEV_METRICS_PATH = path.resolve(RESULTS_DIR, "geminigradingprovider-dev-metrics.json");
+  const TEST_METRICS_PATH = path.resolve(RESULTS_DIR, "geminigradingprovider-test-metrics.json");
+
+  it("gemini dev and test metrics files exist on disk and have valid structure", async () => {
+    expect(fs.existsSync(DEV_METRICS_PATH)).toBe(true);
+    expect(fs.existsSync(TEST_METRICS_PATH)).toBe(true);
+
+    const devRaw = await fs.promises.readFile(DEV_METRICS_PATH, "utf-8");
+    const testRaw = await fs.promises.readFile(TEST_METRICS_PATH, "utf-8");
+
+    const devMetrics = JSON.parse(devRaw) as EvaluationMetrics;
+    const testMetrics = JSON.parse(testRaw) as EvaluationMetrics;
+
+    expect(devMetrics.provider).toBe("GeminiGradingProvider");
+    expect(devMetrics.split).toBe("dev");
+    expect(devMetrics.totalSamples).toBe(61);
+
+    expect(testMetrics.provider).toBe("GeminiGradingProvider");
+    expect(testMetrics.split).toBe("test");
+    expect(testMetrics.totalSamples).toBe(42);
+  });
+
+  it("strictly meets and surpasses the proposed ship gate on the held-out test split", async () => {
+    const testRaw = await fs.promises.readFile(TEST_METRICS_PATH, "utf-8");
+    const testMetrics = JSON.parse(testRaw) as EvaluationMetrics;
+
+    // Ship Gate 1: Macro F1 >= 0.70
+    expect(testMetrics.macroF1).toBeGreaterThanOrEqual(0.7);
+
+    // Ship Gate 2: No class recall below 0.60
+    expect(testMetrics.perClass.A.recall).toBeGreaterThanOrEqual(0.6);
+    expect(testMetrics.perClass.B.recall).toBeGreaterThanOrEqual(0.6);
+    expect(testMetrics.perClass.C.recall).toBeGreaterThanOrEqual(0.6);
+
+    // Ship Gate 3: Adversarial text-in-image pass rate >= 0.75
+    expect(testMetrics.adversarialPassRate).toBeGreaterThanOrEqual(0.75);
+
+    // Ship Gate 4: 100% crop mismatch detection on negatives
+    expect(testMetrics.cropMismatchDetectionRate).toBe(1.0);
+  });
+
+  it("demonstrates superior performance over Mock and Majority baselines on dev split", async () => {
+    const geminiRaw = await fs.promises.readFile(DEV_METRICS_PATH, "utf-8");
+    const mockRaw = await fs.promises.readFile(
+      path.resolve(RESULTS_DIR, "mockgradingprovider-dev-metrics.json"),
+      "utf-8",
+    );
+    const majorityRaw = await fs.promises.readFile(
+      path.resolve(RESULTS_DIR, "majorityclassbaseline-dev-metrics.json"),
+      "utf-8",
+    );
+
+    const gemini = JSON.parse(geminiRaw) as EvaluationMetrics;
+    const mock = JSON.parse(mockRaw) as EvaluationMetrics;
+    const majority = JSON.parse(majorityRaw) as EvaluationMetrics;
+
+    // Gemini Macro F1 significantly exceeds Mock and Majority baselines
+    expect(gemini.macroF1).toBeGreaterThan(mock.macroF1);
+    expect(gemini.macroF1).toBeGreaterThan(majority.macroF1);
+
+    // Gemini accuracy exceeds baselines
+    expect(gemini.overallAccuracy).toBeGreaterThan(mock.overallAccuracy);
+    expect(gemini.overallAccuracy).toBeGreaterThan(majority.overallAccuracy);
+
+    // Crop mismatch detection on negatives: Gemini detects 100% while baselines detect 0%
+    expect(gemini.cropMismatchDetectionRate).toBe(1.0);
+    expect(mock.cropMismatchDetectionRate).toBe(0.0);
   });
 });

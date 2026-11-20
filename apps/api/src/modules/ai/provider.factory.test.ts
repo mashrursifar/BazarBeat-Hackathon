@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import {
-  createGradingProvider,
-  createPricePredictionProvider,
-} from "./provider.factory.js";
+import { env } from "../../config/env.js";
+import { createGradingProvider, createPricePredictionProvider } from "./provider.factory.js";
 import { MockGradingProvider } from "./mock-grading.provider.js";
 import { MockPricePredictionProvider } from "./mock-price.provider.js";
+import { GeminiGradingProvider } from "./gemini-grading.provider.js";
 import { DEMO_SAMPLE_HASHES } from "./demo-fixtures.js";
 
 describe("AI Provider Factory Selection", () => {
@@ -21,10 +20,27 @@ describe("AI Provider Factory Selection", () => {
       }
     });
 
-    it("throws a clear error when 'gemini' is selected (scaffolded for Task G3)", () => {
-      expect(() => createGradingProvider("gemini")).toThrowError(
-        /Unsupported AI_GRADING_PROVIDER "gemini" – provider implementation arrives in Task G3/,
-      );
+    it("returns a GeminiGradingProvider when 'gemini' is selected and API key is present", () => {
+      const originalKey = env.GEMINI_API_KEY;
+      try {
+        (env as { GEMINI_API_KEY?: string }).GEMINI_API_KEY = "test-gemini-api-key";
+        const provider = createGradingProvider("gemini");
+        expect(provider).toBeInstanceOf(GeminiGradingProvider);
+      } finally {
+        (env as { GEMINI_API_KEY?: string }).GEMINI_API_KEY = originalKey;
+      }
+    });
+
+    it("throws a clear error when 'gemini' is selected without a valid GEMINI_API_KEY", () => {
+      const originalKey = env.GEMINI_API_KEY;
+      try {
+        (env as { GEMINI_API_KEY?: string }).GEMINI_API_KEY = "";
+        expect(() => createGradingProvider("gemini")).toThrowError(
+          /GEMINI_API_KEY is required to initialize GeminiGradingProvider/,
+        );
+      } finally {
+        (env as { GEMINI_API_KEY?: string }).GEMINI_API_KEY = originalKey;
+      }
     });
 
     it("throws a clear error when an unsupported grading provider is requested", () => {
