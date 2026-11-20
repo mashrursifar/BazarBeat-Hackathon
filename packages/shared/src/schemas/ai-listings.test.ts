@@ -1,11 +1,21 @@
 import { describe, expect, it } from "vitest";
 
-import { AIErrorCode, AIProvider, CropGrade, ListingStatus } from "../enums.js";
+import {
+  AIErrorCode,
+  AIGradingProvider,
+  AIPriceProvider,
+  AIProvider,
+  CropGrade,
+  ListingStatus,
+} from "../enums.js";
 import {
   DEMO_LISTING_DURATION_PRESET_MINUTES,
   LISTING_DURATION_PRESETS,
   aiAssessmentSchema,
   aiErrorCodeSchema,
+  aiGradingProviderSchema,
+  aiPriceProviderSchema,
+  aiProviderSchema,
   assessmentResultSchema,
   classProbabilitiesSchema,
   createListingRequestSchema,
@@ -91,6 +101,13 @@ describe("shared AI and listing schemas", () => {
     expect(aiAssessmentSchema.safeParse({ ...assessment, provider: "unknown" }).success).toBe(
       false,
     );
+    expect(aiAssessmentSchema.safeParse({ ...assessment, provider: "gemini" }).success).toBe(true);
+    expect(AIGradingProvider.MOCK).toBe("mock");
+    expect(AIGradingProvider.GEMINI).toBe("gemini");
+    expect(aiGradingProviderSchema.safeParse("mock").success).toBe(true);
+    expect(aiGradingProviderSchema.safeParse("gemini").success).toBe(true);
+    expect(aiGradingProviderSchema.safeParse("baseline").success).toBe(false);
+    expect(aiProviderSchema.parse("gemini")).toBe("gemini");
   });
 
   it("validates price guidance and its ordered price range", () => {
@@ -98,6 +115,15 @@ describe("shared AI and listing schemas", () => {
     expect(
       priceGuidanceSchema.safeParse({ ...guidance, degraded: true, provider: "http" }).success,
     ).toBe(true);
+    expect(
+      priceGuidanceSchema.safeParse({ ...guidance, provider: "baseline" }).success,
+    ).toBe(true);
+    expect(AIPriceProvider.MOCK).toBe("mock");
+    expect(AIPriceProvider.BASELINE).toBe("baseline");
+    expect(aiPriceProviderSchema.safeParse("mock").success).toBe(true);
+    expect(aiPriceProviderSchema.safeParse("baseline").success).toBe(true);
+    expect(aiPriceProviderSchema.safeParse("gemini").success).toBe(false);
+    expect(aiProviderSchema.parse("baseline")).toBe("baseline");
     expect(priceGuidanceSchema.safeParse({ ...guidance, expectedPerKg: 800 }).success).toBe(false);
     expect(priceGuidanceSchema.safeParse({ ...guidance, highPerKg: 1.5 }).success).toBe(false);
     expect(priceTrendSchema.safeParse("FLAT").success).toBe(true);

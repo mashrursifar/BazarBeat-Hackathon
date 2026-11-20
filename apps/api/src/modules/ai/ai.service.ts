@@ -18,8 +18,8 @@ import { createGradingProvider, createPricePredictionProvider } from "./provider
 import { AiAssessmentRecord, type AiAssessmentRecordDoc } from "./ai-assessment-record.model.js";
 
 let customStorageProvider: StorageProvider | null = null;
-const gradingProvider = createGradingProvider();
-const pricePredictionProvider = createPricePredictionProvider();
+let gradingProvider: GradingProvider | null = null;
+let pricePredictionProvider: PricePredictionProvider | null = null;
 
 export function getStorageProvider(): StorageProvider {
   return customStorageProvider ?? createStorageProvider();
@@ -30,10 +30,16 @@ export function setStorageProvider(provider: StorageProvider | null): void {
 }
 
 export function getGradingProvider(): GradingProvider {
+  if (!gradingProvider) {
+    gradingProvider = createGradingProvider();
+  }
   return gradingProvider;
 }
 
 export function getPricePredictionProvider(): PricePredictionProvider {
+  if (!pricePredictionProvider) {
+    pricePredictionProvider = createPricePredictionProvider();
+  }
   return pricePredictionProvider;
 }
 
@@ -91,7 +97,7 @@ export async function assessCropQuality(
 
   // 3. Call Grading Provider
   const startTime = Date.now();
-  const assessment = await gradingProvider.assessQuality({
+  const assessment = await getGradingProvider().assessQuality({
     cropId: crop._id.toString(),
     images: processedImages.map((img) => img.buffer),
   });
@@ -178,7 +184,7 @@ export async function predictCropPrice(
   }
 
   const startTime = Date.now();
-  const guidance = await pricePredictionProvider.predictPrice(request, division);
+  const guidance = await getPricePredictionProvider().predictPrice(request, division);
   const durationMs = Date.now() - startTime;
 
   // Log provider, duration and model version only

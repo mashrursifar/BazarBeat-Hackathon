@@ -35,7 +35,7 @@ Do not chase coverage numbers by testing trivial code.
 4. **Auction sold:** short-duration listing receives a bid and closes → both dashboards and orders reflect the sale.
 5. **Auction unsold:** closes without qualifying bid → farmer sees relist prompt; inventory restored.
 6. **Role isolation:** farmer cannot open buyer routes and vice versa.
-Run with `DEMO_MODE=true` and `AI_PROVIDER=mock` for determinism. Use stable `data-testid` attributes on key controls.
+Run with `DEMO_MODE=true`, `AI_GRADING_PROVIDER=mock`, and `AI_PRICE_PROVIDER=mock` for determinism. Use stable `data-testid` attributes on key controls.
 
 ## 6. Test data and determinism
 - Factories/builders for users, listings, bids in test utilities; no shared mutable fixtures.

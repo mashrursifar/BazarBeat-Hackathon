@@ -1,11 +1,14 @@
 import pino from "pino";
 
 import { env } from "../config/env.js";
+import { redactSensitiveObject } from "./redact.js";
 
 export const REDACT_PATHS = [
   "req.headers.authorization",
   "req.headers.cookie",
   "res.headers['set-cookie']",
+  "req.headers['x-goog-api-key']",
+  "req.headers['x-api-key']",
   "password",
   "token",
   "refreshToken",
@@ -19,6 +22,9 @@ export const REDACT_PATHS = [
   "JWT_REFRESH_SECRET",
   "CLOUDINARY_API_SECRET",
   "CLOUDINARY_URL",
+  "GEMINI_API_KEY",
+  "geminiApiKey",
+  "apiKey",
   "*.password",
   "*.token",
   "*.refreshToken",
@@ -26,6 +32,9 @@ export const REDACT_PATHS = [
   "*.phone",
   "*.phoneNumber",
   "*.secret",
+  "*.GEMINI_API_KEY",
+  "*.geminiApiKey",
+  "*.apiKey",
 ];
 
 export const logger = pino({
@@ -37,5 +46,12 @@ export const logger = pino({
   },
   formatters: {
     level: (label) => ({ level: label }),
+    log: (obj) => redactSensitiveObject(obj),
+  },
+  serializers: {
+    err: (err) => {
+      const serialized = pino.stdSerializers.err(err as Error);
+      return redactSensitiveObject(serialized);
+    },
   },
 });

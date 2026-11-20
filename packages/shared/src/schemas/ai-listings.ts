@@ -2,6 +2,8 @@ import { z } from "zod";
 
 import {
   AIErrorCode,
+  AIGradingProvider,
+  AIPriceProvider,
   AIProvider,
   CropGrade,
   GradingReasonCode,
@@ -14,7 +16,14 @@ const probabilitySchema = z.number().min(0).max(1);
 const poishaSchema = z.number().int().positive().max(Number.MAX_SAFE_INTEGER);
 
 export const cropGradeSchema = z.enum([CropGrade.A, CropGrade.B, CropGrade.C]);
-export const aiProviderSchema = z.enum([AIProvider.MOCK, AIProvider.HTTP]);
+export const aiGradingProviderSchema = z.enum([AIGradingProvider.MOCK, AIGradingProvider.GEMINI]);
+export const aiPriceProviderSchema = z.enum([AIPriceProvider.MOCK, AIPriceProvider.BASELINE]);
+export const aiProviderSchema = z.enum([
+  AIProvider.MOCK,
+  AIProvider.HTTP,
+  AIProvider.GEMINI,
+  AIProvider.BASELINE,
+]);
 export const aiErrorCodeSchema = z.enum([
   AIErrorCode.CROP_MISMATCH,
   AIErrorCode.GRADE_UNAVAILABLE,

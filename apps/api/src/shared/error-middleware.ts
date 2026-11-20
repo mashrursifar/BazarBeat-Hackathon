@@ -2,6 +2,7 @@ import type { ErrorRequestHandler } from "express";
 
 import { AppError } from "./errors.js";
 import { logger } from "./logger.js";
+import { redactSensitiveObject, redactSensitiveText } from "./redact.js";
 
 export const errorMiddleware: ErrorRequestHandler = (error: unknown, _req, res, next): void => {
   if (res.headersSent) {
@@ -12,8 +13,8 @@ export const errorMiddleware: ErrorRequestHandler = (error: unknown, _req, res, 
     res.status(error.statusCode).json({
       error: {
         code: error.code,
-        message: error.message,
-        ...(error.details !== undefined ? { details: error.details } : {}),
+        message: redactSensitiveText(error.message),
+        ...(error.details !== undefined ? { details: redactSensitiveObject(error.details) } : {}),
       },
     });
     return;

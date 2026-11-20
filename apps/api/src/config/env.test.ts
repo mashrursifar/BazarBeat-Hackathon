@@ -77,6 +77,97 @@ describe("environment validation", () => {
     }
   });
 
+  describe("AI provider split configuration (Task G1)", () => {
+    it("defaults to mock providers and default Gemini parameters", () => {
+      const parsed = envSchema.parse({});
+      expect(parsed.AI_GRADING_PROVIDER).toBe("mock");
+      expect(parsed.AI_PRICE_PROVIDER).toBe("mock");
+      expect(parsed.GEMINI_MODEL).toBe("gemini-2.5-flash");
+      expect(parsed.GEMINI_GRADE_SAMPLES).toBe(3);
+      expect(parsed.GEMINI_TIMEOUT_MS).toBe(10_000);
+      expect(parsed.AI_DAILY_ASSESSMENTS_PER_USER).toBe(20);
+    });
+
+    it("rejects unknown values for AI_GRADING_PROVIDER", () => {
+      const result = envSchema.safeParse({ AI_GRADING_PROVIDER: "http" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0]?.path).toContain("AI_GRADING_PROVIDER");
+      }
+    });
+
+    it("rejects unknown values for AI_PRICE_PROVIDER", () => {
+      const result = envSchema.safeParse({ AI_PRICE_PROVIDER: "gemini" });
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.issues[0]?.path).toContain("AI_PRICE_PROVIDER");
+      }
+    });
+
+    it("rejects AI_GRADING_PROVIDER=gemini without GEMINI_API_KEY across all environments", () => {
+      const devMissing = envSchema.safeParse({
+        NODE_ENV: "development",
+        AI_GRADING_PROVIDER: "gemini",
+      });
+      expect(devMissing.success).toBe(false);
+      if (!devMissing.success) {
+        expect(devMissing.error.issues[0]?.path).toContain("GEMINI_API_KEY");
+        expect(devMissing.error.issues[0]?.message).toContain("GEMINI_API_KEY is required");
+      }
+
+      const emptyKey = envSchema.safeParse({
+        AI_GRADING_PROVIDER: "gemini",
+        GEMINI_API_KEY: "   ",
+      });
+      expect(emptyKey.success).toBe(false);
+
+      const placeholderKey = envSchema.safeParse({
+        AI_GRADING_PROVIDER: "gemini",
+        GEMINI_API_KEY: "replace-with-your-key",
+      });
+      expect(placeholderKey.success).toBe(false);
+    });
+
+    it("accepts AI_GRADING_PROVIDER=gemini when a valid GEMINI_API_KEY is provided", () => {
+      const result = envSchema.safeParse({
+        AI_GRADING_PROVIDER: "gemini",
+        GEMINI_API_KEY: "AIzaSyValidGeminiKeyForTest1234567890",
+        GEMINI_MODEL: "gemini-2.5-flash",
+        GEMINI_GRADE_SAMPLES: 4,
+        GEMINI_TIMEOUT_MS: 15_000,
+        AI_DAILY_ASSESSMENTS_PER_USER: 30,
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.AI_GRADING_PROVIDER).toBe("gemini");
+        expect(result.data.GEMINI_API_KEY).toBe("AIzaSyValidGeminiKeyForTest1234567890");
+        expect(result.data.GEMINI_MODEL).toBe("gemini-2.5-flash");
+        expect(result.data.GEMINI_GRADE_SAMPLES).toBe(4);
+        expect(result.data.GEMINI_TIMEOUT_MS).toBe(15_000);
+        expect(result.data.AI_DAILY_ASSESSMENTS_PER_USER).toBe(30);
+      }
+    });
+
+    it("accepts AI_PRICE_PROVIDER=baseline", () => {
+      const result = envSchema.safeParse({
+        AI_PRICE_PROVIDER: "baseline",
+      });
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.data.AI_PRICE_PROVIDER).toBe("baseline");
+      }
+    });
+
+    it("rejects non-positive sample count, timeout, and daily cap", () => {
+      expect(envSchema.safeParse({ GEMINI_GRADE_SAMPLES: 0 }).success).toBe(false);
+      expect(envSchema.safeParse({ GEMINI_GRADE_SAMPLES: -1 }).success).toBe(false);
+      expect(envSchema.safeParse({ GEMINI_TIMEOUT_MS: 0 }).success).toBe(false);
+      expect(envSchema.safeParse({ GEMINI_TIMEOUT_MS: -500 }).success).toBe(false);
+      expect(envSchema.safeParse({ AI_DAILY_ASSESSMENTS_PER_USER: 0 }).success).toBe(false);
+      expect(envSchema.safeParse({ AI_DAILY_ASSESSMENTS_PER_USER: -5 }).success).toBe(false);
+    });
+  });
+
   describe("parseTrustProxy helper", () => {
     it("parses falsy values to boolean false", () => {
       expect(parseTrustProxy(undefined)).toBe(false);

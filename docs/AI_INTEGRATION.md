@@ -6,19 +6,20 @@ Two AI capabilities: **quality grading** from photos and **price prediction**. B
 **GradingProvider.assess(input)** — input: crop slug, 1–4 image buffers. Output: grade A|B|C, confidence 0–1, class probabilities, quality notes (short plain-language reasons), cropMatch flag, model version, provider name.
 **PricePredictionProvider.predict(input)** — input: crop slug, grade, quantityKg, division/district, date, optional recent market rows. Output: low, expected, high per kg (poisha), trend UP|FLAT|DOWN, confidence, explanation bullets, model version, provider name.
 
-Provider selection: `AI_PROVIDER=mock` (default) or `http` (calls the external model service). The API never imports model-specific code outside the provider file.
+Provider selection (split configuration per Task G1 / D-47):
+- `AI_GRADING_PROVIDER=mock` (default) or `gemini` (Google Gemini multimodal model). Setting back to `mock` is the operational kill switch.
+- `AI_PRICE_PROVIDER=mock` (default) or `baseline` (statistical baseline over MarketPrice history).
+The API never imports provider-specific code outside the provider modules. Boot fails fast if `AI_GRADING_PROVIDER=gemini` is selected without a valid `GEMINI_API_KEY`.
 
-## 2. Mock providers (default, always available)
+## 2. Mock providers (default, always available fallback and kill switch)
 - **Grading mock:** deterministic from an image hash so the same photo always gives the same grade; distribution roughly 30% A, 50% B, 20% C; a "demo override" via seeded sample photos named by grade so the live demo can show all three grades reliably.
 - **Price mock:** base price per crop per division from the seeded MarketPrice history, multiplied by a grade factor (A ≈ +10%, B ≈ baseline, C ≈ −15%), a small seasonal factor by month, and a trend computed from the last 7 vs. previous 7 days. Low/high = expected ∓ a band that widens when data is sparse.
-Mock outputs must be labelled in the UI as "AI estimate" like real ones, but the API response includes `provider: mock` so we never misrepresent it in the pitch.
+Mock outputs are labelled in the UI as "AI estimate" like real ones, but the API response includes `provider: mock` so we never misrepresent it in the pitch.
 
-## 3. Real model plan (recommended path)
-Since the team has ML/NLP experience:
-- **Grading:** a small image classifier (transfer learning, e.g. a lightweight CNN/ViT) trained per crop on a public or self-collected dataset, with a fourth "not this crop / unusable" outcome. Served as a tiny Python HTTP service (FastAPI) with one endpoint taking images and returning the output contract above.
-- **Price prediction:** a gradient-boosted or simple regression model over historical price data (government agricultural marketing price bulletins if obtainable, plus platform data), features: crop, region, month, grade, recent moving averages. Same HTTP service, second endpoint.
-- The Node API calls the service through the `http` provider with a timeout (8s) and one retry; on failure it falls back to the mock provider **and marks the result `degraded: true`** so the UI can show a gentle notice.
-- Why only 5 crops: it bounds the data collection and model training scope — keep this explanation in the pitch.
+## 3. Real model architecture (Phase 9 Gemini alternative)
+- **Grading (Task G3):** Hosted multimodal model (Google Gemini via official GenAI SDK). The API sends EXIF-stripped produce photos plus the crop's rubric from the catalog and gets back structured JSON constrained to the shared zod schema. Confidence is agreement-based across `GEMINI_GRADE_SAMPLES` independent samples (D-45). Circuit breaker opens on repeated errors and safely falls back to the mock provider with `degraded: true` (D-42).
+- **Price guidance (Task G5):** Statistical baseline pure functions over MarketPrice history (D-44): seasonal average plus recent moving averages, grade multipliers, and confidence bands that widen when observations are sparse.
+- **Config & safety:** Configured via `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_GRADE_SAMPLES`, `GEMINI_TIMEOUT_MS`, and `AI_DAILY_ASSESSMENTS_PER_USER`. Strict credential hygiene guarantees the API key never appears in logs, error payloads, or responses.
 
 ## 4. Image handling flow
 1. Client compresses each image (max ~1600px, quality ~0.8).
@@ -37,8 +38,10 @@ Natural light, plain background, show 3+ pieces together plus one close-up, no f
 - Do not claim accuracy figures that were not measured. If a model is evaluated, record the metrics in `docs/AI_EVALUATION.md` (created when a real model exists) and cite only those.
 
 ## 7. Operational rules
-- AI calls are rate limited per user and logged with duration, provider, and model version (not images).
-- Timeouts and fallbacks are mandatory; the listing flow must never hard-fail due to AI downtime.
+- AI calls are rate limited per user per minute (10/min) and capped daily per user (`AI_DAILY_ASSESSMENTS_PER_USER=20`) to bound external API costs and abuse.
+- AI calls are logged with duration, provider, and model version (never raw image buffers or keys).
+- Timeouts (`GEMINI_TIMEOUT_MS`) and circuit-breaker fallbacks are mandatory; the listing flow must never hard-fail due to AI downtime.
+- Credential hygiene: `GEMINI_API_KEY` is strictly redacted from all structured logs, error responses, and telemetry.
 - Model version strings are stored with every assessment and prediction for traceability.
 
 ## 8. Testing

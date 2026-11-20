@@ -20,9 +20,25 @@ export const CropGrade = {
 
 export type CropGrade = (typeof CropGrade)[keyof typeof CropGrade];
 
+export const AIGradingProvider = {
+  MOCK: "mock",
+  GEMINI: "gemini",
+} as const;
+
+export type AIGradingProvider = (typeof AIGradingProvider)[keyof typeof AIGradingProvider];
+
+export const AIPriceProvider = {
+  MOCK: "mock",
+  BASELINE: "baseline",
+} as const;
+
+export type AIPriceProvider = (typeof AIPriceProvider)[keyof typeof AIPriceProvider];
+
 export const AIProvider = {
   MOCK: "mock",
   HTTP: "http",
+  GEMINI: "gemini",
+  BASELINE: "baseline",
 } as const;
 
 export type AIProvider = (typeof AIProvider)[keyof typeof AIProvider];

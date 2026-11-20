@@ -11,7 +11,12 @@ export interface HealthCheckResponse {
     status: "ok" | "degraded";
     database: string | { status: string; latencyMs: number | null };
     storage?: { status: string; provider: string };
-    ai?: { status: string; provider: string };
+    ai?: {
+      status: string;
+      provider: string;
+      gradingProvider?: string;
+      priceProvider?: string;
+    };
     version?: string;
     uptime?: number;
     timestamp?: string;
@@ -90,7 +95,9 @@ export async function healthCheckController(
       },
       ai: {
         status: aiStatus,
-        provider: env.AI_PROVIDER,
+        provider: env.AI_GRADING_PROVIDER,
+        gradingProvider: env.AI_GRADING_PROVIDER,
+        priceProvider: env.AI_PRICE_PROVIDER,
       },
       uptime: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),

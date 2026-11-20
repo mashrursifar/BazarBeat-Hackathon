@@ -15,7 +15,14 @@ export const envSchema = z.object({
   JWT_REFRESH_SECRET: z.string().default("local-development-refresh-secret-change-before-deploy"),
   COOKIE_DOMAIN: z.string().default(""),
   CORS_ORIGINS: z.string().default("http://localhost:5173"),
-  AI_PROVIDER: z.enum(["mock", "http"]).default("mock"),
+  // AI Provider split configuration (Task G1: Phase 9 Gemini alternative)
+  AI_GRADING_PROVIDER: z.enum(["mock", "gemini"]).default("mock"),
+  AI_PRICE_PROVIDER: z.enum(["mock", "baseline"]).default("mock"),
+  GEMINI_API_KEY: z.string().optional(),
+  GEMINI_MODEL: z.string().trim().min(1).default("gemini-2.5-flash"),
+  GEMINI_GRADE_SAMPLES: z.coerce.number().int().positive().default(3),
+  GEMINI_TIMEOUT_MS: z.coerce.number().int().positive().default(10_000),
+  AI_DAILY_ASSESSMENTS_PER_USER: z.coerce.number().int().positive().default(20),
   AI_SERVICE_URL: z.string().url().default("http://localhost:8000"),
   AI_SERVICE_KEY: z.string().default("local-mock-key"),
   STORAGE_PROVIDER: z.enum(["local", "cloud"]).default("local"),
@@ -42,6 +49,21 @@ export const envSchema = z.object({
   RATE_LIMIT_AUTH_PER_MIN: z.coerce.number().int().positive().default(10),
   GIT_SHA: z.string().default("dev"),
 }).superRefine((values, context) => {
+  // Validation (Task G1): Boot fails if gemini is selected without an API key
+  if (values.AI_GRADING_PROVIDER === "gemini") {
+    if (
+      !values.GEMINI_API_KEY ||
+      values.GEMINI_API_KEY.trim().length === 0 ||
+      values.GEMINI_API_KEY.startsWith("replace-with-")
+    ) {
+      context.addIssue({
+        code: "custom",
+        path: ["GEMINI_API_KEY"],
+        message: "GEMINI_API_KEY is required when AI_GRADING_PROVIDER is 'gemini'",
+      });
+    }
+  }
+
   if (values.NODE_ENV !== "production") return;
   for (const key of ["JWT_ACCESS_SECRET", "JWT_REFRESH_SECRET"] as const) {
     const secret = values[key];
@@ -60,15 +82,6 @@ export const envSchema = z.object({
   }
   if (values.COOKIE_DOMAIN.length === 0 || values.COOKIE_DOMAIN === "localhost") {
     context.addIssue({ code: "custom", path: ["COOKIE_DOMAIN"], message: "Production must configure COOKIE_DOMAIN" });
-  }
-  if (values.AI_PROVIDER === "http") {
-    if (
-      !values.AI_SERVICE_KEY ||
-      values.AI_SERVICE_KEY === "local-mock-key" ||
-      values.AI_SERVICE_KEY.startsWith("replace-with-")
-    ) {
-      context.addIssue({ code: "custom", path: ["AI_SERVICE_KEY"], message: "Production HTTP AI provider requires a valid AI_SERVICE_KEY" });
-    }
   }
   if (values.STORAGE_PROVIDER === "cloud") {
     const hasS3Config = Boolean(

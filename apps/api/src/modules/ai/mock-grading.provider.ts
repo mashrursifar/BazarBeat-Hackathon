@@ -24,6 +24,11 @@ export class MockGradingProvider implements GradingProvider {
     this.registry.set(hash, grade);
   }
 
+  /** Retrieve registered grade for a hash (test utility). */
+  public getRegisteredGrade(hash: string): AssessmentResult["grade"] | undefined {
+    return this.registry.get(hash);
+  }
+
   /** Set a one-off override for the next assessment (useful for testing edge cases). */
   public setNextOverride(override: Partial<AssessmentResult> | null): void {
     this.nextOverride = override;

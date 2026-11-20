@@ -106,8 +106,14 @@ Multipart upload through the storage adapter; validated for type and size; image
 ## 8. Environments and config
 
 Required variable names (values in `.env`, never committed):
-`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`, `CORS_ORIGINS`, `AI_PROVIDER` (mock|http), `AI_SERVICE_URL`, `AI_SERVICE_KEY`, `STORAGE_PROVIDER` (local|cloud), `UPLOAD_DIR`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION`, `S3_PUBLIC_URL`, `S3_FORCE_PATH_STYLE`, `DEMO_MODE` (true|false), `PLATFORM_FEE_BPS`, `VITE_API_URL`, `TRUST_PROXY`, `SERVE_WEB`, `WEB_DIST_PATH`, `RATE_LIMIT_AUTH_PER_MIN`, `GIT_SHA`.
+`NODE_ENV`, `PORT`, `MONGODB_URI`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`, `COOKIE_DOMAIN`, `CORS_ORIGINS`, `AI_GRADING_PROVIDER` (mock|gemini), `AI_PRICE_PROVIDER` (mock|baseline), `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_GRADE_SAMPLES`, `GEMINI_TIMEOUT_MS`, `AI_DAILY_ASSESSMENTS_PER_USER`, `STORAGE_PROVIDER` (local|cloud), `UPLOAD_DIR`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_REGION`, `S3_PUBLIC_URL`, `S3_FORCE_PATH_STYLE`, `DEMO_MODE` (true|false), `PLATFORM_FEE_BPS`, `VITE_API_URL`, `TRUST_PROXY`, `SERVE_WEB`, `WEB_DIST_PATH`, `RATE_LIMIT_AUTH_PER_MIN`, `GIT_SHA`.
 Maintain `.env.example` with every name and a safe placeholder.
+
+AI provider configuration & secret hygiene (Task G1):
+
+- **Split provider architecture:** Single `AI_PROVIDER` is split into `AI_GRADING_PROVIDER` (`mock` | `gemini`) and `AI_PRICE_PROVIDER` (`mock` | `baseline`). Setting `AI_GRADING_PROVIDER=mock` serves as the offline fallback and operational kill switch.
+- **Fail-fast boot validation:** Boot immediately fails across all environments if `AI_GRADING_PROVIDER=gemini` is selected without a valid `GEMINI_API_KEY` (missing, blank, or placeholder).
+- **Strict credential redaction:** The Gemini API key and all sensitive authentication tokens are strictly redacted from structured logs (Pino redaction paths, formatters, and error serializer), Express error middleware responses, and deep health check telemetry. Keys never appear in logs, error payloads, or API responses.
 
 Production hardening and single-service deployment (Task 9.1):
 

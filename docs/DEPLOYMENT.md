@@ -122,7 +122,9 @@ If you prefer Render's native Node environment:
 | `CLOUDINARY_URL` | `cloudinary://<key>:<secret>@<cloud>` | Your Cloudinary credentials |
 | `JWT_ACCESS_SECRET` | *(Random 32+ character string)* | Secret for auth access tokens (must not be default) |
 | `JWT_REFRESH_SECRET` | *(Random 32+ character distinct string)* | Secret for auth refresh tokens (must differ from access) |
-| `AI_PROVIDER` | `mock` | Default offline mock adapter (until Part C real AI) |
+| `AI_GRADING_PROVIDER` | `mock` | Grading provider (`mock` or `gemini`) |
+| `AI_PRICE_PROVIDER` | `mock` | Price guidance provider (`mock` or `baseline`) |
+| `GEMINI_API_KEY` | *(Secret from Google AI Studio)* | Required when `AI_GRADING_PROVIDER=gemini` |
 | `RATE_LIMIT_AUTH_PER_MIN` | `60` | Relaxed auth rate limit to avoid venue IP lockout (Decision D-41) |
 | `DEMO_MODE` | `false` | `true` enables shortened 2-minute auction timers |
 

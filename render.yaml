@@ -14,7 +14,9 @@ services:
         value: "true"
       - key: STORAGE_PROVIDER
         value: cloud
-      - key: AI_PROVIDER
+      - key: AI_GRADING_PROVIDER
+        value: mock
+      - key: AI_PRICE_PROVIDER
         value: mock
       - key: DEMO_MODE
         value: "false"
