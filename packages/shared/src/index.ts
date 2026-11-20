@@ -14,3 +14,5 @@ export * from "./dashboard-helpers.js";
 export * from "./fixtures/dashboard-golden-dataset.js";
 export * from "./events.js";
 export * from "./schemas/index.js";
+export { z } from "zod";
+

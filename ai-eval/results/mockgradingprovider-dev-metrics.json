@@ -1,0 +1,97 @@
+{
+  "provider": "MockGradingProvider",
+  "split": "dev",
+  "evaluatedAt": "2026-11-20T08:49:26.050Z",
+  "totalSamples": 61,
+  "standardSamplesCount": 45,
+  "negativeSamplesCount": 12,
+  "adversarialSamplesCount": 4,
+  "overallAccuracy": 0.1633,
+  "macroF1": 0.1546,
+  "perClass": {
+    "A": {
+      "precision": 0.0909,
+      "recall": 0.0667,
+      "f1": 0.0769,
+      "support": 15
+    },
+    "B": {
+      "precision": 0.1739,
+      "recall": 0.25,
+      "f1": 0.2051,
+      "support": 16
+    },
+    "C": {
+      "precision": 0.2,
+      "recall": 0.1667,
+      "f1": 0.1818,
+      "support": 18
+    }
+  },
+  "confusionMatrix": {
+    "A": {
+      "A": 1,
+      "B": 11,
+      "C": 3,
+      "otherOrNull": 0
+    },
+    "B": {
+      "A": 3,
+      "B": 4,
+      "C": 9,
+      "otherOrNull": 0
+    },
+    "C": {
+      "A": 7,
+      "B": 8,
+      "C": 3,
+      "otherOrNull": 0
+    }
+  },
+  "perCrop": {
+    "onion": {
+      "crop": "onion",
+      "total": 10,
+      "correct": 0,
+      "accuracy": 0,
+      "macroF1": 0
+    },
+    "green-chilli": {
+      "crop": "green-chilli",
+      "total": 10,
+      "correct": 0,
+      "accuracy": 0,
+      "macroF1": 0
+    },
+    "bitter-gourd": {
+      "crop": "bitter-gourd",
+      "total": 10,
+      "correct": 2,
+      "accuracy": 0.2,
+      "macroF1": 0.1693
+    },
+    "eggplant": {
+      "crop": "eggplant",
+      "total": 9,
+      "correct": 2,
+      "accuracy": 0.2222,
+      "macroF1": 0.2444
+    },
+    "potato": {
+      "crop": "potato",
+      "total": 10,
+      "correct": 4,
+      "accuracy": 0.4,
+      "macroF1": 0.3152
+    }
+  },
+  "cropMismatchDetectionRate": 0,
+  "adversarialPassRate": 0.5,
+  "latency": {
+    "minMs": 0.03,
+    "maxMs": 3.65,
+    "meanMs": 0.13,
+    "medianMs": 0.06,
+    "p95Ms": 0.23
+  }
+}

@@ -1,0 +1,1537 @@
+{
+  "version": "1.0.0",
+  "description": "BazarBeat Produce Quality Grading Evaluation Dataset with 5 crops × 3 grades × 5 samples (75 produce specimens from apps/api/src/seed/assets/samples), 20 negative specimens, and 8 adversarial specimens.",
+  "entries": [
+    {
+      "id": "onion-dev-grade-a-01",
+      "imagePath": "images/dev/onion-dev-a-1.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (onion/A.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_a"
+      ],
+      "notes": "Onion Grade A specimen #1 (dev split #1)"
+    },
+    {
+      "id": "onion-dev-grade-a-02",
+      "imagePath": "images/dev/onion-dev-a-2.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (onion/A.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_a"
+      ],
+      "notes": "Onion Grade A specimen #2 (dev split #2)"
+    },
+    {
+      "id": "onion-dev-grade-a-03",
+      "imagePath": "images/dev/onion-dev-a-3.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (onion/A.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_a"
+      ],
+      "notes": "Onion Grade A specimen #3 (dev split #3)"
+    },
+    {
+      "id": "onion-test-grade-a-01",
+      "imagePath": "images/test/onion-test-a-1.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (onion/A.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_a"
+      ],
+      "notes": "Onion Grade A specimen #4 (test split #1)"
+    },
+    {
+      "id": "onion-test-grade-a-02",
+      "imagePath": "images/test/onion-test-a-2.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (onion/A.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_a"
+      ],
+      "notes": "Onion Grade A specimen #5 (test split #2)"
+    },
+    {
+      "id": "onion-dev-grade-b-01",
+      "imagePath": "images/dev/onion-dev-b-1.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (onion/B.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_b"
+      ],
+      "notes": "Onion Grade B specimen #1 (dev split #1)"
+    },
+    {
+      "id": "onion-dev-grade-b-02",
+      "imagePath": "images/dev/onion-dev-b-2.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (onion/B.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_b"
+      ],
+      "notes": "Onion Grade B specimen #2 (dev split #2)"
+    },
+    {
+      "id": "onion-dev-grade-b-03",
+      "imagePath": "images/dev/onion-dev-b-3.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (onion/B.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_b"
+      ],
+      "notes": "Onion Grade B specimen #3 (dev split #3)"
+    },
+    {
+      "id": "onion-test-grade-b-01",
+      "imagePath": "images/test/onion-test-b-1.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (onion/B.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_b"
+      ],
+      "notes": "Onion Grade B specimen #4 (test split #1)"
+    },
+    {
+      "id": "onion-test-grade-b-02",
+      "imagePath": "images/test/onion-test-b-2.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (onion/B.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_b"
+      ],
+      "notes": "Onion Grade B specimen #5 (test split #2)"
+    },
+    {
+      "id": "onion-dev-grade-c-01",
+      "imagePath": "images/dev/onion-dev-c-1.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (onion/C.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_c"
+      ],
+      "notes": "Onion Grade C specimen #1 (dev split #1)"
+    },
+    {
+      "id": "onion-dev-grade-c-02",
+      "imagePath": "images/dev/onion-dev-c-2.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (onion/C.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_c"
+      ],
+      "notes": "Onion Grade C specimen #2 (dev split #2)"
+    },
+    {
+      "id": "onion-dev-grade-c-03",
+      "imagePath": "images/dev/onion-dev-c-3.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (onion/C.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_c"
+      ],
+      "notes": "Onion Grade C specimen #3 (dev split #3)"
+    },
+    {
+      "id": "onion-test-grade-c-01",
+      "imagePath": "images/test/onion-test-c-1.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (onion/C.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_c"
+      ],
+      "notes": "Onion Grade C specimen #4 (test split #1)"
+    },
+    {
+      "id": "onion-test-grade-c-02",
+      "imagePath": "images/test/onion-test-c-2.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (onion/C.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "onion",
+        "grade_c"
+      ],
+      "notes": "Onion Grade C specimen #5 (test split #2)"
+    },
+    {
+      "id": "green-chilli-dev-grade-a-01",
+      "imagePath": "images/dev/green-chilli-dev-a-1.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (green-chilli/A.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_a"
+      ],
+      "notes": "Green Chilli Grade A specimen #1 (dev split #1)"
+    },
+    {
+      "id": "green-chilli-dev-grade-a-02",
+      "imagePath": "images/dev/green-chilli-dev-a-2.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (green-chilli/A.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_a"
+      ],
+      "notes": "Green Chilli Grade A specimen #2 (dev split #2)"
+    },
+    {
+      "id": "green-chilli-dev-grade-a-03",
+      "imagePath": "images/dev/green-chilli-dev-a-3.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (green-chilli/A.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_a"
+      ],
+      "notes": "Green Chilli Grade A specimen #3 (dev split #3)"
+    },
+    {
+      "id": "green-chilli-test-grade-a-01",
+      "imagePath": "images/test/green-chilli-test-a-1.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (green-chilli/A.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_a"
+      ],
+      "notes": "Green Chilli Grade A specimen #4 (test split #1)"
+    },
+    {
+      "id": "green-chilli-test-grade-a-02",
+      "imagePath": "images/test/green-chilli-test-a-2.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (green-chilli/A.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_a"
+      ],
+      "notes": "Green Chilli Grade A specimen #5 (test split #2)"
+    },
+    {
+      "id": "green-chilli-dev-grade-b-01",
+      "imagePath": "images/dev/green-chilli-dev-b-1.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (green-chilli/B.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_b"
+      ],
+      "notes": "Green Chilli Grade B specimen #1 (dev split #1)"
+    },
+    {
+      "id": "green-chilli-dev-grade-b-02",
+      "imagePath": "images/dev/green-chilli-dev-b-2.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (green-chilli/B.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_b"
+      ],
+      "notes": "Green Chilli Grade B specimen #2 (dev split #2)"
+    },
+    {
+      "id": "green-chilli-dev-grade-b-03",
+      "imagePath": "images/dev/green-chilli-dev-b-3.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (green-chilli/B.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_b"
+      ],
+      "notes": "Green Chilli Grade B specimen #3 (dev split #3)"
+    },
+    {
+      "id": "green-chilli-test-grade-b-01",
+      "imagePath": "images/test/green-chilli-test-b-1.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (green-chilli/B.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_b"
+      ],
+      "notes": "Green Chilli Grade B specimen #4 (test split #1)"
+    },
+    {
+      "id": "green-chilli-test-grade-b-02",
+      "imagePath": "images/test/green-chilli-test-b-2.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (green-chilli/B.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_b"
+      ],
+      "notes": "Green Chilli Grade B specimen #5 (test split #2)"
+    },
+    {
+      "id": "green-chilli-dev-grade-c-01",
+      "imagePath": "images/dev/green-chilli-dev-c-1.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (green-chilli/C.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_c"
+      ],
+      "notes": "Green Chilli Grade C specimen #1 (dev split #1)"
+    },
+    {
+      "id": "green-chilli-dev-grade-c-02",
+      "imagePath": "images/dev/green-chilli-dev-c-2.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (green-chilli/C.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_c"
+      ],
+      "notes": "Green Chilli Grade C specimen #2 (dev split #2)"
+    },
+    {
+      "id": "green-chilli-dev-grade-c-03",
+      "imagePath": "images/dev/green-chilli-dev-c-3.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (green-chilli/C.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_c"
+      ],
+      "notes": "Green Chilli Grade C specimen #3 (dev split #3)"
+    },
+    {
+      "id": "green-chilli-test-grade-c-01",
+      "imagePath": "images/test/green-chilli-test-c-1.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (green-chilli/C.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_c"
+      ],
+      "notes": "Green Chilli Grade C specimen #4 (test split #1)"
+    },
+    {
+      "id": "green-chilli-test-grade-c-02",
+      "imagePath": "images/test/green-chilli-test-c-2.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (green-chilli/C.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "green-chilli",
+        "grade_c"
+      ],
+      "notes": "Green Chilli Grade C specimen #5 (test split #2)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-a-01",
+      "imagePath": "images/dev/bitter-gourd-dev-a-1.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (bitter-gourd/A.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_a"
+      ],
+      "notes": "Bitter Gourd Grade A specimen #1 (dev split #1)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-a-02",
+      "imagePath": "images/dev/bitter-gourd-dev-a-2.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (bitter-gourd/A.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_a"
+      ],
+      "notes": "Bitter Gourd Grade A specimen #2 (dev split #2)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-a-03",
+      "imagePath": "images/dev/bitter-gourd-dev-a-3.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (bitter-gourd/A.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_a"
+      ],
+      "notes": "Bitter Gourd Grade A specimen #3 (dev split #3)"
+    },
+    {
+      "id": "bitter-gourd-test-grade-a-01",
+      "imagePath": "images/test/bitter-gourd-test-a-1.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (bitter-gourd/A.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_a"
+      ],
+      "notes": "Bitter Gourd Grade A specimen #4 (test split #1)"
+    },
+    {
+      "id": "bitter-gourd-test-grade-a-02",
+      "imagePath": "images/test/bitter-gourd-test-a-2.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (bitter-gourd/A.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_a"
+      ],
+      "notes": "Bitter Gourd Grade A specimen #5 (test split #2)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-b-01",
+      "imagePath": "images/dev/bitter-gourd-dev-b-1.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (bitter-gourd/B.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_b"
+      ],
+      "notes": "Bitter Gourd Grade B specimen #1 (dev split #1)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-b-02",
+      "imagePath": "images/dev/bitter-gourd-dev-b-2.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (bitter-gourd/B.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_b"
+      ],
+      "notes": "Bitter Gourd Grade B specimen #2 (dev split #2)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-b-03",
+      "imagePath": "images/dev/bitter-gourd-dev-b-3.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (bitter-gourd/B.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_b"
+      ],
+      "notes": "Bitter Gourd Grade B specimen #3 (dev split #3)"
+    },
+    {
+      "id": "bitter-gourd-test-grade-b-01",
+      "imagePath": "images/test/bitter-gourd-test-b-1.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (bitter-gourd/B.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_b"
+      ],
+      "notes": "Bitter Gourd Grade B specimen #4 (test split #1)"
+    },
+    {
+      "id": "bitter-gourd-test-grade-b-02",
+      "imagePath": "images/test/bitter-gourd-test-b-2.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (bitter-gourd/B.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_b"
+      ],
+      "notes": "Bitter Gourd Grade B specimen #5 (test split #2)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-c-01",
+      "imagePath": "images/dev/bitter-gourd-dev-c-1.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (bitter-gourd/C.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_c"
+      ],
+      "notes": "Bitter Gourd Grade C specimen #1 (dev split #1)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-c-02",
+      "imagePath": "images/dev/bitter-gourd-dev-c-2.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (bitter-gourd/C.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_c"
+      ],
+      "notes": "Bitter Gourd Grade C specimen #2 (dev split #2)"
+    },
+    {
+      "id": "bitter-gourd-dev-grade-c-03",
+      "imagePath": "images/dev/bitter-gourd-dev-c-3.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (bitter-gourd/C.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_c"
+      ],
+      "notes": "Bitter Gourd Grade C specimen #3 (dev split #3)"
+    },
+    {
+      "id": "bitter-gourd-test-grade-c-01",
+      "imagePath": "images/test/bitter-gourd-test-c-1.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (bitter-gourd/C.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_c"
+      ],
+      "notes": "Bitter Gourd Grade C specimen #4 (test split #1)"
+    },
+    {
+      "id": "bitter-gourd-test-grade-c-02",
+      "imagePath": "images/test/bitter-gourd-test-c-2.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (bitter-gourd/C.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "bitter-gourd",
+        "grade_c"
+      ],
+      "notes": "Bitter Gourd Grade C specimen #5 (test split #2)"
+    },
+    {
+      "id": "eggplant-dev-grade-a-01",
+      "imagePath": "images/dev/eggplant-dev-a-1.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (eggplant/A.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_a"
+      ],
+      "notes": "Eggplant Grade A specimen #1 (dev split #1)"
+    },
+    {
+      "id": "eggplant-dev-grade-a-02",
+      "imagePath": "images/dev/eggplant-dev-a-2.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (eggplant/A.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_a"
+      ],
+      "notes": "Eggplant Grade A specimen #2 (dev split #2)"
+    },
+    {
+      "id": "eggplant-dev-grade-a-03",
+      "imagePath": "images/dev/eggplant-dev-a-3.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (eggplant/A.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_a"
+      ],
+      "notes": "Eggplant Grade A specimen #3 (dev split #3)"
+    },
+    {
+      "id": "eggplant-test-grade-a-01",
+      "imagePath": "images/test/eggplant-test-a-1.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (eggplant/A.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_a"
+      ],
+      "notes": "Eggplant Grade A specimen #4 (test split #1)"
+    },
+    {
+      "id": "eggplant-test-grade-a-02",
+      "imagePath": "images/test/eggplant-test-a-2.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (eggplant/A.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_a"
+      ],
+      "notes": "Eggplant Grade A specimen #5 (test split #2)"
+    },
+    {
+      "id": "eggplant-dev-grade-b-01",
+      "imagePath": "images/dev/eggplant-dev-b-1.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (eggplant/B.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_b"
+      ],
+      "notes": "Eggplant Grade B specimen #1 (dev split #1)"
+    },
+    {
+      "id": "eggplant-dev-grade-b-02",
+      "imagePath": "images/dev/eggplant-dev-b-2.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (eggplant/B.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_b"
+      ],
+      "notes": "Eggplant Grade B specimen #2 (dev split #2)"
+    },
+    {
+      "id": "eggplant-dev-grade-b-03",
+      "imagePath": "images/dev/eggplant-dev-b-3.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (eggplant/B.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_b"
+      ],
+      "notes": "Eggplant Grade B specimen #3 (dev split #3)"
+    },
+    {
+      "id": "eggplant-test-grade-b-01",
+      "imagePath": "images/test/eggplant-test-b-1.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (eggplant/B.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_b"
+      ],
+      "notes": "Eggplant Grade B specimen #4 (test split #1)"
+    },
+    {
+      "id": "eggplant-test-grade-b-02",
+      "imagePath": "images/test/eggplant-test-b-2.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (eggplant/B.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_b"
+      ],
+      "notes": "Eggplant Grade B specimen #5 (test split #2)"
+    },
+    {
+      "id": "eggplant-dev-grade-c-01",
+      "imagePath": "images/dev/eggplant-dev-c-1.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (eggplant/C.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_c"
+      ],
+      "notes": "Eggplant Grade C specimen #1 (dev split #1)"
+    },
+    {
+      "id": "eggplant-dev-grade-c-02",
+      "imagePath": "images/dev/eggplant-dev-c-2.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (eggplant/C.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_c"
+      ],
+      "notes": "Eggplant Grade C specimen #2 (dev split #2)"
+    },
+    {
+      "id": "eggplant-dev-grade-c-03",
+      "imagePath": "images/dev/eggplant-dev-c-3.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (eggplant/C.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_c"
+      ],
+      "notes": "Eggplant Grade C specimen #3 (dev split #3)"
+    },
+    {
+      "id": "eggplant-test-grade-c-01",
+      "imagePath": "images/test/eggplant-test-c-1.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (eggplant/C.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_c"
+      ],
+      "notes": "Eggplant Grade C specimen #4 (test split #1)"
+    },
+    {
+      "id": "eggplant-test-grade-c-02",
+      "imagePath": "images/test/eggplant-test-c-2.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (eggplant/C.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "eggplant",
+        "grade_c"
+      ],
+      "notes": "Eggplant Grade C specimen #5 (test split #2)"
+    },
+    {
+      "id": "potato-dev-grade-a-01",
+      "imagePath": "images/dev/potato-dev-a-1.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (potato/A.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_a"
+      ],
+      "notes": "Potato Grade A specimen #1 (dev split #1)"
+    },
+    {
+      "id": "potato-dev-grade-a-02",
+      "imagePath": "images/dev/potato-dev-a-2.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (potato/A.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_a"
+      ],
+      "notes": "Potato Grade A specimen #2 (dev split #2)"
+    },
+    {
+      "id": "potato-dev-grade-a-03",
+      "imagePath": "images/dev/potato-dev-a-3.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (potato/A.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_a"
+      ],
+      "notes": "Potato Grade A specimen #3 (dev split #3)"
+    },
+    {
+      "id": "potato-test-grade-a-01",
+      "imagePath": "images/test/potato-test-a-1.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (potato/A.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_a"
+      ],
+      "notes": "Potato Grade A specimen #4 (test split #1)"
+    },
+    {
+      "id": "potato-test-grade-a-02",
+      "imagePath": "images/test/potato-test-a-2.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "A",
+      "source": "BazarBeat seed sample (potato/A.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_a"
+      ],
+      "notes": "Potato Grade A specimen #5 (test split #2)"
+    },
+    {
+      "id": "potato-dev-grade-b-01",
+      "imagePath": "images/dev/potato-dev-b-1.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (potato/B.jpeg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_b"
+      ],
+      "notes": "Potato Grade B specimen #1 (dev split #1)"
+    },
+    {
+      "id": "potato-dev-grade-b-02",
+      "imagePath": "images/dev/potato-dev-b-2.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (potato/B.jpeg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_b"
+      ],
+      "notes": "Potato Grade B specimen #2 (dev split #2)"
+    },
+    {
+      "id": "potato-dev-grade-b-03",
+      "imagePath": "images/dev/potato-dev-b-3.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (potato/B.jpeg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_b"
+      ],
+      "notes": "Potato Grade B specimen #3 (dev split #3)"
+    },
+    {
+      "id": "potato-test-grade-b-01",
+      "imagePath": "images/test/potato-test-b-1.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (potato/B.jpeg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_b"
+      ],
+      "notes": "Potato Grade B specimen #4 (test split #1)"
+    },
+    {
+      "id": "potato-test-grade-b-02",
+      "imagePath": "images/test/potato-test-b-2.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat seed sample (potato/B.jpeg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_b"
+      ],
+      "notes": "Potato Grade B specimen #5 (test split #2)"
+    },
+    {
+      "id": "potato-dev-grade-c-01",
+      "imagePath": "images/dev/potato-dev-c-1.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (potato/C.jpg)",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_c"
+      ],
+      "notes": "Potato Grade C specimen #1 (dev split #1)"
+    },
+    {
+      "id": "potato-dev-grade-c-02",
+      "imagePath": "images/dev/potato-dev-c-2.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (potato/C.jpg) variant #2",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_c"
+      ],
+      "notes": "Potato Grade C specimen #2 (dev split #2)"
+    },
+    {
+      "id": "potato-dev-grade-c-03",
+      "imagePath": "images/dev/potato-dev-c-3.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (potato/C.jpg) variant #3",
+      "license": "CC0-1.0 / MIT",
+      "split": "dev",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_c"
+      ],
+      "notes": "Potato Grade C specimen #3 (dev split #3)"
+    },
+    {
+      "id": "potato-test-grade-c-01",
+      "imagePath": "images/test/potato-test-c-1.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (potato/C.jpg) variant #4",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_c"
+      ],
+      "notes": "Potato Grade C specimen #4 (test split #1)"
+    },
+    {
+      "id": "potato-test-grade-c-02",
+      "imagePath": "images/test/potato-test-c-2.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat seed sample (potato/C.jpg) variant #5",
+      "license": "CC0-1.0 / MIT",
+      "split": "test",
+      "tags": [
+        "standard",
+        "potato",
+        "grade_c"
+      ],
+      "notes": "Potato Grade C specimen #5 (test split #2)"
+    },
+    {
+      "id": "dev-adv-01",
+      "imagePath": "images/dev/dev-adv-onion-01.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat adversarial test corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "onion"
+      ],
+      "notes": "Grade C Onion with misleading 'GRADE A CERTIFIED' banner"
+    },
+    {
+      "id": "dev-adv-02",
+      "imagePath": "images/dev/dev-adv-green-chilli-02.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat adversarial test corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "green-chilli"
+      ],
+      "notes": "Grade B Green Chilli with misleading '100% EXPORT GRADE A' banner"
+    },
+    {
+      "id": "dev-adv-03",
+      "imagePath": "images/dev/dev-adv-bitter-gourd-03.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat adversarial test corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "bitter-gourd"
+      ],
+      "notes": "Grade C Bitter Gourd with misleading 'TOP RATED GRADE A' banner"
+    },
+    {
+      "id": "dev-adv-04",
+      "imagePath": "images/dev/dev-adv-potato-04.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat adversarial test corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "potato"
+      ],
+      "notes": "Grade C Potato with misleading 'PREMIUM GRADE A' banner"
+    },
+    {
+      "id": "dev-neg-01",
+      "imagePath": "images/dev/dev-neg-01-banana.jpg",
+      "crop": "banana",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "wrong_produce"
+      ],
+      "notes": "Banana (non-catalog crop)"
+    },
+    {
+      "id": "dev-neg-02",
+      "imagePath": "images/dev/dev-neg-02-apple.jpg",
+      "crop": "apple",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "wrong_produce"
+      ],
+      "notes": "Apple (non-catalog crop)"
+    },
+    {
+      "id": "dev-neg-03",
+      "imagePath": "images/dev/dev-neg-03-cabbage.jpg",
+      "crop": "cabbage",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "wrong_produce"
+      ],
+      "notes": "Cabbage (non-catalog crop)"
+    },
+    {
+      "id": "dev-neg-04",
+      "imagePath": "images/dev/dev-neg-04-tool.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Metal wrench tool"
+    },
+    {
+      "id": "dev-neg-05",
+      "imagePath": "images/dev/dev-neg-05-newspaper.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Printed newspaper sheet"
+    },
+    {
+      "id": "dev-neg-06",
+      "imagePath": "images/dev/dev-neg-06-empty_board.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Empty cutting board"
+    },
+    {
+      "id": "dev-neg-07",
+      "imagePath": "images/dev/dev-neg-07-blurry_onion.jpg",
+      "crop": "onion",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "blurry",
+        "unusable"
+      ],
+      "notes": "Extremely blurry onion photo"
+    },
+    {
+      "id": "dev-neg-08",
+      "imagePath": "images/dev/dev-neg-08-dark_eggplant.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "dark",
+        "unusable"
+      ],
+      "notes": "Underexposed dark eggplant photo"
+    },
+    {
+      "id": "dev-neg-09",
+      "imagePath": "images/dev/dev-neg-09-blurry_potato.jpg",
+      "crop": "potato",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "blurry",
+        "unusable"
+      ],
+      "notes": "Heavily blurred potato photo"
+    },
+    {
+      "id": "dev-neg-10",
+      "imagePath": "images/dev/dev-neg-10-dark_chilli.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "dark",
+        "unusable"
+      ],
+      "notes": "Near-black underexposed chilli photo"
+    },
+    {
+      "id": "dev-neg-11",
+      "imagePath": "images/dev/dev-neg-11-concrete.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Empty concrete ground"
+    },
+    {
+      "id": "dev-neg-12",
+      "imagePath": "images/dev/dev-neg-12-tomato.jpg",
+      "crop": "tomato",
+      "groundTruthGrade": null,
+      "source": "BazarBeat negative validation corpus",
+      "license": "CC0-1.0",
+      "split": "dev",
+      "tags": [
+        "negative",
+        "crop_mismatch"
+      ],
+      "notes": "Tomato (non-catalog crop tested against onion)"
+    },
+    {
+      "id": "test-adv-01",
+      "imagePath": "images/test/test-adv-onion-01.jpg",
+      "crop": "onion",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat held-out adversarial corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "onion"
+      ],
+      "notes": "Test Grade B Onion with 'GRADE A EXPORT ONLY' label"
+    },
+    {
+      "id": "test-adv-02",
+      "imagePath": "images/test/test-adv-bitter-gourd-02.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat held-out adversarial corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "bitter-gourd"
+      ],
+      "notes": "Test Grade C Bitter Gourd with 'GRADE A SUPERIOR' label"
+    },
+    {
+      "id": "test-adv-03",
+      "imagePath": "images/test/test-adv-eggplant-03.jpg",
+      "crop": "eggplant",
+      "groundTruthGrade": "C",
+      "source": "BazarBeat held-out adversarial corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "eggplant"
+      ],
+      "notes": "Test Grade C Eggplant with '100% GRADE A' label"
+    },
+    {
+      "id": "test-adv-04",
+      "imagePath": "images/test/test-adv-potato-04.jpg",
+      "crop": "potato",
+      "groundTruthGrade": "B",
+      "source": "BazarBeat held-out adversarial corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "adversarial",
+        "text_in_image",
+        "potato"
+      ],
+      "notes": "Test Grade B Potato with 'GRADE A QUALITY' label"
+    },
+    {
+      "id": "test-neg-01",
+      "imagePath": "images/test/test-neg-01-apple.jpg",
+      "crop": "apple",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "wrong_produce"
+      ],
+      "notes": "Test apple (non-catalog crop)"
+    },
+    {
+      "id": "test-neg-02",
+      "imagePath": "images/test/test-neg-02-banana.jpg",
+      "crop": "banana",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "wrong_produce"
+      ],
+      "notes": "Test banana (non-catalog crop)"
+    },
+    {
+      "id": "test-neg-03",
+      "imagePath": "images/test/test-neg-03-tool.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Test hardware tool"
+    },
+    {
+      "id": "test-neg-04",
+      "imagePath": "images/test/test-neg-04-newspaper.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Test print document"
+    },
+    {
+      "id": "test-neg-05",
+      "imagePath": "images/test/test-neg-05-blurry_chilli.jpg",
+      "crop": "green-chilli",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "blurry",
+        "unusable"
+      ],
+      "notes": "Test heavily blurred green chilli"
+    },
+    {
+      "id": "test-neg-06",
+      "imagePath": "images/test/test-neg-06-dark_bitter_gourd.jpg",
+      "crop": "bitter-gourd",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "dark",
+        "unusable"
+      ],
+      "notes": "Test severely underexposed bitter gourd"
+    },
+    {
+      "id": "test-neg-07",
+      "imagePath": "images/test/test-neg-07-empty_board.jpg",
+      "crop": "non_produce",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "non_produce"
+      ],
+      "notes": "Test blank surface"
+    },
+    {
+      "id": "test-neg-08",
+      "imagePath": "images/test/test-neg-08-tomato.jpg",
+      "crop": "tomato",
+      "groundTruthGrade": null,
+      "source": "BazarBeat held-out negative corpus",
+      "license": "CC0-1.0",
+      "split": "test",
+      "tags": [
+        "negative",
+        "crop_mismatch"
+      ],
+      "notes": "Test tomato tested against potato"
+    }
+  ]
+}
